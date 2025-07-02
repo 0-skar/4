@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Personal Assistant</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 1rem; background-color: #f7f7f7; }
+        #chatbox { height: 400px; border: 1px solid #ccc; overflow-y: scroll; padding: 10px; background-color: white; margin-bottom: 1rem; }
+        .message { margin-bottom: 10px; padding: 8px 12px; border-radius: 18px; max-width: 70%; line-height: 1.4; }
+        .user-message { background-color: #dcf8c6; align-self: flex-end; text-align: right; margin-left: auto; }
+        .assistant-message { background-color: #f1f0f0; align-self: flex-start; text-align: left; }
+        #chat-container { display: flex; flex-direction: column; }
+        #chatForm { display: flex; }
+        #userInput { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
+        button { padding: 10px 15px; margin-left: 10px; background-color: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>My Personal Assistant</h1>
+    <div id="chat-container">
+        <div id="chatbox"></div>
+    </div>
+    <form id="chatForm">
+        <input type="text" id="userInput" placeholder="Ask something..." autocomplete="off">
+        <button type="submit">Send</button>
+    </form>
+
+    <script>
+        // !!! CRITICAL STEP: CHANGE THIS URL !!!
+        // This MUST be the URL of the backend you just deployed.
+        const BACKEND_URL = "https://eosforus-3.hf.space/chat";
+
+        const chatForm = document.getElementById('chatForm');
+        const userInput = document.getElementById('userInput');
+        const chatbox = document.getElementById('chatbox');
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userText = userInput.value.trim();
+            if (!userText) return;
+
+            addMessage(userText, 'user-message');
+            userInput.value = '';
+            const thinkingMessage = addMessage('...', 'assistant-message');
+
+            try {
+                const response = await fetch(BACKEND_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: userText })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    thinkingMessage.innerText = data[0].generated_text;
+                } else {
+                    thinkingMessage.innerText = `Error: ${data.error || 'The model may be loading. Please try again in a moment.'}`;
+                }
+            } catch (error) {
+                thinkingMessage.innerText = 'Error: Could not reach the backend server.';
+            }
+        });
+
+        function addMessage(text, className) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${className}`;
+            messageDiv.innerText = text;
+            chatbox.appendChild(messageDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;
+            return messageDiv;
+        }
+    </script>
+</body>
+</html>
