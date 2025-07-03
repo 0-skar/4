@@ -27,8 +27,6 @@
     </form>
 
     <script>
-        // --- CRITICAL CHANGE ---
-        // This URL now points directly to your public Hugging Face Space API endpoint.
         const BACKEND_URL = "https://eosforus-3.hf.space/chat";
 
         const chatForm = document.getElementById('chatForm');
@@ -50,17 +48,24 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: userText })
                 });
-
+                
+                // We will now always get a JSON response, even for errors
                 const data = await response.json();
 
-                if (response.ok) {
-                    thinkingMessage.innerText = data[0].generated_text;
+                if (!response.ok) {
+                    // If the response was not successful (e.g., 500 error), display the detailed error message from the backend.
+                    // The error from FastAPI is often in the "detail" field.
+                    const errorMessage = data.detail || JSON.stringify(data);
+                    thinkingMessage.innerText = `Error: ${errorMessage}`;
                 } else {
-                    thinkingMessage.innerText = `Error: ${data.error || 'The model may be loading. Please try again in a moment.'}`;
+                    // Success!
+                    thinkingMessage.innerText = data[0].generated_text;
                 }
+
             } catch (error) {
-                console.error("Fetch Error:", error);
-                thinkingMessage.innerText = 'Error: Could not reach backend. Check browser console (F12) for CORS errors.';
+                // This will now only catch network errors (e.g., backend is offline).
+                console.error("Network or other critical error:", error);
+                thinkingMessage.innerText = 'Error: Could not connect to the backend server.';
             }
         });
 
