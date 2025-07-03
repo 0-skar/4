@@ -27,8 +27,8 @@
     </form>
 
     <script>
-        // !!! CRITICAL STEP: CHANGE THIS URL !!!
-        // This MUST be the URL of the backend you just deployed.
+        // --- CRITICAL CHANGE ---
+        // This URL now points directly to your public Hugging Face Space API endpoint.
         const BACKEND_URL = "https://eosforus-3.hf.space/chat";
 
         const chatForm = document.getElementById('chatForm');
@@ -59,7 +59,8 @@
                     thinkingMessage.innerText = `Error: ${data.error || 'The model may be loading. Please try again in a moment.'}`;
                 }
             } catch (error) {
-                thinkingMessage.innerText = 'Error: Could not reach the backend server.';
+                console.error("Fetch Error:", error);
+                thinkingMessage.innerText = 'Error: Could not reach backend. Check browser console (F12) for CORS errors.';
             }
         });
 
