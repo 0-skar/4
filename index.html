@@ -1,43 +1,62 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Avatar Assistant</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f9; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        #app-container { width: 90%; max-width: 700px; height: 95vh; max-height: 900px; display: flex; flex-direction: column; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); overflow: hidden; }
+        :root { --transition-speed: 0.5s; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f9; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        #app-container { width: 95%; height: 95vh; max-width: 1200px; max-height: 900px; display: flex; flex-direction: column; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); position: relative; transition: all var(--transition-speed) ease; }
         
-        #avatar-container { flex-grow: 1; display: flex; justify-content: center; align-items: center; padding: 1rem; background-color: #e9ecef; position: relative; }
-        #avatar { width: 300px; height: 300px; border-radius: 50%; object-fit: cover; border: 5px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        /* --- NOWY GŁÓWNY UKŁAD --- */
+        #main-content { display: flex; flex: 1; overflow: hidden; }
 
-        #transcript-container { height: 150px; padding: 1rem; overflow-y: auto; border-top: 1px solid #dee2e6; font-size: 0.9rem; line-height: 1.5; background-color: #f8f9fa; }
+        /* --- AWATAR --- */
+        #avatar-container { flex: 3; display: flex; justify-content: center; align-items: center; padding: 1rem; background-color: #e9ecef; transition: all var(--transition-speed) ease; position: relative; }
+        #avatar { width: 300px; height: 300px; border-radius: 50%; object-fit: cover; border: 5px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: all var(--transition-speed) ease; }
+
+        /* --- TRANSKRYPCJA CZATU (PANEL BOCZNY) --- */
+        #transcript-container { flex: 2; display: flex; flex-direction: column; border-left: 1px solid #dee2e6; background-color: #f8f9fa; position: relative; transition: all var(--transition-speed) ease; }
+        #transcript-header { padding: 0.5rem 1rem; font-weight: bold; border-bottom: 1px solid #dee2e6; }
+        #transcript-messages { flex: 1; padding: 1rem; overflow-y: auto; font-size: 0.9rem; line-height: 1.5; }
         .transcript-line { margin-bottom: 0.5rem; }
         .user-text { font-weight: bold; color: #007bff; }
         .assistant-text { color: #343a40; }
+        
+        /* --- NOWA IKONA PRZEŁĄCZANIA WIDOKU --- */
+        #view-toggle-button { position: absolute; top: 5px; right: 5px; width: 30px; height: 30px; background: rgba(0,0,0,0.1); border: none; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; z-index: 10; }
+        #view-toggle-button svg { width: 16px; height: 16px; fill: #333; }
+        #view-toggle-button:hover { background: rgba(0,0,0,0.2); }
 
-        /* --- NEW STYLES for Voice Selection --- */
-        #voice-select-container { padding: 1rem; border-top: 1px solid #e9ecef; background: #f8f9fa; text-align: center; }
-        select { padding: 0.5rem; border-radius: 8px; width: 80%; max-width: 400px; }
-
+        /* --- KONTROLKI (NA DOLE) --- */
         .controls { display: flex; padding: 1rem; border-top: 1px solid #e9ecef; align-items: center; }
         #userInput { flex-grow: 1; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 18px; font-size: 1rem; }
         #micButton { background-color: #28a745; width: 50px; height: 50px; font-size: 1.5rem; border-radius: 50%; margin-left: 0.5rem; border: none; cursor: pointer; color: white; }
         #micButton.is-listening { background-color: #dc3545; }
+
+        /* --- LOGIKA STANU ZMAKSYMALIZOWANEGO --- */
+        #app-container.chat-is-maximized #avatar-container { position: absolute; top: 10px; left: 10px; width: 100px; height: 100px; padding: 0; z-index: 20; background: transparent; }
+        #app-container.chat-is-maximized #avatar { width: 100px; height: 100px; }
+        #app-container.chat-is-maximized #transcript-container { flex: 1 0 100%; /* Zajmij całą szerokość */ }
+        #app-container.chat-is-maximized #main-content { z-index: 5; }
     </style>
 </head>
 <body>
     <div id="app-container">
-        <div id="avatar-container">
-            <img id="avatar" src="https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png" alt="Assistant Avatar">
-        </div>
-        <div id="transcript-container"></div>
-        
-        <!-- The voice selection dropdown is back -->
-        <div id="voice-select-container">
-            <label for="voiceSelect">Choose a Voice: </label>
-            <select id="voiceSelect"></select>
+        <!-- Nowa struktura z panelem bocznym -->
+        <div id="main-content">
+            <div id="avatar-container">
+                <img id="avatar" src="https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png" alt="Assistant Avatar">
+            </div>
+            <div id="transcript-container">
+                <div id="transcript-header">
+                    <span>Chat Transcript</span>
+                    <button id="view-toggle-button"></button>
+                </div>
+                <div id="transcript-messages"></div>
+            </div>
         </div>
         
         <div class="controls">
@@ -47,60 +66,49 @@
     </div>
 
     <script>
-        // --- CONFIGURATION ---
+        // --- KONFIGURACJA ---
         const BACKEND_URL = "https://eosforus-3.hf.space/chat";
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        // --- DOM ELEMENT REFERENCES ---
+        // --- REFERENCJE DO DOM ---
+        const appContainer = document.getElementById('app-container');
         const userInput = document.getElementById('userInput');
-        const transcriptContainer = document.getElementById('transcript-container');
+        const transcriptMessages = document.getElementById('transcript-messages');
         const micButton = document.getElementById('micButton');
         const avatar = document.getElementById('avatar');
-        const voiceSelect = document.getElementById('voiceSelect'); // Reference to the dropdown
+        const viewToggleButton = document.getElementById('view-toggle-button');
 
-        // --- TEXT-TO-SPEECH (The "Voice") - MERGED LOGIC ---
-        const synth = window.speechSynthesis;
-        let voices = [];
-        
-        function populateVoiceList() {
-            voices = synth.getVoices();
-            voiceSelect.innerHTML = ''; // Clear previous options
-            voices.forEach((voice) => {
-                // We are now showing ALL voices, including Polish ones (e.g., lang: 'pl-PL')
-                const option = document.createElement('option');
-                option.textContent = `${voice.name} (${voice.lang})`;
-                option.setAttribute('data-name', voice.name);
-                voiceSelect.appendChild(option);
-            });
-        }
-        
-        populateVoiceList();
-        if (synth.onvoiceschanged !== undefined) {
-            synth.onvoiceschanged = populateVoiceList;
+        // --- IKONY SVG DLA PRZYCISKU ---
+        const maximizeIcon = `<svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>`;
+        const minimizeIcon = `<svg viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>`;
+
+        // --- LOGIKA PRZEŁĄCZANIA WIDOKU ---
+        function toggleChatView() {
+            appContainer.classList.toggle('chat-is-maximized');
+            updateToggleIcon();
         }
 
-        function speak(text) {
-            if (synth.speaking) {
-                synth.cancel();
+        function updateToggleIcon() {
+            if (appContainer.classList.contains('chat-is-maximized')) {
+                viewToggleButton.innerHTML = minimizeIcon;
+            } else {
+                viewToggleButton.innerHTML = maximizeIcon;
             }
+        }
+        viewToggleButton.addEventListener('click', toggleChatView);
+        updateToggleIcon(); // Ustaw ikonę przy starcie
+
+        // --- LOGIKA MOWY (TTS) Z AWATAREM ---
+        const synth = window.speechSynthesis;
+        function speak(text) {
             const utterance = new SpeechSynthesisUtterance(text);
-            
-            // This is the magic for animating the avatar
             utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
             utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
-            
-            // This is the magic for selecting the voice
-            const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name');
-            const selectedVoice = voices.find(voice => voice.name === selectedVoiceName);
-            if (selectedVoice) {
-                utterance.voice = selectedVoice;
-            }
-            
             synth.speak(utterance);
         }
 
-        // --- CORE LOGIC (handleSubmit is the same) ---
+        // --- GŁÓWNA LOGIKA APLIKACJI ---
         async function handleSubmit() {
             const userText = userInput.value.trim();
             if (!userText) return;
@@ -125,15 +133,17 @@
             }
         }
 
-        // --- HELPER & SPEECH RECOGNITION (Unchanged from before) ---
         function addMessageToTranscript(text, className) {
             const messageDiv = document.createElement('p');
             messageDiv.className = `transcript-line ${className}`;
             messageDiv.innerText = text;
-            transcriptContainer.appendChild(messageDiv);
-            transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
+            transcriptMessages.appendChild(messageDiv);
+            transcriptMessages.scrollTop = transcriptMessages.scrollHeight;
         }
+
         userInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); handleSubmit(); } });
+
+        // --- LOGIKA MIKROFONU (bez zmian) ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
             const recognition = new SpeechRecognition();
