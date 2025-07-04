@@ -16,8 +16,13 @@
         .controls { display: flex; padding: 1rem; border-top: 1px solid #e9ecef; background: #f8f9fa; align-items: center; }
         #userInput { flex-grow: 1; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 18px; font-size: 1rem; }
         button { padding: 0.75rem 1rem; background-color: #007bff; color: white; border: none; border-radius: 18px; cursor: pointer; font-size: 1rem; margin-left: 0.5rem; transition: background-color 0.2s; }
-        #micButton { background-color: #28a745; }
-        #micButton.is-listening { background-color: #dc3545; }
+        #micButton { background-color: #28a745; width: 50px; height: 50px; font-size: 1.5rem; border-radius: 50%; }
+        #micButton.is-listening { background-color: #dc3545; animation: pulse 1.5s infinite; }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
         #voice-select-container { padding: 0 1rem 1rem 1rem; background: #f8f9fa; text-align: center; }
         select { padding: 0.5rem; border-radius: 8px; }
     </style>
@@ -52,68 +57,75 @@
         // --- NEW: SPEECH RECOGNITION (The "Ears") ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
+        
+        // --- THIS IS THE NEW LOGIC ---
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
-            recognition.continuous = false;
+            recognition.continuous = true; // <-- CHANGED: Keep listening.
+            recognition.interimResults = true; // <-- NEW: Show results as you speak.
             recognition.lang = 'en-US';
 
-            recognition.onstart = () => {
-                micButton.textContent = '...';
-                micButton.classList.add('is-listening');
-            };
-
-            recognition.onresult = (event) => {
-                const spokenText = event.results[0][0].transcript;
-                userInput.value = spokenText; // Put the spoken text in the input box
-                handleSubmit(new Event('submit')); // Programmatically submit the form
-            };
-
-            recognition.onerror = (event) => {
-                console.error("Speech recognition error", event.error);
-                micButton.textContent = '🎤';
-                micButton.classList.remove('is-listening');
-            };
-
-            recognition.onend = () => {
-                micButton.textContent = '🎤';
-                micButton.classList.remove('is-listening');
-            };
+            let final_transcript = '';
 
             micButton.addEventListener('click', () => {
                 if (micButton.classList.contains('is-listening')) {
                     recognition.stop();
                 } else {
+                    final_transcript = ''; // Reset transcript on new start
                     recognition.start();
                 }
             });
+
+            recognition.onstart = () => {
+                micButton.classList.add('is-listening');
+            };
+
+            recognition.onend = () => {
+                micButton.classList.remove('is-listening');
+                // If there's a final transcript, submit it
+                if (final_transcript) {
+                    userInput.value = final_transcript;
+                    handleSubmit(new Event('submit'));
+                }
+            };
+            
+            recognition.onresult = (event) => {
+                let interim_transcript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        final_transcript += event.results[i][0].transcript;
+                    } else {
+                        interim_transcript += event.results[i][0].transcript;
+                    }
+                }
+                // Display interim results in the input box for better UX
+                userInput.value = final_transcript + interim_transcript;
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech recognition error", event.error);
+                micButton.classList.remove('is-listening');
+            };
+
         } else {
             console.warn("Speech Recognition not supported in this browser.");
-            micButton.style.display = 'none'; // Hide mic button if not supported
+            micButton.style.display = 'none';
         }
 
-        // --- NEW: TEXT-TO-SPEECH (The "Voice") ---
+        // --- TEXT-TO-SPEECH (The "Voice") ---
         let voices = [];
-
         function populateVoiceList() {
             voices = speechSynthesis.getVoices();
             voiceSelect.innerHTML = '';
-            voices.forEach((voice, i) => {
+            voices.forEach((voice) => {
                 const option = document.createElement('option');
                 option.textContent = `${voice.name} (${voice.lang})`;
-                if (voice.default) {
-                    option.textContent += ' -- DEFAULT';
-                }
-                option.setAttribute('data-lang', voice.lang);
                 option.setAttribute('data-name', voice.name);
                 voiceSelect.appendChild(option);
             });
         }
-
         function speak(text) {
-            if (speechSynthesis.speaking) {
-                console.error('SpeechSynthesis.speaking');
-                return;
-            }
+            speechSynthesis.cancel(); // Stop any previous speech
             const utterance = new SpeechSynthesisUtterance(text);
             const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name');
             const selectedVoice = voices.find(voice => voice.name === selectedVoiceName);
@@ -122,20 +134,17 @@
             }
             speechSynthesis.speak(utterance);
         }
-        
-        // This is needed because voices load asynchronously
         speechSynthesis.onvoiceschanged = populateVoiceList;
 
-        // --- CORE LOGIC (Mostly Unchanged) ---
+        // --- CORE LOGIC ---
         chatForm.addEventListener('submit', handleSubmit);
-
         async function handleSubmit(event) {
             event.preventDefault();
             const userText = userInput.value.trim();
             if (!userText) return;
 
             addMessage(userText, 'user-message');
-            userInput.value = '';
+            userInput.value = ''; // Clear input after submitting
             const thinkingMessage = addMessage('...', 'assistant-message');
 
             try {
@@ -145,11 +154,10 @@
                     body: JSON.stringify({ prompt: userText })
                 });
                 const data = await response.json();
-
                 if (response.ok) {
                     const assistantText = data.generated_text;
                     thinkingMessage.innerText = assistantText;
-                    speak(assistantText); // <-- NEW: Speak the response!
+                    speak(assistantText);
                 } else {
                     thinkingMessage.innerText = `Error: ${data.error || 'An unknown error occurred.'}`;
                 }
@@ -158,7 +166,6 @@
                 console.error('Fetch error:', error);
             }
         }
-
         function addMessage(text, className) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${className}`;
@@ -167,7 +174,6 @@
             chatbox.scrollTop = chatbox.scrollHeight;
             return messageDiv;
         }
-
     </script>
 </body>
 </html>
