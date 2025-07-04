@@ -9,40 +9,18 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f9; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
         #app-container { width: 90%; max-width: 700px; height: 95vh; max-height: 900px; display: flex; flex-direction: column; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); overflow: hidden; }
         
-        /* --- AVATAR STYLES --- */
-        #avatar-container {
-            flex-grow: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 1rem;
-            background-color: #e9ecef;
-            position: relative; 
-        }
-        #avatar {
-            width: 300px;
-            height: 300px;
-            border-radius: 50%; /* Makes the avatar circular */
-            object-fit: cover;
-            border: 5px solid white;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
+        #avatar-container { flex-grow: 1; display: flex; justify-content: center; align-items: center; padding: 1rem; background-color: #e9ecef; position: relative; }
+        #avatar { width: 300px; height: 300px; border-radius: 50%; object-fit: cover; border: 5px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
 
-        /* --- TRANSCRIPT STYLES --- */
-        #transcript-container {
-            height: 150px;
-            padding: 1rem;
-            overflow-y: auto;
-            border-top: 1px solid #dee2e6;
-            font-size: 0.9rem;
-            line-height: 1.5;
-            background-color: #f8f9fa;
-        }
+        #transcript-container { height: 150px; padding: 1rem; overflow-y: auto; border-top: 1px solid #dee2e6; font-size: 0.9rem; line-height: 1.5; background-color: #f8f9fa; }
         .transcript-line { margin-bottom: 0.5rem; }
         .user-text { font-weight: bold; color: #007bff; }
         .assistant-text { color: #343a40; }
 
-        /* --- CONTROLS STYLES --- */
+        /* --- NEW STYLES for Voice Selection --- */
+        #voice-select-container { padding: 1rem; border-top: 1px solid #e9ecef; background: #f8f9fa; text-align: center; }
+        select { padding: 0.5rem; border-radius: 8px; width: 80%; max-width: 400px; }
+
         .controls { display: flex; padding: 1rem; border-top: 1px solid #e9ecef; align-items: center; }
         #userInput { flex-grow: 1; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 18px; font-size: 1rem; }
         #micButton { background-color: #28a745; width: 50px; height: 50px; font-size: 1.5rem; border-radius: 50%; margin-left: 0.5rem; border: none; cursor: pointer; color: white; }
@@ -52,10 +30,15 @@
 <body>
     <div id="app-container">
         <div id="avatar-container">
-            <!-- THIS IS THE CRITICAL CHANGE -->
             <img id="avatar" src="https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png" alt="Assistant Avatar">
         </div>
         <div id="transcript-container"></div>
+        
+        <!-- The voice selection dropdown is back -->
+        <div id="voice-select-container">
+            <label for="voiceSelect">Choose a Voice: </label>
+            <select id="voiceSelect"></select>
+        </div>
         
         <div class="controls">
             <input type="text" id="userInput" placeholder="Ask anything or use the microphone..." autocomplete="off">
@@ -74,34 +57,55 @@
         const transcriptContainer = document.getElementById('transcript-container');
         const micButton = document.getElementById('micButton');
         const avatar = document.getElementById('avatar');
+        const voiceSelect = document.getElementById('voiceSelect'); // Reference to the dropdown
 
-        // --- TEXT-TO-SPEECH (The "Voice") with Avatar Control ---
+        // --- TEXT-TO-SPEECH (The "Voice") - MERGED LOGIC ---
         const synth = window.speechSynthesis;
+        let voices = [];
         
+        function populateVoiceList() {
+            voices = synth.getVoices();
+            voiceSelect.innerHTML = ''; // Clear previous options
+            voices.forEach((voice) => {
+                // We are now showing ALL voices, including Polish ones (e.g., lang: 'pl-PL')
+                const option = document.createElement('option');
+                option.textContent = `${voice.name} (${voice.lang})`;
+                option.setAttribute('data-name', voice.name);
+                voiceSelect.appendChild(option);
+            });
+        }
+        
+        populateVoiceList();
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = populateVoiceList;
+        }
+
         function speak(text) {
             if (synth.speaking) {
                 synth.cancel();
             }
             const utterance = new SpeechSynthesisUtterance(text);
             
-            utterance.onstart = () => {
-                avatar.src = AVATAR_TALKING_URL; // Change to talking GIF
-            };
-            utterance.onend = () => {
-                avatar.src = AVATAR_STILL_URL; // Change back to still image
-            };
+            // This is the magic for animating the avatar
+            utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
+            utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
+            
+            // This is the magic for selecting the voice
+            const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name');
+            const selectedVoice = voices.find(voice => voice.name === selectedVoiceName);
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+            }
             
             synth.speak(utterance);
         }
 
-        // --- CORE LOGIC ---
+        // --- CORE LOGIC (handleSubmit is the same) ---
         async function handleSubmit() {
             const userText = userInput.value.trim();
             if (!userText) return;
-
             addMessageToTranscript(`You: ${userText}`, 'user-text');
             userInput.value = '';
-            
             try {
                 const response = await fetch(BACKEND_URL, {
                     method: 'POST',
@@ -121,7 +125,7 @@
             }
         }
 
-        // --- HELPER FUNCTION to display text ---
+        // --- HELPER & SPEECH RECOGNITION (Unchanged from before) ---
         function addMessageToTranscript(text, className) {
             const messageDiv = document.createElement('p');
             messageDiv.className = `transcript-line ${className}`;
@@ -129,16 +133,7 @@
             transcriptContainer.appendChild(messageDiv);
             transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
         }
-        
-        // Event listener for pressing Enter in the input box
-        userInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                handleSubmit();
-            }
-        });
-
-        // --- SPEECH RECOGNITION (The "Ears") ---
+        userInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); handleSubmit(); } });
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
             const recognition = new SpeechRecognition();
@@ -146,46 +141,19 @@
             recognition.interimResults = true;
             let final_transcript = '';
             let isListening = false;
-
             micButton.addEventListener('click', () => {
-                if (isListening) {
-                    recognition.stop();
-                } else {
-                    final_transcript = '';
-                    userInput.value = '';
-                    recognition.start();
-                }
+                if (isListening) { recognition.stop(); } else { final_transcript = ''; userInput.value = ''; recognition.start(); }
             });
-
-            recognition.onstart = () => {
-                isListening = true;
-                micButton.classList.add('is-listening');
-            };
-
-            recognition.onend = () => {
-                isListening = false;
-                micButton.classList.remove('is-listening');
-                if (userInput.value.trim()){
-                   handleSubmit();
-                }
-            };
-
+            recognition.onstart = () => { isListening = true; micButton.classList.add('is-listening'); };
+            recognition.onend = () => { isListening = false; micButton.classList.remove('is-listening'); if (userInput.value.trim()){ handleSubmit(); } };
             recognition.onresult = (event) => {
                 let interim_transcript = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        final_transcript += event.results[i][0].transcript + ' ';
-                    } else {
-                        interim_transcript += event.results[i][0].transcript;
-                    }
+                    if (event.results[i].isFinal) { final_transcript += event.results[i][0].transcript + ' '; } else { interim_transcript += event.results[i][0].transcript; }
                 }
                 userInput.value = final_transcript + interim_transcript;
             };
-
-        } else {
-            console.warn("Speech Recognition not supported in this browser.");
-            micButton.style.display = 'none';
-        }
+        } else { micButton.style.display = 'none'; }
     </script>
 </body>
 </html>
