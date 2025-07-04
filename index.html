@@ -3,107 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Custom Voice Assistant</title>
+    <title>My AI Assistant</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f9; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
         #chat-container { width: 90%; max-width: 700px; height: 85vh; max-height: 800px; display: flex; flex-direction: column; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); overflow: hidden; }
-        header { background: #5e2ab2; color: white; padding: 1rem; text-align: center; font-size: 1.2rem; font-weight: 600; }
+        header { background: #007bff; color: white; padding: 1rem; text-align: center; font-size: 1.2rem; font-weight: 600; }
         #chatbox { flex-grow: 1; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
         .message { padding: 0.75rem 1rem; border-radius: 18px; max-width: 75%; line-height: 1.5; word-wrap: break-word; }
         .user-message { background-color: #e1f5fe; color: #01579b; align-self: flex-end; border-bottom-right-radius: 4px; }
         .assistant-message { background-color: #f1f3f5; color: #343a40; align-self: flex-start; border-bottom-left-radius: 4px; }
-        .controls { display: flex; padding: 1rem; border-top: 1px solid #e9ecef; background: #f8f9fa; align-items: center; }
-        #userInput { flex-grow: 1; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 18px; font-size: 1rem; }
-        button { padding: 0.75rem 1rem; background-color: #007bff; color: white; border: none; border-radius: 18px; cursor: pointer; font-size: 1rem; margin-left: 0.5rem; transition: background-color 0.2s; }
-        #micButton { background-color: #28a745; width: 50px; height: 50px; font-size: 1.5rem; border-radius: 50%; }
-        #micButton.is-listening { background-color: #dc3545; }
+        #chatForm { display: flex; padding: 1rem; border-top: 1px solid #e9ecef; background: #f8f9fa; }
+        #userInput { flex-grow: 1; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 18px; font-size: 1rem; margin-right: 0.5rem; }
+        #userInput:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25); }
+        button { padding: 0.75rem 1.25rem; background-color: #007bff; color: white; border: none; border-radius: 18px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: background-color 0.2s; }
+        button:hover { background-color: #0056b3; }
     </style>
 </head>
 <body>
-
     <div id="chat-container">
-        <header>Custom Voice Assistant</header>
+        <header>AI Assistant</header>
         <div id="chatbox"></div>
-        <form class="controls" id="chatForm">
-            <input type="text" id="userInput" placeholder="Ask anything or use the microphone..." autocomplete="off" required>
+        <form id="chatForm">
+            <input type="text" id="userInput" placeholder="Ask anything..." autocomplete="off" required>
             <button type="submit">Send</button>
-            <button type="button" id="micButton">🎤</button>
         </form>
     </div>
 
     <script>
-        // --- CONFIGURATION ---
         const BACKEND_URL = "https://eosforus-3.hf.space/chat";
-
-        // --- DOM ELEMENT REFERENCES ---
         const chatForm = document.getElementById('chatForm');
         const userInput = document.getElementById('userInput');
         const chatbox = document.getElementById('chatbox');
-        const micButton = document.getElementById('micButton');
 
-        // --- SPEECH RECOGNITION ("Ears") ---
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition;
-        
-        if (SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
-
-            let final_transcript = '';
-            let isListening = false;
-
-            micButton.addEventListener('click', () => {
-                if (isListening) {
-                    isListening = false;
-                    recognition.stop();
-                    micButton.classList.remove('is-listening');
-                    if (final_transcript) {
-                        userInput.value = final_transcript.trim();
-                        handleSubmit(new Event('submit'));
-                    }
-                } else {
-                    isListening = true;
-                    final_transcript = '';
-                    recognition.start();
-                    micButton.classList.add('is-listening');
-                }
-            });
-
-            recognition.onresult = (event) => {
-                let interim_transcript = '';
-                final_transcript = ''; // Reset final transcript to rebuild it
-                for (let i = 0; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        final_transcript += event.results[i][0].transcript;
-                    } else {
-                        interim_transcript += event.results[i][0].transcript;
-                    }
-                }
-                userInput.value = final_transcript + interim_transcript;
-            };
-
-            recognition.onend = () => {
-                if (isListening) { // If it timed out, but we want to keep listening
-                    recognition.start();
-                }
-            };
-            
-            recognition.onerror = (event) => {
-                console.error("Speech recognition error", event.error);
-                isListening = false;
-                micButton.classList.remove('is-listening');
-            };
-
-        } else {
-            console.warn("Speech Recognition not supported in this browser.");
-            micButton.style.display = 'none';
-        }
-
-        // --- CORE LOGIC ---
         chatForm.addEventListener('submit', handleSubmit);
+
         async function handleSubmit(event) {
             event.preventDefault();
             const userText = userInput.value.trim();
@@ -119,24 +53,24 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: userText })
                 });
+
                 const data = await response.json();
-                
+
                 if (response.ok) {
-                    thinkingMessage.innerText = data.text_response;
-                    
-                    // This is the new logic to play audio from the backend
-                    const audio = new Audio(data.audio_response);
-                    audio.play();
-                    
+                    // --- THIS IS THE FIX ---
+                    // We now read directly from data.generated_text, not data[0]
+                    thinkingMessage.innerText = data.generated_text;
                 } else {
                     thinkingMessage.innerText = `Error: ${data.error || 'An unknown error occurred.'}`;
                 }
+
             } catch (error) {
+                // This will now only catch true network failures
                 thinkingMessage.innerText = 'Error: Could not connect to the server.';
                 console.error('Fetch error:', error);
             }
         }
-        
+
         function addMessage(text, className) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${className}`;
