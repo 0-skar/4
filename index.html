@@ -13,7 +13,7 @@
         #main-content { display: flex; flex: 1; overflow: hidden; }
 
         #avatar-container { flex: 3; display: flex; justify-content: center; align-items: center; padding: 1rem; background-color: #e9ecef; transition: all var(--transition-speed) ease; position: relative; }
-        #avatar { width: 300px; height: 300px; border-radius: 50%; object-fit: cover; border: 5px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: all var(--transition-speed) ease; }
+        #avatar { width: 300px; height: 300px; border-radius: 50%; object-fit: cover; border: 5px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: width var(--transition-speed) ease, height var(--transition-speed) ease; }
 
         #transcript-container { flex: 2; display: flex; flex-direction: column; border-left: 1px solid #dee2e6; background-color: #f8f9fa; position: relative; transition: all var(--transition-speed) ease; }
         #transcript-header { padding: 0.5rem 1rem; font-weight: bold; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
@@ -31,21 +31,30 @@
         #micButton { background-color: #28a745; width: 50px; height: 50px; font-size: 1.5rem; border-radius: 50%; margin-left: 0.5rem; border: none; cursor: pointer; color: white; }
         #micButton.is-listening { background-color: #dc3545; }
 
-        /* --- LOGIKA STANU ZMAKSYMALIZOWANEGO --- */
+        /* --- LOGIKA ZMAKSYMALIZOWANEGO WIDOKU & PRZECIĄGANIA --- */
         #app-container.chat-is-maximized #avatar-container {
             position: absolute;
             top: 10px;
-            right: 10px; /* <-- TO JEST POPRAWKA */
-            left: auto;   /* <-- Dodajemy to, aby usunąć starą pozycję 'left' */
+            right: 10px;
+            left: auto;
             width: 100px;
             height: 100px;
             padding: 0;
             z-index: 20;
             background: transparent;
+            cursor: grab; /* Kursor "chwytania" w stanie zminimalizowanym */
+            transition: none; /* Wyłączamy płynne przejście podczas przeciągania */
         }
         #app-container.chat-is-maximized #avatar { width: 100px; height: 100px; }
         #app-container.chat-is-maximized #transcript-container { flex: 1 0 100%; }
         #app-container.chat-is-maximized #main-content { z-index: 5; }
+        
+        #avatar-container.is-dragging {
+            cursor: grabbing; /* Kursor "chwytający" podczas przeciągania */
+            z-index: 999;
+            transform: scale(1.1); /* Lekkie powiększenie dla feedbacku */
+        }
+
     </style>
 </head>
 <body>
@@ -70,104 +79,96 @@
     </div>
 
     <script>
-        // --- KONFIGURACJA ---
+        // --- KONFIGURACJA & REFERENCJE DO DOM ---
         const BACKEND_URL = "https://eosforus-3.hf.space/chat";
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        // --- REFERENCJE DO DOM ---
         const appContainer = document.getElementById('app-container');
+        const avatarContainer = document.getElementById('avatar-container'); // Nowa referencja
+        const avatar = document.getElementById('avatar');
+        // ... (reszta referencji bez zmian)
         const userInput = document.getElementById('userInput');
         const transcriptMessages = document.getElementById('transcript-messages');
         const micButton = document.getElementById('micButton');
-        const avatar = document.getElementById('avatar');
         const viewToggleButton = document.getElementById('view-toggle-button');
+        
+        // --- NOWA LOGIKA PRZECIĄGANIA AWATARA ---
+        let isDragging = false;
+        let initialX, initialY, offsetX = 0, offsetY = 0;
 
-        // --- IKONY SVG DLA PRZYCISKU ---
+        function dragStart(e) {
+            if (!appContainer.classList.contains('chat-is-maximized')) return; // Działa tylko w trybie maxi
+            e.preventDefault();
+            
+            initialX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+            initialY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+
+            offsetX = avatarContainer.offsetLeft;
+            offsetY = avatarContainer.offsetTop;
+
+            isDragging = true;
+            avatarContainer.classList.add('is-dragging');
+            
+            document.addEventListener('mousemove', dragging);
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('touchmove', dragging);
+            document.addEventListener('touchend', dragEnd);
+        }
+
+        function dragging(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+
+            let currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+            let currentY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+
+            let dx = currentX - initialX;
+            let dy = currentY - initialY;
+            
+            let newX = offsetX + dx;
+            let newY = offsetY + dy;
+
+            // Ograniczenia, by nie wyjść poza kontener aplikacji
+            const parentRect = appContainer.getBoundingClientRect();
+            const avatarRect = avatarContainer.getBoundingClientRect();
+            newX = Math.max(0, Math.min(newX, parentRect.width - avatarRect.width));
+            newY = Math.max(0, Math.min(newY, parentRect.height - avatarRect.height));
+
+            avatarContainer.style.left = `${newX}px`;
+            avatarContainer.style.top = `${newY}px`;
+            avatarContainer.style.right = 'auto'; // Musimy to nadpisać
+        }
+
+        function dragEnd() {
+            isDragging = false;
+            avatarContainer.classList.remove('is-dragging');
+            
+            document.removeEventListener('mousemove', dragging);
+            document.removeEventListener('mouseup', dragEnd);
+            document.removeEventListener('touchmove', dragging);
+            document.removeEventListener('touchend', dragEnd);
+        }
+        
+        avatarContainer.addEventListener('mousedown', dragStart);
+        avatarContainer.addEventListener('touchstart', dragStart);
+
+
+        // --- IKONY SVG DLA PRZYCISKU (bez zmian) ---
         const maximizeIcon = `<svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>`;
         const minimizeIcon = `<svg viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>`;
 
-        // --- LOGIKA PRZEŁĄCZANIA WIDOKU ---
-        function toggleChatView() {
-            appContainer.classList.toggle('chat-is-maximized');
-            updateToggleIcon();
-        }
-
-        function updateToggleIcon() {
-            if (appContainer.classList.contains('chat-is-maximized')) {
-                viewToggleButton.innerHTML = minimizeIcon;
-            } else {
-                viewToggleButton.innerHTML = maximizeIcon;
-            }
-        }
-        viewToggleButton.addEventListener('click', toggleChatView);
-        updateToggleIcon();
-
-        // --- LOGIKA MOWY (TTS) Z AWATAREM ---
+        // --- RESZTA KODU (bez większych zmian) ---
+        function toggleChatView() { appContainer.classList.toggle('chat-is-maximized'); updateToggleIcon(); }
+        function updateToggleIcon() { if (appContainer.classList.contains('chat-is-maximized')) { viewToggleButton.innerHTML = minimizeIcon; } else { viewToggleButton.innerHTML = maximizeIcon; avatarContainer.style.top = ''; avatarContainer.style.left = ''; avatarContainer.style.right = ''; } }
+        viewToggleButton.addEventListener('click', toggleChatView); updateToggleIcon();
         const synth = window.speechSynthesis;
-        function speak(text) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
-            utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
-            synth.speak(utterance);
-        }
-
-        // --- GŁÓWNA LOGIKA APLIKACJI ---
-        async function handleSubmit() {
-            const userText = userInput.value.trim();
-            if (!userText) return;
-            addMessageToTranscript(`You: ${userText}`, 'user-text');
-            userInput.value = '';
-            try {
-                const response = await fetch(BACKEND_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: userText })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    const assistantText = data.generated_text;
-                    addMessageToTranscript(`Assistant: ${assistantText}`, 'assistant-text');
-                    speak(assistantText);
-                } else {
-                    addMessageToTranscript(`Error: ${data.error || 'An unknown error occurred.'}`, 'assistant-text');
-                }
-            } catch (error) {
-                addMessageToTranscript('Error: Could not connect to the server.', 'assistant-text');
-            }
-        }
-
-        function addMessageToTranscript(text, className) {
-            const messageDiv = document.createElement('p');
-            messageDiv.className = `transcript-line ${className}`;
-            messageDiv.innerText = text;
-            transcriptMessages.appendChild(messageDiv);
-            transcriptMessages.scrollTop = transcriptMessages.scrollHeight;
-        }
-
+        function speak(text) { const utterance = new SpeechSynthesisUtterance(text); utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; }; utterance.onend = () => { avatar.src = AVATAR_STILL_URL; }; synth.speak(utterance); }
+        async function handleSubmit() { const userText = userInput.value.trim(); if (!userText) return; addMessageToTranscript(`You: ${userText}`, 'user-text'); userInput.value = ''; try { const response = await fetch(BACKEND_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: userText }) }); const data = await response.json(); if (response.ok) { const assistantText = data.generated_text; addMessageToTranscript(`Assistant: ${assistantText}`, 'assistant-text'); speak(assistantText); } else { addMessageToTranscript(`Error: ${data.error || 'An unknown error occurred.'}`, 'assistant-text'); } } catch (error) { addMessageToTranscript('Error: Could not connect to the server.', 'assistant-text'); } }
+        function addMessageToTranscript(text, className) { const messageDiv = document.createElement('p'); messageDiv.className = `transcript-line ${className}`; messageDiv.innerText = text; transcriptMessages.appendChild(messageDiv); transcriptMessages.scrollTop = transcriptMessages.scrollHeight; }
         userInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); handleSubmit(); } });
-
-        // --- LOGIKA MIKROFONU (bez zmian) ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SpeechRecognition) {
-            const recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            let final_transcript = '';
-            let isListening = false;
-            micButton.addEventListener('click', () => {
-                if (isListening) { recognition.stop(); } else { final_transcript = ''; userInput.value = ''; recognition.start(); }
-            });
-            recognition.onstart = () => { isListening = true; micButton.classList.add('is-listening'); };
-            recognition.onend = () => { isListening = false; micButton.classList.remove('is-listening'); if (userInput.value.trim()){ handleSubmit(); } };
-            recognition.onresult = (event) => {
-                let interim_transcript = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) { final_transcript += event.results[i][0].transcript + ' '; } else { interim_transcript += event.results[i][0].transcript; }
-                }
-                userInput.value = final_transcript + interim_transcript;
-            };
-        } else { micButton.style.display = 'none'; }
+        if (SpeechRecognition) { const recognition = new SpeechRecognition(); recognition.continuous = true; recognition.interimResults = true; let final_transcript = ''; let isListening = false; micButton.addEventListener('click', () => { if (isListening) { recognition.stop(); } else { final_transcript = ''; userInput.value = ''; recognition.start(); } }); recognition.onstart = () => { isListening = true; micButton.classList.add('is-listening'); }; recognition.onend = () => { isListening = false; micButton.classList.remove('is-listening'); if (userInput.value.trim()){ handleSubmit(); } }; recognition.onresult = (event) => { let interim_transcript = ''; for (let i = event.resultIndex; i < event.results.length; ++i) { if (event.results[i].isFinal) { final_transcript += event.results[i][0].transcript + ' '; } else { interim_transcript += event.results[i][0].transcript; } } userInput.value = final_transcript + interim_transcript; }; } else { micButton.style.display = 'none'; }
     </script>
 </body>
 </html>
