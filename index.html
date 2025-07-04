@@ -16,13 +16,14 @@
         .controls { display: flex; padding: 1rem; border-top: 1px solid #e9ecef; background: #f8f9fa; align-items: center; }
         #userInput { flex-grow: 1; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 18px; font-size: 1rem; }
         button { padding: 0.75rem 1rem; background-color: #007bff; color: white; border: none; border-radius: 18px; cursor: pointer; font-size: 1rem; margin-left: 0.5rem; transition: background-color 0.2s; }
-        #micButton { background-color: #28a745; width: 50px; height: 50px; font-size: 1.5rem; border-radius: 50%; }
+        #micButton { background-color: #28a745; }
         #micButton.is-listening { background-color: #dc3545; }
         #voice-select-container { padding: 0 1rem 1rem 1rem; background: #f8f9fa; text-align: center; }
         select { padding: 0.5rem; border-radius: 8px; }
     </style>
 </head>
 <body>
+
     <div id="chat-container">
         <header>Voice Assistant</header>
         <div id="chatbox"></div>
@@ -36,83 +37,107 @@
             <button type="button" id="micButton">🎤</button>
         </form>
     </div>
+
     <script>
+        // --- CONFIGURATION ---
         const BACKEND_URL = "https://eosforus-3.hf.space/chat";
+
+        // --- DOM ELEMENT REFERENCES ---
         const chatForm = document.getElementById('chatForm');
         const userInput = document.getElementById('userInput');
         const chatbox = document.getElementById('chatbox');
         const micButton = document.getElementById('micButton');
         const voiceSelect = document.getElementById('voiceSelect');
+
+        // --- NEW: SPEECH RECOGNITION (The "Ears") ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
         if (SpeechRecognition) {
             recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
+            recognition.continuous = false;
             recognition.lang = 'en-US';
-            let final_transcript = '';
-            let isListening = false;
+
+            recognition.onstart = () => {
+                micButton.textContent = '...';
+                micButton.classList.add('is-listening');
+            };
+
+            recognition.onresult = (event) => {
+                const spokenText = event.results[0][0].transcript;
+                userInput.value = spokenText; // Put the spoken text in the input box
+                handleSubmit(new Event('submit')); // Programmatically submit the form
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech recognition error", event.error);
+                micButton.textContent = '🎤';
+                micButton.classList.remove('is-listening');
+            };
+
+            recognition.onend = () => {
+                micButton.textContent = '🎤';
+                micButton.classList.remove('is-listening');
+            };
+
             micButton.addEventListener('click', () => {
-                if (isListening) {
-                    isListening = false;
+                if (micButton.classList.contains('is-listening')) {
                     recognition.stop();
-                    micButton.classList.remove('is-listening');
-                    if (final_transcript) {
-                        userInput.value = final_transcript.trim();
-                        handleSubmit(new Event('submit'));
-                    }
                 } else {
-                    isListening = true;
-                    final_transcript = '';
                     recognition.start();
-                    micButton.classList.add('is-listening');
                 }
             });
-            recognition.onresult = (event) => {
-                let interim_transcript = '';
-                final_transcript = '';
-                for (let i = 0; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        final_transcript += event.results[i][0].transcript;
-                    } else {
-                        interim_transcript += event.results[i][0].transcript;
-                    }
-                }
-                userInput.value = final_transcript + interim_transcript;
-            };
-            recognition.onend = () => { if (isListening) { recognition.start(); } };
-            recognition.onerror = (event) => { console.error("Speech recognition error:", event.error); isListening = false; micButton.classList.remove('is-listening'); };
-        } else { console.warn("Speech Recognition not supported."); micButton.style.display = 'none'; }
-        
+        } else {
+            console.warn("Speech Recognition not supported in this browser.");
+            micButton.style.display = 'none'; // Hide mic button if not supported
+        }
+
+        // --- NEW: TEXT-TO-SPEECH (The "Voice") ---
         let voices = [];
+
         function populateVoiceList() {
             voices = speechSynthesis.getVoices();
             voiceSelect.innerHTML = '';
-            voices.filter(voice => voice.lang.startsWith('en')).forEach((voice) => {
+            voices.forEach((voice, i) => {
                 const option = document.createElement('option');
                 option.textContent = `${voice.name} (${voice.lang})`;
+                if (voice.default) {
+                    option.textContent += ' -- DEFAULT';
+                }
+                option.setAttribute('data-lang', voice.lang);
                 option.setAttribute('data-name', voice.name);
                 voiceSelect.appendChild(option);
             });
         }
+
         function speak(text) {
-            speechSynthesis.cancel();
+            if (speechSynthesis.speaking) {
+                console.error('SpeechSynthesis.speaking');
+                return;
+            }
             const utterance = new SpeechSynthesisUtterance(text);
             const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name');
             const selectedVoice = voices.find(voice => voice.name === selectedVoiceName);
-            if (selectedVoice) { utterance.voice = selectedVoice; }
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+            }
             speechSynthesis.speak(utterance);
         }
+        
+        // This is needed because voices load asynchronously
         speechSynthesis.onvoiceschanged = populateVoiceList;
 
+        // --- CORE LOGIC (Mostly Unchanged) ---
         chatForm.addEventListener('submit', handleSubmit);
+
         async function handleSubmit(event) {
             event.preventDefault();
             const userText = userInput.value.trim();
             if (!userText) return;
+
             addMessage(userText, 'user-message');
             userInput.value = '';
             const thinkingMessage = addMessage('...', 'assistant-message');
+
             try {
                 const response = await fetch(BACKEND_URL, {
                     method: 'POST',
@@ -120,17 +145,20 @@
                     body: JSON.stringify({ prompt: userText })
                 });
                 const data = await response.json();
+
                 if (response.ok) {
                     const assistantText = data.generated_text;
                     thinkingMessage.innerText = assistantText;
-                    speak(assistantText);
+                    speak(assistantText); // <-- NEW: Speak the response!
                 } else {
                     thinkingMessage.innerText = `Error: ${data.error || 'An unknown error occurred.'}`;
                 }
             } catch (error) {
                 thinkingMessage.innerText = 'Error: Could not connect to the server.';
+                console.error('Fetch error:', error);
             }
         }
+
         function addMessage(text, className) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${className}`;
@@ -139,6 +167,7 @@
             chatbox.scrollTop = chatbox.scrollHeight;
             return messageDiv;
         }
+
     </script>
 </body>
 </html>
