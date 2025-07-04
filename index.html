@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My AI Assistant</title>
+    <title>My Voice Assistant</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f9; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
@@ -13,64 +13,124 @@
         .message { padding: 0.75rem 1rem; border-radius: 18px; max-width: 75%; line-height: 1.5; word-wrap: break-word; }
         .user-message { background-color: #e1f5fe; color: #01579b; align-self: flex-end; border-bottom-right-radius: 4px; }
         .assistant-message { background-color: #f1f3f5; color: #343a40; align-self: flex-start; border-bottom-left-radius: 4px; }
-        #chatForm { display: flex; padding: 1rem; border-top: 1px solid #e9ecef; background: #f8f9fa; }
-        #userInput { flex-grow: 1; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 18px; font-size: 1rem; margin-right: 0.5rem; }
-        #userInput:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25); }
-        button { padding: 0.75rem 1.25rem; background-color: #007bff; color: white; border: none; border-radius: 18px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: background-color 0.2s; }
-        button:hover { background-color: #0056b3; }
+        .controls { display: flex; padding: 1rem; border-top: 1px solid #e9ecef; background: #f8f9fa; align-items: center; }
+        #userInput { flex-grow: 1; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 18px; font-size: 1rem; }
+        button { padding: 0.75rem 1rem; background-color: #007bff; color: white; border: none; border-radius: 18px; cursor: pointer; font-size: 1rem; margin-left: 0.5rem; transition: background-color 0.2s; }
+        #micButton { background-color: #28a745; width: 50px; height: 50px; font-size: 1.5rem; border-radius: 50%; }
+        #micButton.is-listening { background-color: #dc3545; }
+        #voice-select-container { padding: 0 1rem 1rem 1rem; background: #f8f9fa; text-align: center; }
+        select { padding: 0.5rem; border-radius: 8px; }
     </style>
 </head>
 <body>
     <div id="chat-container">
-        <header>AI Assistant</header>
+        <header>Voice Assistant</header>
         <div id="chatbox"></div>
-        <form id="chatForm">
-            <input type="text" id="userInput" placeholder="Ask anything..." autocomplete="off" required>
+        <div id="voice-select-container">
+            <label for="voiceSelect">Choose a Voice: </label>
+            <select id="voiceSelect"></select>
+        </div>
+        <form class="controls" id="chatForm">
+            <input type="text" id="userInput" placeholder="Ask anything or use the microphone..." autocomplete="off" required>
             <button type="submit">Send</button>
+            <button type="button" id="micButton">🎤</button>
         </form>
     </div>
-
     <script>
         const BACKEND_URL = "https://eosforus-3.hf.space/chat";
         const chatForm = document.getElementById('chatForm');
         const userInput = document.getElementById('userInput');
         const chatbox = document.getElementById('chatbox');
+        const micButton = document.getElementById('micButton');
+        const voiceSelect = document.getElementById('voiceSelect');
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+            let final_transcript = '';
+            let isListening = false;
+            micButton.addEventListener('click', () => {
+                if (isListening) {
+                    isListening = false;
+                    recognition.stop();
+                    micButton.classList.remove('is-listening');
+                    if (final_transcript) {
+                        userInput.value = final_transcript.trim();
+                        handleSubmit(new Event('submit'));
+                    }
+                } else {
+                    isListening = true;
+                    final_transcript = '';
+                    recognition.start();
+                    micButton.classList.add('is-listening');
+                }
+            });
+            recognition.onresult = (event) => {
+                let interim_transcript = '';
+                final_transcript = '';
+                for (let i = 0; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        final_transcript += event.results[i][0].transcript;
+                    } else {
+                        interim_transcript += event.results[i][0].transcript;
+                    }
+                }
+                userInput.value = final_transcript + interim_transcript;
+            };
+            recognition.onend = () => { if (isListening) { recognition.start(); } };
+            recognition.onerror = (event) => { console.error("Speech recognition error:", event.error); isListening = false; micButton.classList.remove('is-listening'); };
+        } else { console.warn("Speech Recognition not supported."); micButton.style.display = 'none'; }
+        
+        let voices = [];
+        function populateVoiceList() {
+            voices = speechSynthesis.getVoices();
+            voiceSelect.innerHTML = '';
+            voices.filter(voice => voice.lang.startsWith('en')).forEach((voice) => {
+                const option = document.createElement('option');
+                option.textContent = `${voice.name} (${voice.lang})`;
+                option.setAttribute('data-name', voice.name);
+                voiceSelect.appendChild(option);
+            });
+        }
+        function speak(text) {
+            speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name');
+            const selectedVoice = voices.find(voice => voice.name === selectedVoiceName);
+            if (selectedVoice) { utterance.voice = selectedVoice; }
+            speechSynthesis.speak(utterance);
+        }
+        speechSynthesis.onvoiceschanged = populateVoiceList;
 
         chatForm.addEventListener('submit', handleSubmit);
-
         async function handleSubmit(event) {
             event.preventDefault();
             const userText = userInput.value.trim();
             if (!userText) return;
-
             addMessage(userText, 'user-message');
             userInput.value = '';
             const thinkingMessage = addMessage('...', 'assistant-message');
-
             try {
                 const response = await fetch(BACKEND_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: userText })
                 });
-
                 const data = await response.json();
-
                 if (response.ok) {
-                    // --- THIS IS THE FIX ---
-                    // We now read directly from data.generated_text, not data[0]
-                    thinkingMessage.innerText = data.generated_text;
+                    const assistantText = data.generated_text;
+                    thinkingMessage.innerText = assistantText;
+                    speak(assistantText);
                 } else {
                     thinkingMessage.innerText = `Error: ${data.error || 'An unknown error occurred.'}`;
                 }
-
             } catch (error) {
-                // This will now only catch true network failures
                 thinkingMessage.innerText = 'Error: Could not connect to the server.';
-                console.error('Fetch error:', error);
             }
         }
-
         function addMessage(text, className) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${className}`;
