@@ -14,13 +14,12 @@
         #avatar { width: 300px; height: 300px; border-radius: 50%; object-fit: cover; border: 5px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: width var(--transition-speed) ease, height var(--transition-speed) ease; }
         #transcript-container { flex: 2; display: flex; flex-direction: column; border-left: 1px solid #dee2e6; background-color: #f8f9fa; position: relative; transition: all var(--transition-speed) ease; }
         
-        /* --- NOWY STYL NAGŁÓWKA I KONTROLEK --- */
         #transcript-header { padding: 0.5rem 1rem; font-weight: bold; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
         #header-controls { display: flex; align-items: center; gap: 8px; }
         .header-button { background: rgba(0,0,0,0.1); border: none; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; width: 30px; height: 30px; padding: 5px; }
         .header-button svg { width: 100%; height: 100%; fill: #333; }
         .header-button:hover { background: rgba(0,0,0,0.2); }
-        .header-button.is-muted { opacity: 0.4; } /* Styl dla wyciszonego przycisku */
+        .header-button.is-muted { opacity: 0.4; }
 
         #voice-select-container { padding: 0.5rem 1rem; border-bottom: 1px solid #dee2e6; text-align: center; }
         select { padding: 0.5rem; border-radius: 8px; width: 100%; }
@@ -83,7 +82,7 @@
         const micButton = document.getElementById('micButton');
         const viewToggleButton = document.getElementById('view-toggle-button');
         const voiceSelect = document.getElementById('voiceSelect');
-        const ttsToggleButton = document.getElementById('tts-toggle-button'); // Nowy przycisk
+        const ttsToggleButton = document.getElementById('tts-toggle-button');
 
         // --- IKONY SVG ---
         const speakerOnIcon = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
@@ -91,7 +90,9 @@
         const maximizeIcon = `<svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>`;
         const minimizeIcon = `<svg viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>`;
 
-        // --- NOWA LOGIKA PRZEŁĄCZANIA DŹWIĘKU ---
+        // --- KONTROLA GŁOSU I TTS ---
+        const synth = window.speechSynthesis;
+        let voices = [];
         let isTtsEnabled = true;
 
         function updateTtsToggleIcon() {
@@ -105,23 +106,40 @@
         }
 
         ttsToggleButton.addEventListener('click', () => {
-            isTtsEnabled = !isTtsEnabled; // Przełącz stan
+            isTtsEnabled = !isTtsEnabled;
             updateTtsToggleIcon();
             if (!isTtsEnabled) {
-                synth.cancel(); // Jeśli wyciszamy, natychmiast przerwij mowę
+                synth.cancel();
             }
         });
 
-        // --- ZAKTUALIZOWANA LOGIKA TTS ---
-        const synth = window.speechSynthesis;
-        let voices = [];
-        function populateVoiceList() { /* ... (bez zmian) ... */ }
+        function populateVoiceList() {
+            voices = synth.getVoices();
+            voiceSelect.innerHTML = '';
+            const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
+            voices
+                .filter(voice => voice.lang.startsWith('en') || voice.lang.startsWith('pl'))
+                .filter(voice => !femaleNamesToFilter.some(name => voice.name.toLowerCase().includes(name.toLowerCase())))
+                .forEach(voice => {
+                    const option = document.createElement('option');
+                    option.textContent = `${voice.name} (${voice.lang})`;
+                    option.setAttribute('data-name', voice.name);
+                    voiceSelect.appendChild(option);
+                });
+        }
+        
+        populateVoiceList();
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = populateVoiceList;
+        }
+
         function speak(text) {
-            if (!isTtsEnabled) return; // SPRAWDŹ, CZY DŹWIĘK JEST WŁĄCZONY
+            if (!isTtsEnabled) return;
             synth.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
             utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
+            
             if (voiceSelect.selectedOptions.length > 0) {
                 const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name');
                 const selectedVoice = voices.find(voice => voice.name === selectedVoiceName);
@@ -129,10 +147,71 @@
             }
             synth.speak(utterance);
         }
+
+        // --- GŁÓWNA LOGIKA APLIKACJI ---
+        async function handleSubmit() {
+            const userText = userInput.value.trim();
+            if (!userText) return;
+            addMessageToTranscript(`You: ${userText}`, 'user-text');
+            userInput.value = '';
+            try {
+                const response = await fetch(BACKEND_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: userText })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    const assistantText = data.generated_text;
+                    addMessageToTranscript(`Assistant: ${assistantText}`, 'assistant-text');
+                    speak(assistantText);
+                } else {
+                    addMessageToTranscript(`Error: ${data.error || 'Service unavailable.'}`, 'assistant-text');
+                }
+            } catch (error) {
+                addMessageToTranscript('Error: Could not connect to the backend.', 'assistant-text');
+            }
+        }
         
-        // --- INICJALIZACJA I RESZTA KODU (bez zmian) ---
-        updateTtsToggleIcon(); // Ustaw ikonę na starcie
-        // (Tutaj wklej CAŁY pozostały kod JavaScript z poprzedniej odpowiedzi, zaczynając od populateVoiceList)
+        function addMessageToTranscript(text, className) {
+            const messageDiv = document.createElement('p');
+            messageDiv.className = `transcript-line ${className}`;
+            messageDiv.innerText = text;
+            transcriptMessages.appendChild(messageDiv);
+            transcriptMessages.scrollTop = transcriptMessages.scrollHeight;
+        }
+        
+        userInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); handleSubmit(); } });
+        
+        // --- LOGIKA MIKROFONU ---
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            let final_transcript = '';
+            let isListening = false;
+            micButton.addEventListener('click', () => { if (isListening) { recognition.stop(); } else { final_transcript = ''; userInput.value = ''; recognition.start(); } });
+            recognition.onstart = () => { isListening = true; micButton.classList.add('is-listening'); };
+            recognition.onend = () => { isListening = false; micButton.classList.remove('is-listening'); if (userInput.value.trim()){ handleSubmit(); } };
+            recognition.onresult = (event) => { let interim_transcript = ''; for (let i = event.resultIndex; i < event.results.length; ++i) { if (event.results[i].isFinal) { final_transcript += event.results[i][0].transcript + ' '; } else { interim_transcript += event.results[i][0].transcript; } } userInput.value = final_transcript + interim_transcript; };
+            recognition.onerror = (event) => { console.error("Speech recognition error:", event.error); isListening = false; micButton.classList.remove('is-listening'); };
+        } else { micButton.style.display = 'none'; }
+        
+        // --- LOGIKA PRZECIĄGANIA I ZMIANY WIDOKU ---
+        let isDragging = false, initialX, initialY, offsetX = 0, offsetY = 0;
+        function dragStart(e) { if (!appContainer.classList.contains('chat-is-maximized')) return; e.preventDefault(); initialX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX; initialY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY; offsetX = avatarContainer.offsetLeft; offsetY = avatarContainer.offsetTop; avatarContainer.style.transform = 'none'; avatarContainer.style.left = `${offsetX}px`; avatarContainer.style.top = `${offsetY}px`; isDragging = true; avatarContainer.classList.add('is-dragging'); document.addEventListener('mousemove', dragging); document.addEventListener('mouseup', dragEnd); document.addEventListener('touchmove', dragging); document.addEventListener('touchend', dragEnd); }
+        function dragging(e) { if (!isDragging) return; e.preventDefault(); let currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX; let currentY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY; let dx = currentX - initialX; let dy = currentY - initialY; let newX = offsetX + dx; let newY = offsetY + dy; const parentRect = appContainer.getBoundingClientRect(); const avatarRect = avatarContainer.getBoundingClientRect(); newX = Math.max(0, Math.min(newX, parentRect.width - avatarRect.width)); newY = Math.max(0, Math.min(newY, parentRect.height - avatarRect.height)); avatarContainer.style.left = `${newX}px`; avatarContainer.style.top = `${newY}px`; avatarContainer.style.right = 'auto'; }
+        function dragEnd() { isDragging = false; avatarContainer.classList.remove('is-dragging'); document.removeEventListener('mousemove', dragging); document.removeEventListener('mouseup', dragEnd); document.removeEventListener('touchmove', dragging); document.removeEventListener('touchend', dragEnd); }
+        avatarContainer.addEventListener('mousedown', dragStart); avatarContainer.addEventListener('touchstart', dragStart);
+
+        function updateToggleIcon() { if (appContainer.classList.contains('chat-is-maximized')) { viewToggleButton.innerHTML = minimizeIcon; } else { viewToggleButton.innerHTML = maximizeIcon; avatarContainer.style.top = ''; avatarContainer.style.left = ''; avatarContainer.style.right = ''; avatarContainer.style.transform = ''; } }
+        function toggleChatView() { appContainer.classList.toggle('chat-is-maximized'); updateToggleIcon(); }
+        viewToggleButton.addEventListener('click', toggleChatView);
+        
+        // --- INICJALIZACJA ---
+        updateToggleIcon();
+        updateTtsToggleIcon();
 
     </script>
 </body>
