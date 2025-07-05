@@ -7,10 +7,9 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <style>
         :root {
-            --app-bg: #e9ecef; /* Przywracamy oryginalne tło */
-            --chat-bg: white;
+            --app-bg: #e9ecef;
             --user-bubble-bg: #007bff;
-            --assistant-bubble-bg: #d3d3d3; /* Lekko ciemniejszy szary dla asystenta */
+            --assistant-bubble-bg: #d3d3d3;
             --header-bg: #ffffff;
             --border-color: #ced0d4;
         }
@@ -24,29 +23,34 @@
         #app-container {
             width: 100%;
             height: 100%;
+            max-width: 800px; /* Opcjonalnie: ograniczenie szerokości na desktopie */
+            margin: 0 auto;
             display: flex;
-            flex-direction: column;
-            background-color: var(--app-bg);
+            flex-direction: column; /* Kluczowa zmiana: układ pionowy */
+            background-color: white;
         }
         
-        /* --- NOWY UKŁAD Z AWATAREM I CZATEM --- */
-        #main-content {
-            flex-grow: 1;
-            display: flex;
-            position: relative; /* Kluczowe dla pozycjonowania awatara */
-            overflow: hidden;
+        /* --- NOWY, STATYCZNY KONTENER AWATARA --- */
+        #avatar-container {
+            width: 100%;
+            padding: 16px 0;
+            background-color: var(--header-bg);
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0; /* Zapobiega kurczeniu się tej sekcji */
+        }
+        #avatar {
+            width: 90%; /* Szerokość względna */
+            max-width: 400px; /* Maksymalna szerokość na większych ekranach */
+            height: auto; /* Wysokość dopasuje się automatycznie */
+            border-radius: 8px; /* Prostokąt z zaokrąglonymi rogami */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
-        /* --- KONTENER CZATU (TERAZ PO LEWEJ) --- */
-        #chat-window {
-            width: 70%; /* Zajmuje większość szerokości */
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
+        /* --- PRZEWIJANA LISTA WIADOMOŚCI --- */
         #message-list {
-            flex-grow: 1;
-            overflow-y: auto;
+            flex-grow: 1; /* NAJWAŻNIEJSZE: ten element się rozciąga */
+            overflow-y: auto; /* TYLKO ten element się przewija */
             padding: 16px;
             display: flex;
             flex-direction: column;
@@ -58,59 +62,24 @@
             max-width: 80%;
             line-height: 1.4;
             word-wrap: break-word;
-            align-self: flex-start; /* WAŻNE: Wszystkie dymki do lewej */
+            align-self: flex-start;
         }
-        .user-message {
-            background-color: var(--user-bubble-bg);
-            color: white;
-        }
-        .assistant-message {
-            background-color: var(--assistant-bubble-bg);
-            color: #050505;
-        }
-
-        /* --- KONTENER AWATARA (TERAZ PO PRAWEJ) --- */
-        #avatar-container {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 30%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 1rem;
-        }
-        #avatar {
-            width: 150px; /* Zwiększamy rozmiar awatara */
-            height: 150px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 5px solid white;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
+        .user-message { background-color: var(--user-bubble-bg); color: white; }
+        .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
         
-        /* --- KONTROLKI NA DOLE --- */
+        /* --- STATYCZNE KONTROLKI NA DOLE --- */
         #controls-container {
             padding: 8px;
             border-top: 1px solid var(--border-color);
             background: var(--header-bg);
+            flex-shrink: 0; /* Zapobiega kurczeniu się tej sekcji */
         }
-        #voice-controls {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 0 8px 8px 8px;
-        }
+        #voice-controls { display: flex; align-items: center; gap: 16px; padding: 0 8px 8px 8px; }
         #voiceSelect { flex-grow: 1; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border-color); }
         #tts-toggle-button { background: transparent; border: none; cursor: pointer; padding: 5px; }
         #tts-toggle-button svg { width: 24px; height: 24px; fill: #65676b; }
         #tts-toggle-button.is-muted svg { fill: #bec3c9; }
-
-        #chat-form {
-            display: flex;
-            align-items: center;
-        }
+        #chat-form { display: flex; align-items: center; }
         #userInput { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 18px; font-size: 1rem; background: #f0f2f5; }
         #micButton { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
         #micButton.is-listening { background-color: #fa383e; }
@@ -118,15 +87,12 @@
 </head>
 <body>
     <div id="app-container">
-        <div id="main-content">
-            <div id="chat-window">
-                <div id="message-list">
-                    <!-- Wiadomości będą dodawane tutaj przez JavaScript -->
-                </div>
-            </div>
-            <div id="avatar-container">
-                <img id="avatar" src="https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png" alt="Assistant Avatar">
-            </div>
+        <div id="avatar-container">
+            <img id="avatar" src="https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png" alt="Assistant Avatar">
+        </div>
+
+        <div id="message-list">
+            <!-- Wiadomości będą dodawane tutaj -->
         </div>
 
         <div id="controls-container">
@@ -142,76 +108,56 @@
     </div>
 
     <script>
-        // --- KONFIGURACJA ---
+        // --- CAŁY KOD JAVASCRIPT POZOSTAJE BEZ ZMIAN ---
+        // Ponieważ zmieniliśmy tylko wygląd, cała logika działania,
+        // którą zbudowaliśmy do tej pory, jest nadal w 100% poprawna.
+        // Po prostu skopiuj i wklej cały kod z sekcji <script>
+        // z naszej poprzedniej, w pełni działającej wersji.
+        
         const BACKEND_URL = "https://eosforus-3.hf.space/chat";
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        // --- REFERENCJE DO DOM ---
         const userInput = document.getElementById('userInput');
         const messageList = document.getElementById('message-list');
         const micButton = document.getElementById('micButton');
         const avatar = document.getElementById('avatar');
         const voiceSelect = document.getElementById('voiceSelect');
         const ttsToggleButton = document.getElementById('tts-toggle-button');
-        const chatWindow = document.getElementById('chat-window'); // Potrzebne do przewijania
 
-        // --- IKONY SVG ---
         const speakerOnIcon = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
         const speakerOffIcon = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9.02 12 14v-2.18l-2.01-2.01L12 7.82V4z"/></svg>`;
         
-        // --- CAŁY KOD JAVASCRIPT POZOSTAJE BEZ ZMIAN ---
-        // (Wklej tutaj cały kod z sekcji <script> z naszej poprzedniej,
-        // w pełni działającej wersji z filtrowaniem męskich głosów.
-        // Logika działania się nie zmienia, tylko wygląd.)
         const synth = window.speechSynthesis;
         let voices = [];
         let isTtsEnabled = true;
 
-        function updateTtsToggleIcon() {
-            ttsToggleButton.innerHTML = isTtsEnabled ? speakerOnIcon : speakerOffIcon;
-            ttsToggleButton.classList.toggle('is-muted', !isTtsEnabled);
-        }
-        ttsToggleButton.addEventListener('click', () => {
-            isTtsEnabled = !isTtsEnabled;
-            updateTtsToggleIcon();
-            if (!isTtsEnabled) { synth.cancel(); }
-        });
+        function updateTtsToggleIcon() { ttsToggleButton.innerHTML = isTtsEnabled ? speakerOnIcon : speakerOffIcon; ttsToggleButton.classList.toggle('is-muted', !isTtsEnabled); }
+        ttsToggleButton.addEventListener('click', () => { isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); if (!isTtsEnabled) { synth.cancel(); } });
+        
         function populateVoiceList() {
             voices = synth.getVoices();
             voiceSelect.innerHTML = '';
             const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
-            voices
-                .filter(voice => voice.lang.startsWith('en') || voice.lang.startsWith('pl'))
-                .filter(voice => !femaleNamesToFilter.some(name => voice.name.toLowerCase().includes(name.toLowerCase())))
-                .forEach(voice => {
-                    const option = document.createElement('option');
-                    option.textContent = `${voice.name} (${voice.lang})`;
-                    option.setAttribute('data-name', voice.name);
-                    voiceSelect.appendChild(option);
-                });
+            voices.filter(voice => voice.lang.startsWith('en') || voice.lang.startsWith('pl')).filter(voice => !femaleNamesToFilter.some(name => voice.name.toLowerCase().includes(name.toLowerCase()))).forEach(voice => { const option = document.createElement('option'); option.textContent = `${voice.name} (${voice.lang})`; option.setAttribute('data-name', voice.name); voiceSelect.appendChild(option); });
         }
         populateVoiceList();
-        if (synth.onvoiceschanged !== undefined) {
-            synth.onvoiceschanged = populateVoiceList;
-        }
+        if (synth.onvoiceschanged !== undefined) { synth.onvoiceschanged = populateVoiceList; }
+
         function speak(text) {
             if (!isTtsEnabled) return;
             synth.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
             utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
-            if (voiceSelect.selectedOptions.length > 0) {
-                const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name');
-                const selectedVoice = voices.find(voice => voice.name === selectedVoiceName);
-                if (selectedVoice) { utterance.voice = selectedVoice; }
-            }
+            if (voiceSelect.selectedOptions.length > 0) { const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name'); const selectedVoice = voices.find(voice => voice.name === selectedVoiceName); if (selectedVoice) { utterance.voice = selectedVoice; } }
             synth.speak(utterance);
         }
+
         async function handleSubmit() {
             const userText = userInput.value.trim();
             if (!userText) return;
-            addMessageToChat(`You: ${userText}`, 'user-message');
+            addMessageToChat(userText, 'user-message');
             userInput.value = '';
             try {
                 const response = await fetch(BACKEND_URL, {
@@ -220,24 +166,18 @@
                     body: JSON.stringify({ prompt: userText })
                 });
                 const data = await response.json();
-                if (response.ok) {
-                    const assistantText = data.generated_text;
-                    addMessageToChat(`Assistant: ${assistantText}`, 'assistant-message');
-                    speak(assistantText);
-                } else {
-                    addMessageToChat(`Error: ${data.error || 'Service unavailable.'}`, 'assistant-message');
-                }
-            } catch (error) {
-                addMessageToChat('Error: Could not connect to the backend.', 'assistant-message');
-            }
+                if (response.ok) { const assistantText = data.generated_text; addMessageToChat(assistantText, 'assistant-message'); speak(assistantText); } else { addMessageToChat(`Error: ${data.error || 'Service unavailable.'}`, 'assistant-message'); }
+            } catch (error) { addMessageToChat('Error: Could not connect to the backend.', 'assistant-message'); }
         }
+        
         function addMessageToChat(text, className) {
             const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${className}`;
-            messageBubble.innerText = text.replace('You: ', '').replace('Assistant: ', '');
+            messageBubble.innerText = text;
             messageList.appendChild(messageBubble);
-            messageList.scrollTop = messageList.scrollHeight; // Zmieniono na messageList
+            messageList.scrollTop = messageList.scrollHeight;
         }
+
         document.getElementById('chat-form').addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(); });
         userInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); handleSubmit(); } });
         
@@ -256,7 +196,6 @@
         } else { micButton.style.display = 'none'; }
         
         updateTtsToggleIcon();
-
     </script>
 </body>
 </html>
