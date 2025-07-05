@@ -24,58 +24,81 @@
             width: 100%;
             height: 100%;
             display: flex;
-            flex-direction: column;
-            background-color: white;
+            flex-direction: column; /* Kluczowe dla przypiętego layoutu */
         }
         
-        /* --- NOWY, PRZYPIĘTY NAGŁÓWEK Z AWATAREM --- */
-        #app-header {
-            padding: 8px;
-            background-color: var(--controls-bg);
-            border-bottom: 1px solid var(--border-color);
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        #avatar {
-            width: 60px;
-            height: 60px;
-            border-radius: 8px;
-            object-fit: cover;
-        }
-        #header-controls {
+        /* --- GŁÓWNA ZAWARTOŚĆ (zajmuje całą dostępną przestrzeń) --- */
+        #main-content {
             flex-grow: 1;
             display: flex;
-            flex-direction: column;
-            gap: 8px;
+            overflow: hidden; /* Zapobiega podwójnym paskom przewijania */
         }
-        #voiceSelect { width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border-color); }
-        #tts-toggle-button { background: transparent; border: none; cursor: pointer; padding: 5px; align-self: flex-end; }
-        #tts-toggle-button svg { width: 24px; height: 24px; fill: #65676b; }
-        #tts-toggle-button.is-muted svg { fill: #bec3c9; }
 
-        /* --- PRZEWIJANA LISTA WIADOMOŚCI --- */
+        /* --- OKNO CZATU (zajmuje lewą stronę) --- */
+        #chat-window {
+            flex-grow: 1; /* Pozwala mu się rozciągać */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Kluczowe: rodzic nie przewija się */
+        }
         #message-list {
-            flex-grow: 1;
-            overflow-y: auto;
+            flex-grow: 1; /* NAJWAŻNIEJSZE: ten element się rozciąga */
+            overflow-y: auto; /* TYLKO ten element się przewija */
             padding: 16px;
+            background-color: var(--app-bg);
             display: flex;
             flex-direction: column;
             gap: 12px;
-            background-color: var(--app-bg);
         }
-        .message-bubble { padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4; word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .message-bubble {
+            padding: 10px 14px;
+            border-radius: 18px;
+            max-width: 85%;
+            line-height: 1.4;
+            word-wrap: break-word;
+            align-self: flex-start;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
         .user-message { background-color: var(--user-bubble-bg); color: white; }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
+
+        /* --- KONTENER AWATARA (zajmuje prawą stronę) --- */
+        #avatar-container {
+            display: flex; /* Ukrywamy na małych ekranach */
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            background: white;
+            border-left: 1px solid var(--border-color);
+            flex-basis: 35%; /* Stała szerokość na większych ekranach */
+            flex-shrink: 0;
+        }
+        #avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid #f0f2f5;
+        }
+        /* Media query: ukryj awatar na telefonach, aby dać 100% miejsca na czat */
+        @media (max-width: 768px) {
+            #avatar-container {
+                display: none;
+            }
+        }
         
         /* --- PRZYPIĘTE KONTROLKI NA DOLE --- */
-        #chat-form-container {
+        #controls-container {
             padding: 8px;
             border-top: 1px solid var(--border-color);
             background: var(--controls-bg);
-            flex-shrink: 0;
+            flex-shrink: 0; /* Zapobiega kurczeniu się */
         }
+        #voice-controls { display: flex; align-items: center; gap: 16px; padding: 0 8px 8px 8px; }
+        #voiceSelect { flex-grow: 1; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border-color); }
+        #tts-toggle-button { background: transparent; border: none; cursor: pointer; padding: 5px; }
+        #tts-toggle-button svg { width: 24px; height: 24px; fill: #65676b; }
+        #tts-toggle-button.is-muted svg { fill: #bec3c9; }
         #chat-form { display: flex; align-items: center; }
         #userInput { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 18px; font-size: 1rem; background: #f0f2f5; }
         #micButton { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
@@ -84,18 +107,20 @@
 </head>
 <body>
     <div id="app-container">
-        <div id="app-header">
-            <img id="avatar" src="https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png" alt="Assistant Avatar">
-            <div id="header-controls">
-                <select id="voiceSelect"></select>
-                <button id="tts-toggle-button"></button>
+        <div id="main-content">
+            <div id="chat-window">
+                <div id="message-list"></div>
+            </div>
+            <div id="avatar-container">
+                <img id="avatar" src="https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png" alt="Assistant Avatar">
             </div>
         </div>
 
-        <div id="message-list">
-        </div>
-
-        <div id="chat-form-container">
+        <div id="controls-container">
+            <div id="voice-controls">
+                <select id="voiceSelect"></select>
+                <button id="tts-toggle-button"></button>
+            </div>
             <form id="chat-form">
                 <input type="text" id="userInput" placeholder="Napisz lub mów..." autocomplete="off">
                 <button type="button" id="micButton">🎤</button>
@@ -122,15 +147,16 @@
         const speakerOnIcon = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
         const speakerOffIcon = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9.02 12 14v-2.18l-2.01-2.01L12 7.82V4z"/></svg>`;
         
-        // --- NOWA LOGIKA "ODBLOKOWANIA" DŹWIĘKU ---
-        let isTtsUnlocked = false;
-        function unlockTts() {
-            if (isTtsUnlocked) return;
+        // --- LOGIKA "ODBLOKOWANIA" DŹWIĘKU ---
+        let isAudioUnlocked = false;
+        function unlockAudioContext() {
+            if (isAudioUnlocked) return;
             const synth = window.speechSynthesis;
             const utterance = new SpeechSynthesisUtterance("");
+            utterance.volume = 0; // Odtwórz cichy dźwięk
             synth.speak(utterance);
-            isTtsUnlocked = true;
-            console.log("Audio context unlocked.");
+            isAudioUnlocked = true;
+            console.log("Audio context unlocked by user interaction.");
         }
         
         // --- KONTROLA GŁOSU I TTS ---
@@ -139,14 +165,30 @@
         let isTtsEnabled = true;
 
         function updateTtsToggleIcon() { ttsToggleButton.innerHTML = isTtsEnabled ? speakerOnIcon : speakerOffIcon; ttsToggleButton.classList.toggle('is-muted', !isTtsEnabled); }
-        ttsToggleButton.addEventListener('click', () => { unlockTts(); isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); if (!isTtsEnabled) { synth.cancel(); } });
+        ttsToggleButton.addEventListener('click', () => { unlockAudioContext(); isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); if (!isTtsEnabled) { synth.cancel(); } });
         
-        function populateVoiceList() { /* (bez zmian) */ }
+        function populateVoiceList() {
+            voices = synth.getVoices();
+            voiceSelect.innerHTML = '';
+            const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
+            voices
+                .filter(voice => voice.lang.startsWith('en') || voice.lang.startsWith('pl'))
+                .filter(voice => !femaleNamesToFilter.some(name => voice.name.toLowerCase().includes(name.toLowerCase())))
+                .forEach(voice => {
+                    const option = document.createElement('option');
+                    option.textContent = `${voice.name} (${voice.lang})`;
+                    option.setAttribute('data-name', voice.name);
+                    voiceSelect.appendChild(option);
+                });
+        }
         populateVoiceList();
-        if (synth.onvoiceschanged !== undefined) { synth.onvoiceschanged = populateVoiceList; }
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = populateVoiceList;
+        }
 
         function speak(text) {
             if (!isTtsEnabled) return;
+            unlockAudioContext(); // Na wszelki wypadek, gdyby to była pierwsza interakcja
             synth.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
@@ -157,10 +199,10 @@
 
         // --- GŁÓWNA LOGIKA APLIKACJI ---
         async function handleSubmit() {
-            unlockTts(); // Odblokuj audio przy pierwszej interakcji
+            unlockAudioContext();
             const userText = userInput.value.trim();
             if (!userText) return;
-            addMessageToChat(userText, 'user-message');
+            addMessageToChat(userText, true); // true = isUser
             userInput.value = '';
             try {
                 const response = await fetch(BACKEND_URL, {
@@ -169,13 +211,13 @@
                     body: JSON.stringify({ prompt: userText })
                 });
                 const data = await response.json();
-                if (response.ok) { const assistantText = data.generated_text; addMessageToChat(assistantText, 'assistant-message'); speak(assistantText); } else { addMessageToChat(`Error: ${data.error || 'Service unavailable.'}`, 'assistant-message'); }
-            } catch (error) { addMessageToChat('Error: Could not connect to the backend.', 'assistant-message'); }
+                if (response.ok) { const assistantText = data.generated_text; addMessageToChat(assistantText, false); speak(assistantText); } else { addMessageToChat(`Error: ${data.error || 'Service unavailable.'}`, false); }
+            } catch (error) { addMessageToChat('Error: Could not connect to the backend.', false); }
         }
         
-        function addMessageToChat(text, className) {
+        function addMessageToChat(text, isUser) {
             const messageBubble = document.createElement('div');
-            messageBubble.className = `message-bubble ${className}`;
+            messageBubble.className = isUser ? 'message-bubble user-message' : 'message-bubble assistant-message';
             messageBubble.innerText = text;
             messageList.appendChild(messageBubble);
             messageList.scrollTop = messageList.scrollHeight;
@@ -183,7 +225,7 @@
 
         chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(); });
         
-        // --- LOGIKA MIKROFONU (z odblokowaniem audio) ---
+        // --- LOGIKA MIKROFONU ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
             const recognition = new SpeechRecognition();
@@ -191,7 +233,7 @@
             recognition.interimResults = true;
             let final_transcript = '';
             let isListening = false;
-            micButton.addEventListener('click', () => { unlockTts(); if (isListening) { recognition.stop(); } else { final_transcript = ''; userInput.value = ''; recognition.start(); } });
+            micButton.addEventListener('click', () => { unlockAudioContext(); if (isListening) { recognition.stop(); } else { final_transcript = ''; userInput.value = ''; recognition.start(); } });
             recognition.onstart = () => { isListening = true; micButton.classList.add('is-listening'); };
             recognition.onend = () => { isListening = false; micButton.classList.remove('is-listening'); if (userInput.value.trim()){ handleSubmit(); } };
             recognition.onresult = (event) => { let interim_transcript = ''; for (let i = event.resultIndex; i < event.results.length; ++i) { if (event.results[i].isFinal) { final_transcript += event.results[i][0].transcript + ' '; } else { interim_transcript += event.results[i][0].transcript; } } userInput.value = final_transcript + interim_transcript; };
@@ -200,21 +242,6 @@
         
         // --- INICJALIZACJA ---
         updateTtsToggleIcon();
-        // Ponowne wklejenie funkcji populateVoiceList dla kompletności
-        function populateVoiceList() {
-            voices = synth.getVoices();
-            voiceSelect.innerHTML = '';
-            const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
-            voices
-                .filter(voice => voice.lang.startsWith('en') || voice.lang.startsWith('pl'))
-                .filter(voice => !femaleNamesToFilter.some(name => voice.name.toLowerCase().includes(name.toLowerCase())))
-                .forEach(voice => {
-                    const option = document.createElement('option');
-                    option.textContent = voice.name;
-                    option.setAttribute('data-name', voice.name);
-                    voiceSelect.appendChild(option);
-                });
-        }
     </script>
 </body>
 </html>
