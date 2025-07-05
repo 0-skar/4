@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Hybrid Assistant</title>
+    <title>My Voice Assistant</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <style>
         :root { --transition-speed: 0.5s; }
@@ -30,10 +30,8 @@
         #app-container.chat-is-maximized #transcript-container { flex: 1 0 100%; }
         #app-container.chat-is-maximized #main-content { z-index: 5; }
         #avatar-container.is-dragging { cursor: grabbing; z-index: 999; transform: scale(1.1); }
-        #api-key-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        #api-key-modal-content { background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 400px; text-align: center; }
-        #api-key-input { width: 90%; padding: 0.5rem; margin-top: 1rem; }
-        #save-api-key-button { margin-top: 1rem; }
+        #voice-select-container { padding: 1rem; border-top: 1px solid #e9ecef; background: #f8f9fa; text-align: center; }
+        select { padding: 0.5rem; border-radius: 8px; width: 80%; max-width: 400px; }
     </style>
 </head>
 <body>
@@ -50,30 +48,21 @@
                 <div id="transcript-messages"></div>
             </div>
         </div>
+        <div id="voice-select-container">
+            <label for="voiceSelect">Choose a Voice: </label>
+            <select id="voiceSelect"></select>
+        </div>
         <div class="controls">
             <input type="text" id="userInput" placeholder="Ask anything or use the microphone..." autocomplete="off">
             <button type="button" id="micButton">🎤</button>
         </div>
     </div>
-    <div id="api-key-modal">
-        <div id="api-key-modal-content">
-            <h3 id="api-key-modal-title">Shared Quota Exhausted</h3>
-            <p id="api-key-modal-text">The shared key pool is empty. To continue, please provide your own free key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p>
-            <input type="password" id="api-key-input" placeholder="Paste your key here...">
-            <button id="save-api-key-button">Save & Continue</button>
-        </div>
-    </div>
 
     <script>
+        const BACKEND_URL = "https://eosforus-3.hf.space/chat";
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
-        const SHARED_BACKEND_URL = "https://eosforus-3.hf.space/chat";
-        const GEMINI_API_URL_BASE = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=";
-        const SYSTEM_PROMPT = "You are a helpful and friendly assistant named Alex.";
-        
-        let currentApiMode = localStorage.getItem('geminiApiKey') ? 'direct' : 'shared';
-        let GEMINI_API_KEY = localStorage.getItem('geminiApiKey');
-        
+
         const appContainer = document.getElementById('app-container');
         const avatarContainer = document.getElementById('avatar-container');
         const avatar = document.getElementById('avatar');
@@ -81,105 +70,98 @@
         const transcriptMessages = document.getElementById('transcript-messages');
         const micButton = document.getElementById('micButton');
         const viewToggleButton = document.getElementById('view-toggle-button');
-        const apiKeyModal = document.getElementById('api-key-modal');
-        const apiKeyInput = document.getElementById('api-key-input');
-        const saveApiKeyButton = document.getElementById('save-api-key-button');
-        const apiKeyModalTitle = document.getElementById('api-key-modal-title');
-        const apiKeyModalText = document.getElementById('api-key-modal-text');
+        const voiceSelect = document.getElementById('voiceSelect');
 
-        function showApiKeyModal(isInitial = false) {
-            if (isInitial) {
-                apiKeyModalTitle.innerText = "Enter Your Google Gemini API Key";
-                apiKeyModalText.innerHTML = `To start, please provide your free key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.`;
-            } else {
-                apiKeyModalTitle.innerText = "Shared Quota Exhausted";
-                apiKeyModalText.innerHTML = `The shared key pool is empty. To continue, please provide your own free key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.`;
-            }
-            apiKeyModal.style.display = 'flex';
+        const synth = window.speechSynthesis;
+        let voices = [];
+
+        // --- ZAKTUALIZOWANA FUNKCJA FILTROWANIA GŁOSÓW ---
+        function populateVoiceList() {
+            voices = synth.getVoices();
+            voiceSelect.innerHTML = '';
+            
+            const femaleNames = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English']; // Dodajemy tutaj nazwy do odfiltrowania
+
+            voices
+                .filter(voice => voice.lang.startsWith('en') || voice.lang.startsWith('pl')) // Krok 1: Filtruj po języku
+                .filter(voice => !femaleNames.some(name => voice.name.toLowerCase().includes(name.toLowerCase()))) // Krok 2: Odfiltruj imiona żeńskie
+                .forEach(voice => {
+                    const option = document.createElement('option');
+                    option.textContent = `${voice.name} (${voice.lang})`;
+                    option.setAttribute('data-name', voice.name);
+                    voiceSelect.appendChild(option);
+                });
         }
         
-        saveApiKeyButton.addEventListener('click', () => {
-            const key = apiKeyInput.value.trim();
-            if (key) {
-                localStorage.setItem('geminiApiKey', key);
-                GEMINI_API_KEY = key;
-                currentApiMode = 'direct';
-                apiKeyModal.style.display = 'none';
-                const lastPrompt = Array.from(transcriptMessages.querySelectorAll('.user-text')).pop()?.innerText.replace('You: ', '');
-                if (lastPrompt) {
-                    addMessageToTranscript(`(Continuing with new key...)`, 'assistant-text');
-                    handleDirectApi(lastPrompt);
+        populateVoiceList();
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = populateVoiceList;
+        }
+
+        function speak(text) {
+            if (synth.speaking) {
+                synth.cancel();
+            }
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
+            utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
+            
+            if (voiceSelect.selectedOptions.length > 0) {
+                const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name');
+                const selectedVoice = voices.find(voice => voice.name === selectedVoiceName);
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
                 }
             }
-        });
+            synth.speak(utterance);
+        }
 
         async function handleSubmit() {
             const userText = userInput.value.trim();
             if (!userText) return;
             addMessageToTranscript(`You: ${userText}`, 'user-text');
             userInput.value = '';
-            if (currentApiMode === 'shared') {
-                await handleSharedBackend(userText);
-            } else {
-                await handleDirectApi(userText);
-            }
-        }
-
-        async function handleSharedBackend(prompt) {
             try {
-                const response = await fetch(SHARED_BACKEND_URL, {
+                const response = await fetch(BACKEND_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: prompt })
+                    body: JSON.stringify({ prompt: userText })
                 });
                 const data = await response.json();
                 if (response.ok) {
-                    addMessageToTranscript(`Assistant: ${data.generated_text}`, 'assistant-text');
-                    speak(data.generated_text);
-                } else if (response.status === 429 && data.all_keys_exhausted === true) {
-                    addMessageToTranscript(`Info: ${data.error}`, 'assistant-text');
-                    currentApiMode = 'direct'; // Switch mode
-                    showApiKeyModal(false);
+                    const assistantText = data.generated_text;
+                    addMessageToTranscript(`Assistant: ${assistantText}`, 'assistant-text');
+                    speak(assistantText);
                 } else {
-                    addMessageToTranscript(`Error: ${data.error || 'Shared service unavailable.'}`, 'assistant-text');
+                    addMessageToTranscript(`Error: ${data.error || 'Service unavailable.'}`, 'assistant-text');
                 }
             } catch (error) {
-                addMessageToTranscript('Error: Could not connect to the shared backend.', 'assistant-text');
+                addMessageToTranscript('Error: Could not connect to the backend.', 'assistant-text');
             }
         }
-
-        async function handleDirectApi(prompt) {
-            if (!GEMINI_API_KEY) { showApiKeyModal(true); return; }
-            try {
-                const response = await fetch(GEMINI_API_URL_BASE + GEMINI_API_KEY, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-                        generationConfig: { "maxOutputTokens": 2048 }
-                    })
-                });
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(`API Error ${response.status}: ${errorData.error.message}`);
-                }
-                const data = await response.json();
-                const assistantText = data.candidates[0].content.parts[0].text;
-                addMessageToTranscript(`Assistant: ${assistantText}`, 'assistant-text');
-                speak(assistantText);
-            } catch (error) {
-                if (String(error).includes('400') || String(error).includes('403')) {
-                    addMessageToTranscript('Error: Invalid API Key. Please click the mic or press Enter to provide a new key.', 'assistant-text');
-                    localStorage.removeItem('geminiApiKey');
-                    GEMINI_API_KEY = null;
-                } else if (String(error).includes('429')) {
-                    addMessageToTranscript('Error: You have exceeded your daily free quota for this API key.', 'assistant-text');
-                } else {
-                    addMessageToTranscript(`Error: ${error.message}`, 'assistant-text');
-                }
-            }
+        
+        function addMessageToTranscript(text, className) {
+            const messageDiv = document.createElement('p');
+            messageDiv.className = `transcript-line ${className}`;
+            messageDiv.innerText = text;
+            transcriptMessages.appendChild(messageDiv);
+            transcriptMessages.scrollTop = transcriptMessages.scrollHeight;
         }
+        
+        userInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); handleSubmit(); } });
+        
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            let final_transcript = '';
+            let isListening = false;
+            micButton.addEventListener('click', () => { if (isListening) { recognition.stop(); } else { final_transcript = ''; userInput.value = ''; recognition.start(); } });
+            recognition.onstart = () => { isListening = true; micButton.classList.add('is-listening'); };
+            recognition.onend = () => { isListening = false; micButton.classList.remove('is-listening'); if (userInput.value.trim()){ handleSubmit(); } };
+            recognition.onresult = (event) => { let interim_transcript = ''; for (let i = event.resultIndex; i < event.results.length; ++i) { if (event.results[i].isFinal) { final_transcript += event.results[i][0].transcript + ' '; } else { interim_transcript += event.results[i][0].transcript; } } userInput.value = final_transcript + interim_transcript; };
+        } else { micButton.style.display = 'none'; }
         
         let isDragging = false, initialX, initialY, offsetX = 0, offsetY = 0;
         function dragStart(e) { if (!appContainer.classList.contains('chat-is-maximized')) return; e.preventDefault(); initialX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX; initialY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY; offsetX = avatarContainer.offsetLeft; offsetY = avatarContainer.offsetTop; avatarContainer.style.transform = 'none'; avatarContainer.style.left = `${offsetX}px`; avatarContainer.style.top = `${offsetY}px`; isDragging = true; avatarContainer.classList.add('is-dragging'); document.addEventListener('mousemove', dragging); document.addEventListener('mouseup', dragEnd); document.addEventListener('touchmove', dragging); document.addEventListener('touchend', dragEnd); }
@@ -192,14 +174,6 @@
         function updateToggleIcon() { if (appContainer.classList.contains('chat-is-maximized')) { viewToggleButton.innerHTML = minimizeIcon; } else { viewToggleButton.innerHTML = maximizeIcon; avatarContainer.style.top = ''; avatarContainer.style.left = ''; avatarContainer.style.right = ''; avatarContainer.style.transform = ''; } }
         function toggleChatView() { appContainer.classList.toggle('chat-is-maximized'); updateToggleIcon(); }
         viewToggleButton.addEventListener('click', toggleChatView); updateToggleIcon();
-        
-        const synth = window.speechSynthesis;
-        function speak(text) { const utterance = new SpeechSynthesisUtterance(text); utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; }; utterance.onend = () => { avatar.src = AVATAR_STILL_URL; }; synth.speak(utterance); }
-        function addMessageToTranscript(text, className) { const messageDiv = document.createElement('p'); messageDiv.className = `transcript-line ${className}`; messageDiv.innerText = text; transcriptMessages.appendChild(messageDiv); transcriptMessages.scrollTop = transcriptMessages.scrollHeight; }
-        userInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); handleSubmit(); } });
-        
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SpeechRecognition) { const recognition = new SpeechRecognition(); recognition.continuous = true; recognition.interimResults = true; let final_transcript = ''; let isListening = false; micButton.addEventListener('click', () => { if (isListening) { recognition.stop(); } else { final_transcript = ''; userInput.value = ''; recognition.start(); } }); recognition.onstart = () => { isListening = true; micButton.classList.add('is-listening'); }; recognition.onend = () => { isListening = false; micButton.classList.remove('is-listening'); if (userInput.value.trim()){ handleSubmit(); } }; recognition.onresult = (event) => { let interim_transcript = ''; final_transcript = ''; for (let i = 0; i < event.results.length; ++i) { if (event.results[i].isFinal) { final_transcript += event.results[i][0].transcript; } else { interim_transcript += event.results[i][0].transcript; } } userInput.value = final_transcript + interim_transcript; }; } else { micButton.style.display = 'none'; }
     </script>
 </body>
 </html>
