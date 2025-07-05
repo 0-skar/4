@@ -3,57 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Avatar Assistant</title>
+    <title>My Avatar Assistant (BYOK)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <style>
         :root { --transition-speed: 0.5s; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f9; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         #app-container { width: 95%; height: 95vh; max-width: 1200px; max-height: 900px; display: flex; flex-direction: column; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); position: relative; transition: all var(--transition-speed) ease; }
-        
         #main-content { display: flex; flex: 1; overflow: hidden; }
-
         #avatar-container { flex: 3; display: flex; justify-content: center; align-items: center; padding: 1rem; background-color: #e9ecef; transition: all var(--transition-speed) ease; position: relative; }
         #avatar { width: 300px; height: 300px; border-radius: 50%; object-fit: cover; border: 5px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: width var(--transition-speed) ease, height var(--transition-speed) ease; }
-
         #transcript-container { flex: 2; display: flex; flex-direction: column; border-left: 1px solid #dee2e6; background-color: #f8f9fa; position: relative; transition: all var(--transition-speed) ease; }
         #transcript-header { padding: 0.5rem 1rem; font-weight: bold; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
         #transcript-messages { flex: 1; padding: 1rem; overflow-y: auto; font-size: 0.9rem; line-height: 1.5; }
         .transcript-line { margin-bottom: 0.5rem; }
         .user-text { font-weight: bold; color: #007bff; }
         .assistant-text { color: #343a40; }
-        
         #view-toggle-button { background: rgba(0,0,0,0.1); border: none; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; width: 30px; height: 30px; padding: 5px; }
         #view-toggle-button svg { width: 100%; height: 100%; fill: #333; }
         #view-toggle-button:hover { background: rgba(0,0,0,0.2); }
-
         .controls { display: flex; padding: 1rem; border-top: 1px solid #e9ecef; align-items: center; }
         #userInput { flex-grow: 1; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 18px; font-size: 1rem; }
         #micButton { background-color: #28a745; width: 50px; height: 50px; font-size: 1.5rem; border-radius: 50%; margin-left: 0.5rem; border: none; cursor: pointer; color: white; }
         #micButton.is-listening { background-color: #dc3545; }
-
-        /* --- LOGIKA ZMAKSYMALIZOWANEGO WIDOKU & PRZECIĄGANIA --- */
-        #app-container.chat-is-maximized #avatar-container {
-            position: absolute;
-            top: 10px;
-            left: 50%; /* <-- NOWA POZYCJA: środek w poziomie */
-            transform: translateX(-50%); /* <-- Dopasowanie, by wycentrować idealnie */
-            width: 100px;
-            height: 100px;
-            padding: 0;
-            z-index: 20;
-            background: transparent;
-            cursor: grab;
-            transition: none;
-        }
+        #app-container.chat-is-maximized #avatar-container { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 100px; height: 100px; padding: 0; z-index: 20; background: transparent; cursor: grab; transition: none; }
         #app-container.chat-is-maximized #avatar { width: 100px; height: 100px; }
         #app-container.chat-is-maximized #transcript-container { flex: 1 0 100%; }
         #app-container.chat-is-maximized #main-content { z-index: 5; }
-        
-        #avatar-container.is-dragging {
-            cursor: grabbing;
-            z-index: 999;
-            transform: scale(1.1) translateX(-50%); /* Utrzymujemy transformację X */
-        }
+        #avatar-container.is-dragging { cursor: grabbing; z-index: 999; transform: scale(1.1); }
+        #api-key-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        #api-key-modal-content { background: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 400px; text-align: center; }
+        #api-key-input { width: 90%; padding: 0.5rem; margin-top: 1rem; }
+        #save-api-key-button { margin-top: 1rem; }
     </style>
 </head>
 <body>
@@ -70,19 +50,29 @@
                 <div id="transcript-messages"></div>
             </div>
         </div>
-        
         <div class="controls">
             <input type="text" id="userInput" placeholder="Ask anything or use the microphone..." autocomplete="off">
             <button type="button" id="micButton">🎤</button>
         </div>
     </div>
 
+    <div id="api-key-modal" style="display: none;">
+        <div id="api-key-modal-content">
+            <h3>Enter Your Google Gemini API Key</h3>
+            <p>Get your free key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>. Your key is stored only in your browser.</p>
+            <input type="password" id="api-key-input" placeholder="Paste your key here (e.g., AIzaSy...)">
+            <button id="save-api-key-button">Save Key</button>
+        </div>
+    </div>
+
     <script>
-        // --- KONFIGURACJA & REFERENCJE DO DOM ---
-        const BACKEND_URL = "https://eosforus-3.hf.space/chat";
+        // --- CONFIGURATION ---
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
+        const GEMINI_API_URL_BASE = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=";
+        const SYSTEM_PROMPT = "You are a helpful and friendly assistant named Alex. You are polite and cheerful.";
 
+        // --- DOM ELEMENT REFERENCES ---
         const appContainer = document.getElementById('app-container');
         const avatarContainer = document.getElementById('avatar-container');
         const avatar = document.getElementById('avatar');
@@ -90,92 +80,82 @@
         const transcriptMessages = document.getElementById('transcript-messages');
         const micButton = document.getElementById('micButton');
         const viewToggleButton = document.getElementById('view-toggle-button');
-        
-        // --- NOWA LOGIKA PRZECIĄGANIA AWATARA ---
-        let isDragging = false;
-        let initialX, initialY, offsetX = 0, offsetY = 0;
+        const apiKeyModal = document.getElementById('api-key-modal');
+        const apiKeyInput = document.getElementById('api-key-input');
+        const saveApiKeyButton = document.getElementById('save-api-key-button');
 
-        function dragStart(e) {
-            if (!appContainer.classList.contains('chat-is-maximized')) return;
-            e.preventDefault();
-            
-            initialX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-            initialY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+        // --- API KEY LOGIC (BYOK) ---
+        let GEMINI_API_KEY = localStorage.getItem('geminiApiKey');
+        function showApiKeyModal() { apiKeyModal.style.display = 'flex'; }
+        function hideApiKeyModal() { apiKeyModal.style.display = 'none'; }
+        saveApiKeyButton.addEventListener('click', () => {
+            const key = apiKeyInput.value.trim();
+            if (key) {
+                localStorage.setItem('geminiApiKey', key);
+                GEMINI_API_KEY = key;
+                hideApiKeyModal();
+                addMessageToTranscript('API Key saved successfully. You can now chat with the assistant.', 'assistant-text');
+            }
+        });
 
-            offsetX = avatarContainer.offsetLeft;
-            offsetY = avatarContainer.offsetTop;
-
-            // POPRAWKA: usuwamy transformację na czas przeciągania
-            avatarContainer.style.transform = 'none'; 
-            // Ustawiamy pozycję, aby nie było "przeskoku"
-            avatarContainer.style.left = `${offsetX}px`;
-            avatarContainer.style.top = `${offsetY}px`;
-
-            isDragging = true;
-            avatarContainer.classList.add('is-dragging');
-            
-            document.addEventListener('mousemove', dragging);
-            document.addEventListener('mouseup', dragEnd);
-            document.addEventListener('touchmove', dragging);
-            document.addEventListener('touchend', dragEnd);
+        // --- CORE CHAT LOGIC ---
+        async function handleSubmit() {
+            if (!GEMINI_API_KEY) { showApiKeyModal(); return; }
+            const userText = userInput.value.trim();
+            if (!userText) return;
+            addMessageToTranscript(`You: ${userText}`, 'user-text');
+            userInput.value = '';
+            try {
+                const response = await fetch(GEMINI_API_URL_BASE + GEMINI_API_KEY, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userText }] }],
+                        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+                        generationConfig: { "maxOutputTokens": 2048 } // Prośba o dłuższe odpowiedzi
+                    })
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API Error ${response.status}: ${errorData.error.message}`);
+                }
+                const data = await response.json();
+                const assistantText = data.candidates[0].content.parts[0].text;
+                addMessageToTranscript(`Assistant: ${assistantText}`, 'assistant-text');
+                speak(assistantText);
+            } catch (error) {
+                console.error("API call failed:", error);
+                if (String(error).includes('400') || String(error).includes('403')) {
+                    addMessageToTranscript('Error: Invalid API Key. Please click the mic or press Enter to provide a new key.', 'assistant-text');
+                    localStorage.removeItem('geminiApiKey'); // Usuwamy zły klucz
+                    GEMINI_API_KEY = null;
+                } else if (String(error).includes('429')) {
+                    addMessageToTranscript('Error: You have exceeded your daily free quota for this API key.', 'assistant-text');
+                } else {
+                    addMessageToTranscript(`Error: ${error.message}`, 'assistant-text');
+                }
+            }
         }
 
-        function dragging(e) {
-            if (!isDragging) return;
-            e.preventDefault();
-            let currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
-            let currentY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
-            let dx = currentX - initialX;
-            let dy = currentY - initialY;
-            let newX = offsetX + dx;
-            let newY = offsetY + dy;
-            const parentRect = appContainer.getBoundingClientRect();
-            const avatarRect = avatarContainer.getBoundingClientRect();
-            newX = Math.max(0, Math.min(newX, parentRect.width - avatarRect.width));
-            newY = Math.max(0, Math.min(newY, parentRect.height - avatarRect.height));
-            avatarContainer.style.left = `${newX}px`;
-            avatarContainer.style.top = `${newY}px`;
-            avatarContainer.style.right = 'auto';
-        }
+        // --- DRAG-AND-DROP LOGIC ---
+        let isDragging = false, initialX, initialY, offsetX = 0, offsetY = 0;
+        function dragStart(e) { if (!appContainer.classList.contains('chat-is-maximized')) return; e.preventDefault(); initialX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX; initialY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY; offsetX = avatarContainer.offsetLeft; offsetY = avatarContainer.offsetTop; avatarContainer.style.transform = 'none'; avatarContainer.style.left = `${offsetX}px`; avatarContainer.style.top = `${offsetY}px`; isDragging = true; avatarContainer.classList.add('is-dragging'); document.addEventListener('mousemove', dragging); document.addEventListener('mouseup', dragEnd); document.addEventListener('touchmove', dragging); document.addEventListener('touchend', dragEnd); }
+        function dragging(e) { if (!isDragging) return; e.preventDefault(); let currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX; let currentY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY; let dx = currentX - initialX; let dy = currentY - initialY; let newX = offsetX + dx; let newY = offsetY + dy; const parentRect = appContainer.getBoundingClientRect(); const avatarRect = avatarContainer.getBoundingClientRect(); newX = Math.max(0, Math.min(newX, parentRect.width - avatarRect.width)); newY = Math.max(0, Math.min(newY, parentRect.height - avatarRect.height)); avatarContainer.style.left = `${newX}px`; avatarContainer.style.top = `${newY}px`; avatarContainer.style.right = 'auto'; }
+        function dragEnd() { isDragging = false; avatarContainer.classList.remove('is-dragging'); document.removeEventListener('mousemove', dragging); document.removeEventListener('mouseup', dragEnd); document.removeEventListener('touchmove', dragging); document.removeEventListener('touchend', dragEnd); }
+        avatarContainer.addEventListener('mousedown', dragStart); avatarContainer.addEventListener('touchstart', dragStart);
 
-        function dragEnd() {
-            isDragging = false;
-            avatarContainer.classList.remove('is-dragging');
-            document.removeEventListener('mousemove', dragging);
-            document.removeEventListener('mouseup', dragEnd);
-            document.removeEventListener('touchmove', dragging);
-            document.removeEventListener('touchend', dragEnd);
-        }
-        
-        avatarContainer.addEventListener('mousedown', dragStart);
-        avatarContainer.addEventListener('touchstart', dragStart);
-
-        // --- IKONY SVG DLA PRZYCISKU (bez zmian) ---
+        // --- VIEW TOGGLE LOGIC ---
         const maximizeIcon = `<svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>`;
         const minimizeIcon = `<svg viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>`;
-
-        // --- RESZTA KODU (z małymi poprawkami) ---
-        function updateToggleIcon() { 
-            if (appContainer.classList.contains('chat-is-maximized')) { 
-                viewToggleButton.innerHTML = minimizeIcon; 
-            } else { 
-                viewToggleButton.innerHTML = maximizeIcon; 
-                // Resetujemy wszystkie style inline po powrocie do domyślnego widoku
-                avatarContainer.style.top = ''; 
-                avatarContainer.style.left = ''; 
-                avatarContainer.style.right = ''; 
-                avatarContainer.style.transform = ''; 
-            } 
-        }
+        function updateToggleIcon() { if (appContainer.classList.contains('chat-is-maximized')) { viewToggleButton.innerHTML = minimizeIcon; } else { viewToggleButton.innerHTML = maximizeIcon; avatarContainer.style.top = ''; avatarContainer.style.left = ''; avatarContainer.style.right = ''; avatarContainer.style.transform = ''; } }
         function toggleChatView() { appContainer.classList.toggle('chat-is-maximized'); updateToggleIcon(); }
         viewToggleButton.addEventListener('click', toggleChatView); updateToggleIcon();
         
+        // --- TTS & SPEECH RECOGNITION LOGIC ---
         const synth = window.speechSynthesis;
         function speak(text) { const utterance = new SpeechSynthesisUtterance(text); utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; }; utterance.onend = () => { avatar.src = AVATAR_STILL_URL; }; synth.speak(utterance); }
-        async function handleSubmit() { const userText = userInput.value.trim(); if (!userText) return; addMessageToTranscript(`You: ${userText}`, 'user-text'); userInput.value = ''; try { const response = await fetch(BACKEND_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: userText }) }); const data = await response.json(); if (response.ok) { const assistantText = data.generated_text; addMessageToTranscript(`Assistant: ${assistantText}`, 'assistant-text'); speak(assistantText); } else { addMessageToTranscript(`Error: ${data.error || 'An unknown error occurred.'}`, 'assistant-text'); } } catch (error) { addMessageToTranscript('Error: Could not connect to the server.', 'assistant-text'); } }
         function addMessageToTranscript(text, className) { const messageDiv = document.createElement('p'); messageDiv.className = `transcript-line ${className}`; messageDiv.innerText = text; transcriptMessages.appendChild(messageDiv); transcriptMessages.scrollTop = transcriptMessages.scrollHeight; }
         userInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); handleSubmit(); } });
-        
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) { const recognition = new SpeechRecognition(); recognition.continuous = true; recognition.interimResults = true; let final_transcript = ''; let isListening = false; micButton.addEventListener('click', () => { if (isListening) { recognition.stop(); } else { final_transcript = ''; userInput.value = ''; recognition.start(); } }); recognition.onstart = () => { isListening = true; micButton.classList.add('is-listening'); }; recognition.onend = () => { isListening = false; micButton.classList.remove('is-listening'); if (userInput.value.trim()){ handleSubmit(); } }; recognition.onresult = (event) => { let interim_transcript = ''; for (let i = event.resultIndex; i < event.results.length; ++i) { if (event.results[i].isFinal) { final_transcript += event.results[i][0].transcript + ' '; } else { interim_transcript += event.results[i][0].transcript; } } userInput.value = final_transcript + interim_transcript; }; } else { micButton.style.display = 'none'; }
     </script>
