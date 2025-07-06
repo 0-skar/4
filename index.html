@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Dude Assistant</title>
+    <title>My Personal Assistant</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <style>
         :root {
@@ -31,7 +31,7 @@
             background-color: white;
         }
         
-        /* --- NOWY PASEK GÓRNY Z PRZYCISKIEM POWROTU --- */
+        /* --- ZAKTUALIZOWANY PASEK GÓRNY --- */
         #app-top-bar {
             display: flex;
             align-items: center;
@@ -39,6 +39,7 @@
             background-color: var(--controls-bg);
             border-bottom: 1px solid var(--border-color);
             flex-shrink: 0;
+            position: relative; /* Kluczowe dla centrowania tytułu */
         }
         #back-button {
             display: flex;
@@ -48,6 +49,7 @@
             height: 36px;
             border-radius: 50%;
             text-decoration: none;
+            z-index: 1; /* Upewniamy się, że jest klikalny */
         }
         #back-button:hover {
             background-color: rgba(0,0,0,0.05);
@@ -56,6 +58,17 @@
             width: 24px;
             height: 24px;
             fill: #333;
+        }
+        /* --- NOWY TYTUŁ --- */
+        #app-title {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            margin: 0;
+            font-size: 1.1rem;
+            color: #333;
+            font-weight: 600;
         }
 
         #avatar-container {
@@ -118,6 +131,7 @@
             <a href="javascript:history.back()" id="back-button">
                 <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
             </a>
+            <h2 id="app-title">My Dude Assistant</h2>
         </div>
         <div id="avatar-container">
             <img id="avatar" src="https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png" alt="Assistant Avatar">
@@ -168,7 +182,9 @@
             voices.filter(voice => voice.lang.startsWith('en') || voice.lang.startsWith('pl')).filter(voice => !femaleNamesToFilter.some(name => voice.name.toLowerCase().includes(name.toLowerCase()))).forEach(voice => { const option = document.createElement('option'); option.textContent = `${voice.name} (${voice.lang})`; option.setAttribute('data-name', voice.name); voiceSelect.appendChild(option); });
         }
         populateVoiceList();
-        if (synth.onvoiceschanged !== undefined) { synth.onvoiceschanged = populateVoiceList; }
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = populateVoiceList;
+        }
 
         function speak(text) {
             if (!isTtsEnabled) return;
