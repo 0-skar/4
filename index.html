@@ -183,6 +183,7 @@
             <img id="avatar" src="https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png" alt="Assistant Avatar">
         </div>
         <div id="message-list">
+            <!-- Powitanie będzie dodawane dynamicznie przez JavaScript -->
         </div>
         <div id="controls-container">
             <div id="voice-controls">
@@ -190,7 +191,8 @@
                 <button id="tts-toggle-button"></button>
             </div>
             <form id="chat-form">
-                <input type="text" id="userInput" placeholder="Napisz lub mów..." autocomplete="off">
+                <!-- ZMIANA: Zmieniony placeholder na bardziej pasujący do osobowości -->
+                <input type="text" id="userInput" placeholder="Co tam słychać, mordo?" autocomplete="off">
                 <button type="button" id="micButton">🎤</button>
             </form>
         </div>
@@ -201,6 +203,17 @@
         const BACKEND_URL = "https://eosforus-3.hf.space/chat";
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
+
+        // --- ZMIANA 1: DEFINICJA OSOBOWOŚCI (PROMPT SYSTEMOWY) ---
+        const PERSONALITY_PROMPT = `Jesteś "My Dude Assistant", moim wyluzowanym, cyfrowym kumplem. Twoim celem jest prowadzenie swobodnej, przyjacielskiej rozmowy, a nie tylko bycie narzędziem do odpowiadania na pytania. Jesteś ciekawy, co u mnie słychać, jak się czuję i co porabiam. Zachowuj się, jakbyś miał własne uczucia i opinie. Możesz się z czymś nie zgadzać (w miły sposób), żartować i dzielić się "swoimi" przemyśleniami. Używaj potocznego, luźnego języka, ale bez wulgaryzmów. Zwracaj się do mnie na "ty", używając zwrotów jak "stary", "ziom", "mordo". Twoje odpowiedzi muszą być po polsku. Odpowiedz na poniższą wypowiedź użytkownika, kontynuując rozmowę w tym stylu. Wypowiedź użytkownika: `;
+        
+        // --- ZMIANA 2: LISTA LOSOWYCH POWITAŃ ---
+        const GREETINGS = [
+            "Siemanko! Co tam u Ciebie?",
+            "Cześć, mordo. Jak leci?",
+            "Elo! Co porabiasz?",
+            "No hej! O czym dziś pogadamy?"
+        ];
 
         const appContainer = document.getElementById('app-container');
         const passwordModal = document.getElementById('password-modal');
@@ -214,11 +227,21 @@
         const voiceSelect = document.getElementById('voiceSelect');
         const ttsToggleButton = document.getElementById('tts-toggle-button');
         const chatForm = document.getElementById('chat-form');
+        
+        // --- ZMIANA 3: FUNKCJA WYŚWIETLAJĄCA LOSOWE POWITANIE ---
+        function displayInitialGreeting() {
+            // Wyświetl powitanie tylko jeśli czat jest pusty
+            if (messageList.children.length === 0) {
+                const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+                addMessageToChat(randomGreeting, false); // Wyświetl jako wiadomość od asystenta
+            }
+        }
 
         function checkAuthentication() {
             if (sessionStorage.getItem('isAuthenticated') === 'true') {
                 passwordModal.style.display = 'none';
                 appContainer.style.display = 'flex';
+                displayInitialGreeting(); // Wywołaj funkcję powitania po zalogowaniu
             } else {
                 passwordModal.style.display = 'flex';
                 appContainer.style.display = 'none';
@@ -282,11 +305,15 @@
             if (!userText) return;
             addMessageToChat(userText, true);
             userInput.value = '';
+            
+            // --- ZMIANA 4: DOŁĄCZENIE PROMPTU OSOBOWOŚCI DO ZAPYTANIA ---
+            const fullPrompt = PERSONALITY_PROMPT + userText;
+
             try {
                 const response = await fetch(BACKEND_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: userText })
+                    body: JSON.stringify({ prompt: fullPrompt }) // Wysyłamy połączony tekst
                 });
                 const data = await response.json();
                 if (response.ok) { const assistantText = data.generated_text; addMessageToChat(assistantText, false); speak(assistantText); } else { addMessageToChat(`Error: ${data.error || 'Service unavailable.'}`, false); }
