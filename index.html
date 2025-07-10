@@ -52,28 +52,39 @@
             border: 2px solid var(--border-color);
             border-radius: 8px;
         }
-        #password-button {
-            padding: 10px 25px;
-            font-size: 1rem;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        }
         
-        /* ZMIANA: Styl dla nowego przycisku powrotu na ekranie hasła */
-        #return-button {
-            display: inline-block;
+        /* ZMIANA: Kontener dla przycisków na ekranie hasła */
+        #password-buttons-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px; /* Odstęp między przyciskami */
             margin-top: 1rem;
-            padding: 8px 20px;
-            font-size: 0.9rem;
-            background-color: #6c757d;
-            color: white;
-            border: none;
+        }
+
+        /* ZMIANA: Wspólna klasa dla obu przycisków, aby miały ten sam rozmiar */
+        .password-btn {
+            width: 80%;
+            max-width: 200px; /* Opcjonalnie: maksymalna szerokość */
+            padding: 12px;
+            font-size: 1rem;
             border-radius: 8px;
+            border: none;
             cursor: pointer;
             text-decoration: none;
+            color: white;
+            box-sizing: border-box; /* Ważne dla spójnego rozmiaru */
+        }
+        
+        #password-button {
+            background-color: #007bff;
+        }
+        #password-button:hover {
+            background-color: #0069d9;
+        }
+        
+        #return-button {
+            background-color: #6c757d;
         }
         #return-button:hover {
             background-color: #5a6268;
@@ -126,9 +137,11 @@
         <div id="password-modal-content">
             <h3>Wpisz kod dostępu</h3>
             <input type="password" id="password-input" autofocus>
-            <button id="password-button">Wejdź</button>
-            <!-- ZMIANA: Dodany przycisk "Wróć" -->
-            <a href="https://0-skar.github.io/0/" id="return-button">Wróć</a>
+            <!-- ZMIANA: Kontener grupujący przyciski -->
+            <div id="password-buttons-container">
+                <button id="password-button" class="password-btn">Wejdź</button>
+                <a href="https://0-skar.github.io/0/" id="return-button" class="password-btn">Wróć</a>
+            </div>
         </div>
     </div>
 
