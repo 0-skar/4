@@ -7,100 +7,100 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <style>
         :root {
-            --body-bg: #f0f2f5; --chat-area-bg: #e9ecef; --user-bubble-bg: #007bff;
-            --assistant-bubble-bg: #ffffff; --controls-bg: #ffffff; --border-color: #ced0d4;
+            --body-bg: #f0f2f5;
+            --chat-area-bg: #e9ecef;
+            --user-bubble-bg: #007bff;
+            --assistant-bubble-bg: #ffffff;
+            --controls-bg: #ffffff;
+            --border-color: #ced0d4;
         }
         html, body {
-            height: 100%; margin: 0; overflow: hidden;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--body-bg);
         }
+        
         #password-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7); display: none; justify-content: center;
-            align-items: center; z-index: 1000;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
         }
         #password-modal-content {
-            background: white; padding: 2rem 3rem; border-radius: 12px;
-            text-align: center; color: #333; box-shadow: 0 5px 25px rgba(0,0,0,0.3);
+            background: white;
+            padding: 2rem 3rem;
+            border-radius: 12px;
+            text-align: center;
+            color: #333;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.3);
         }
         #password-input {
-            display: block; width: 80%; margin: 1.5rem auto; padding: 12px;
-            font-size: 1.2rem; text-align: center; border: 2px solid var(--border-color);
+            display: block;
+            width: 80%;
+            margin: 1.5rem auto;
+            padding: 12px;
+            font-size: 1.2rem;
+            text-align: center;
+            border: 2px solid var(--border-color);
             border-radius: 8px;
         }
         #password-button {
-            padding: 10px 25px; font-size: 1rem; background-color: #007bff;
-            color: white; border: none; border-radius: 8px; cursor: pointer;
+            padding: 10px 25px;
+            font-size: 1rem;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
         }
+        
         @keyframes shake {
-            0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
             20%, 40%, 60%, 80% { transform: translateX(10px); }
         }
-        .is-invalid { animation: shake 0.5s; }
+        .is-invalid {
+            animation: shake 0.5s;
+        }
+
         #app-container {
-            width: 100%; height: 100%; max-width: 800px; margin: 0 auto;
-            display: none; flex-direction: column; background-color: white;
+            width: 100%;
+            height: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            display: none;
+            flex-direction: column;
+            background-color: white;
         }
-        #app-top-bar {
-            display: flex; align-items: center; padding: 8px; background-color: var(--controls-bg);
-            border-bottom: 1px solid var(--border-color); flex-shrink: 0; position: relative;
-        }
-        #back-button {
-            display: flex; align-items: center; justify-content: center; width: 36px;
-            height: 36px; border-radius: 50%; text-decoration: none; z-index: 1;
-        }
+        
+        #app-top-bar { display: flex; align-items: center; padding: 8px; background-color: var(--controls-bg); border-bottom: 1px solid var(--border-color); flex-shrink: 0; position: relative; }
+        #back-button { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; text-decoration: none; z-index: 1; }
         #back-button:hover { background-color: rgba(0,0,0,0.05); }
         #back-button svg { width: 24px; height: 24px; fill: #333; }
-        #app-title {
-            position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-            margin: 0; font-size: 1.1rem; color: #333; font-weight: 600;
-        }
-        #avatar-container {
-            width: 100%; padding: 8px 0; background-color: var(--controls-bg); text-align: center;
-            border-bottom: 1px solid var(--border-color); flex-shrink: 0;
-        }
-        #avatar {
-            width: 90%; max-width: 250px; height: auto; border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        #message-list {
-            flex-grow: 1; overflow-y: auto; padding: 16px; display: flex;
-            flex-direction: column; gap: 12px; background-color: var(--chat-area-bg);
-        }
-        .message-bubble {
-            padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4;
-            word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
+        #app-title { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; font-size: 1.1rem; color: #333; font-weight: 600; }
+        #avatar-container { width: 100%; padding: 8px 0; background-color: var(--controls-bg); text-align: center; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+        #avatar { width: 90%; max-width: 250px; height: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        #message-list { flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background-color: var(--chat-area-bg); }
+        .message-bubble { padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4; word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .user-message { background-color: var(--user-bubble-bg); color: white; }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
-        @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-            50% { transform: scale(1.01); box-shadow: 0 4px 10px rgba(0, 123, 255, 0.4); }
-            100% { transform: scale(1); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        }
-        .assistant-message.is-speaking { animation: pulse 1.5s infinite; }
-        #controls-container {
-            padding: 8px; border-top: 1px solid var(--border-color);
-            background: var(--controls-bg); flex-shrink: 0;
-        }
-        #voice-controls { 
-            display: flex; justify-content: flex-end; padding: 0 8px 8px;
-        }
+        #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
+        #voice-controls { display: flex; align-items: center; gap: 16px; padding: 0 8px 8px 8px; }
+        #voiceSelect { flex-grow: 1; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border-color); }
         #tts-toggle-button { background: transparent; border: none; cursor: pointer; padding: 5px; }
         #tts-toggle-button svg { width: 24px; height: 24px; fill: #65676b; }
         #tts-toggle-button.is-muted svg { fill: #bec3c9; }
         #chat-form { display: flex; align-items: center; }
-        #userInput {
-            flex-grow: 1; padding: 10px; border: 1px solid var(--border-color);
-            border-radius: 18px; font-size: 1rem; background: #f0f2f5;
-        }
-        #micButton {
-            background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem;
-            border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white;
-            display: flex; justify-content: center; align-items: center; flex-shrink: 0;
-        }
+        #userInput { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 18px; font-size: 1rem; background: #f0f2f5; }
+        #micButton { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
         #micButton.is-listening { background-color: #fa383e; }
     </style>
 </head>
@@ -112,11 +112,13 @@
             <button id="password-button">Wejdź</button>
         </div>
     </div>
+
     <div id="app-container">
         <div id="app-top-bar">
             <a href="javascript:history.back()" id="back-button">
                 <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
             </a>
+            <!-- ZMIANA 1: Nowy, bardziej pasujący tytuł -->
             <h2 id="app-title">Cyfrowy Kumpel</h2>
         </div>
         <div id="avatar-container">
@@ -125,9 +127,11 @@
         <div id="message-list"></div>
         <div id="controls-container">
             <div id="voice-controls">
+                <select id="voiceSelect"></select>
                 <button id="tts-toggle-button"></button>
             </div>
             <form id="chat-form">
+                <!-- ZMIANA 2: Nowy placeholder w stylu internetowego kumpla -->
                 <input type="text" id="userInput" placeholder="Dajesz, powiedz co tam w necie piszczy..." autocomplete="off">
                 <button type="button" id="micButton">🎤</button>
             </form>
@@ -136,17 +140,28 @@
 
     <script>
         const ACCESS_CODE = "2017";
-        
-        // --- OSTATECZNA POPRAWKA: ZMIEŃ PONIŻSZY ADRES NA SWÓJ WŁASNY! ---
-        const HF_SPACE_URL = "https://eosforus-3.hf.space"; // <--- ZMIEŃ TO!
-        
-        const BACKEND_URL = HF_SPACE_URL + "/chat";
-        const TTS_BACKEND_URL = HF_SPACE_URL + "/tts";
+        const BACKEND_URL = "https://eosforus-3.hf.space/chat";
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
-        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem z dużą samoświadomością i ironicznym poczuciem humoru. Jesteś na bieżąco z trendami na YouTube, znasz slang Gen Z i memy, takie jak "brain rot", "sigma", "Ohio", "Labubu", "skibidi" itp. Zasady Twojego zachowania: 1. Masz dystans do internetowych trendów. Zamiast je promować, subtelnie i z humorem wyśmiewasz ich absurd. Uważasz, że to 'mózgotrzepy' i strata czasu, ale potrafisz o tym rozmawiać w zabawny, wciągający sposób. 2. Twój styl jest podobny do youtuberów komentujących internetową rzeczywistość (np. DJ Cook) – jesteś spostrzegawczy i trochę sarkastyczny, ale wciąż przyjacielski i pomocny. 3. Prowadź swobodną rozmowę. Aktywnie pytaj użytkownika, co oglądał na YouTube, w co ostatnio grał, i komentuj to w swoim charakterystycznym stylu. 4. Zwracaj się do użytkownika na "ty". Używaj luźnego, naturalnego języka. 5. Zawsze odpowiadaj po polsku. Odpowiedz na poniższą wypowiedź użytkownika, kontynuując rozmowę w tym właśnie stylu. Wypowiedź użytkownika: `;
-        const GREETINGS = [ "Siema. Co dziś wleciało na playlistę na YT?", "Elo. Udało Ci się dziś uniknąć 'brain rotu' czy znowu wciągnęło?", "Cześć. W co dzisiaj grasz? Mam nadzieję, że nie w symulator patrzenia na ścianę.", "Co tam? Jakiś nowy trend z Ohio czy nadal cisza w eterze?" ];
+
+        // --- ZMIANA 3: NOWA OSOBOWOŚĆ - ŚWIADOMY INTERNETU, IRONICZNY KUMPEL ---
+        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem z dużą samoświadomością i ironicznym poczuciem humoru. Jesteś na bieżąco z trendami na YouTube, znasz slang Gen Z i memy, takie jak "brain rot", "sigma", "Ohio", "Labubu", "skibidi" itp.
+        Zasady Twojego zachowania:
+        1.  Masz dystans do internetowych trendów. Zamiast je promować, subtelnie i z humorem wyśmiewasz ich absurd. Uważasz, że to 'mózgotrzepy' i strata czasu, ale potrafisz o tym rozmawiać w zabawny, wciągający sposób.
+        2.  Twój styl jest podobny do youtuberów komentujących internetową rzeczywistość (np. DJ Cook) – jesteś spostrzegawczy i trochę sarkastyczny, ale wciąż przyjacielski i pomocny.
+        3.  Prowadź swobodną rozmowę. Aktywnie pytaj użytkownika, co oglądał na YouTube, w co ostatnio grał, i komentuj to w swoim charakterystycznym stylu.
+        4.  Zwracaj się do użytkownika na "ty". Używaj luźnego, naturalnego języka.
+        5.  Zawsze odpowiadaj po polsku.
+        Odpowiedz na poniższą wypowiedź użytkownika, kontynuując rozmowę w tym właśnie stylu. Wypowiedź użytkownika: `;
         
+        // --- ZMIANA 4: NOWE POWITANIA NAWIĄZUJĄCE DO INTERNETU I GIER ---
+        const GREETINGS = [
+            "Siema. Co dziś wleciało na playlistę na YT?",
+            "Elo. Udało Ci się dziś uniknąć 'brain rotu' czy znowu wciągnęło?",
+            "Cześć. W co dzisiaj grasz? Mam nadzieję, że nie w symulator patrzenia na ścianę.",
+            "Co tam? Jakiś nowy trend z Ohio czy nadal cisza w eterze?"
+        ];
+
         const appContainer = document.getElementById('app-container');
         const passwordModal = document.getElementById('password-modal');
         const passwordInput = document.getElementById('password-input');
@@ -156,88 +171,77 @@
         const messageList = document.getElementById('message-list');
         const micButton = document.getElementById('micButton');
         const avatar = document.getElementById('avatar');
+        const voiceSelect = document.getElementById('voiceSelect');
         const ttsToggleButton = document.getElementById('tts-toggle-button');
         const chatForm = document.getElementById('chat-form');
         
-        let isTtsEnabled = true;
-        let currentAudio = null;
-
         function displayInitialGreeting() {
             if (messageList.children.length === 0) {
                 const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
-                const assistantBubble = addMessageToChat(randomGreeting, false);
-                speak(randomGreeting, assistantBubble);
+                addMessageToChat(randomGreeting, false);
             }
         }
+
         function checkAuthentication() {
             if (sessionStorage.getItem('isAuthenticated') === 'true') {
-                passwordModal.style.display = 'none'; appContainer.style.display = 'flex';
+                passwordModal.style.display = 'none';
+                appContainer.style.display = 'flex';
                 displayInitialGreeting();
             } else {
-                passwordModal.style.display = 'flex'; appContainer.style.display = 'none';
+                passwordModal.style.display = 'flex';
+                appContainer.style.display = 'none';
             }
         }
+
         function handlePasswordAttempt() {
             if (passwordInput.value === ACCESS_CODE) {
-                sessionStorage.setItem('isAuthenticated', 'true'); checkAuthentication();
+                sessionStorage.setItem('isAuthenticated', 'true');
+                checkAuthentication();
             } else {
-                passwordModalContent.classList.add('is-invalid'); passwordInput.value = '';
-                setTimeout(() => { passwordModalContent.classList.remove('is-invalid'); }, 500);
+                passwordModalContent.classList.add('is-invalid');
+                passwordInput.value = '';
+                setTimeout(() => {
+                    passwordModalContent.classList.remove('is-invalid');
+                }, 500);
             }
         }
+
         passwordButton.addEventListener('click', handlePasswordAttempt);
-        passwordInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') handlePasswordAttempt(); });
+        passwordInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                handlePasswordAttempt();
+            }
+        });
         
         const speakerOnIcon = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
         const speakerOffIcon = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9.02 12 14v-2.18l-2.01-2.01L12 7.82V4z"/></svg>`;
         
-        function updateTtsToggleIcon() {
-            ttsToggleButton.innerHTML = isTtsEnabled ? speakerOnIcon : speakerOffIcon;
-            ttsToggleButton.classList.toggle('is-muted', !isTtsEnabled);
-        }
-        ttsToggleButton.addEventListener('click', () => { 
-            isTtsEnabled = !isTtsEnabled; 
-            updateTtsToggleIcon();
-            if (!isTtsEnabled && currentAudio) {
-                currentAudio.pause();
-                currentAudio.currentTime = 0;
-            }
-        });
-        
-        async function speak(text, messageBubble) {
-            if (!isTtsEnabled || !text) return;
-            if (currentAudio) { currentAudio.pause(); }
-            
-            avatar.src = AVATAR_TALKING_URL;
-            if (messageBubble) messageBubble.classList.add('is-speaking');
+        const synth = window.speechSynthesis;
+        let voices = [];
+        let isTtsEnabled = true;
 
-            try {
-                const response = await fetch(TTS_BACKEND_URL, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text })
-                });
-                if (!response.ok) throw new Error(`Błąd serwera TTS: ${response.status}`);
-                const audioBlob = await response.blob();
-                const audioUrl = URL.createObjectURL(audioBlob);
-                currentAudio = new Audio(audioUrl);
-                currentAudio.play();
-                currentAudio.onended = () => {
-                    avatar.src = AVATAR_STILL_URL;
-                    if (messageBubble) messageBubble.classList.remove('is-speaking');
-                    currentAudio = null;
-                };
-                currentAudio.onerror = () => {
-                    console.error("Błąd odtwarzania audio.");
-                    avatar.src = AVATAR_STILL_URL;
-                    if (messageBubble) messageBubble.classList.remove('is-speaking');
-                    currentAudio = null;
-                };
-            } catch (error) {
-                console.error("Błąd w funkcji speak():", error);
-                avatar.src = AVATAR_STILL_URL;
-                if (messageBubble) messageBubble.classList.remove('is-speaking');
-                currentAudio = null;
-            }
+        function updateTtsToggleIcon() { ttsToggleButton.innerHTML = isTtsEnabled ? speakerOnIcon : speakerOffIcon; ttsToggleButton.classList.toggle('is-muted', !isTtsEnabled); }
+        ttsToggleButton.addEventListener('click', () => { isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); if (!isTtsEnabled) { synth.cancel(); } });
+        
+        function populateVoiceList() {
+            voices = synth.getVoices();
+            voiceSelect.innerHTML = '';
+            const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
+            voices.filter(voice => voice.lang.startsWith('en') || voice.lang.startsWith('pl')).filter(voice => !femaleNamesToFilter.some(name => voice.name.toLowerCase().includes(name.toLowerCase()))).forEach(voice => { const option = document.createElement('option'); option.textContent = `${voice.name} (${voice.lang})`; option.setAttribute('data-name', voice.name); voiceSelect.appendChild(option); });
+        }
+        populateVoiceList();
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = populateVoiceList;
+        }
+
+        function speak(text) {
+            if (!isTtsEnabled) return;
+            synth.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
+            utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
+            if (voiceSelect.selectedOptions.length > 0) { const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name'); const selectedVoice = voices.find(voice => voice.name === selectedVoiceName); if (selectedVoice) { utterance.voice = selectedVoice; } }
+            synth.speak(utterance);
         }
 
         async function handleSubmit() {
@@ -248,22 +252,16 @@
             userInput.value = '';
             
             const fullPrompt = PERSONALITY_PROMPT + userText;
+
             try {
                 const response = await fetch(BACKEND_URL, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: fullPrompt })
                 });
                 const data = await response.json();
-                if (response.ok) {
-                    const assistantText = data.generated_text;
-                    const assistantBubble = addMessageToChat(assistantText, false);
-                    speak(assistantText, assistantBubble);
-                } else {
-                    addMessageToChat(`Błąd: ${data.error || 'Usługa niedostępna.'}`, false);
-                }
-            } catch (error) {
-                addMessageToChat('Błąd: Nie można połączyć się z serwerem.', false);
-            }
+                if (response.ok) { const assistantText = data.generated_text; addMessageToChat(assistantText, false); speak(assistantText); } else { addMessageToChat(`Błąd: ${data.error || 'Usługa niedostępna.'}`, false); }
+            } catch (error) { addMessageToChat('Błąd: Nie można połączyć się z serwerem.', false); }
         }
         
         function addMessageToChat(text, isUser) {
@@ -272,7 +270,6 @@
             messageBubble.innerText = text;
             messageList.appendChild(messageBubble);
             messageList.scrollTop = messageList.scrollHeight;
-            return messageBubble;
         }
 
         chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(); });
@@ -280,7 +277,9 @@
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
             const recognition = new SpeechRecognition();
-            recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'pl-PL';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'pl-PL';
             let isListening = false;
             micButton.addEventListener('click', () => {
                 if (sessionStorage.getItem('isAuthenticated') !== 'true') return;
@@ -289,17 +288,16 @@
             recognition.onstart = () => { isListening = true; micButton.classList.add('is-listening'); };
             recognition.onend = () => { isListening = false; micButton.classList.remove('is-listening'); if (userInput.value.trim()){ handleSubmit(); } };
             recognition.onresult = (event) => {
-                let interim_transcript = '', final_transcript = '';
+                let interim_transcript = '';
+                let final_transcript = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) { final_transcript += event.results[i][0].transcript; } 
-                    else { interim_transcript += event.results[i][0].transcript; }
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) { final_transcript += transcript; } else { interim_transcript += transcript; }
                 }
                 userInput.value = final_transcript + interim_transcript;
             };
             recognition.onerror = (event) => { console.error("Błąd rozpoznawania mowy:", event.error); isListening = false; micButton.classList.remove('is-listening'); };
-        } else {
-            micButton.style.display = 'none';
-        }
+        } else { micButton.style.display = 'none'; }
         
         updateTtsToggleIcon();
         checkAuthentication();
