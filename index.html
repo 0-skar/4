@@ -7,12 +7,8 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <style>
         :root {
-            --body-bg: #f0f2f5;
-            --chat-area-bg: #e9ecef;
-            --user-bubble-bg: #007bff;
-            --assistant-bubble-bg: #ffffff;
-            --controls-bg: #ffffff;
-            --border-color: #ced0d4;
+            --body-bg: #f0f2f5; --chat-area-bg: #e9ecef; --user-bubble-bg: #007bff;
+            --assistant-bubble-bg: #ffffff; --controls-bg: #ffffff; --border-color: #ced0d4;
         }
         html, body {
             height: 100%; margin: 0; overflow: hidden;
@@ -79,26 +75,18 @@
         }
         .user-message { background-color: var(--user-bubble-bg); color: white; }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
-        
-        /* --- ZMIANA 1: Nowa animacja dla "mówiącej" wiadomości --- */
         @keyframes pulse {
             0% { transform: scale(1); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
             50% { transform: scale(1.01); box-shadow: 0 4px 10px rgba(0, 123, 255, 0.4); }
             100% { transform: scale(1); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         }
-        .assistant-message.is-speaking {
-            animation: pulse 1.5s infinite;
-        }
-
+        .assistant-message.is-speaking { animation: pulse 1.5s infinite; }
         #controls-container {
             padding: 8px; border-top: 1px solid var(--border-color);
             background: var(--controls-bg); flex-shrink: 0;
         }
-        /* --- ZMIANA 2: Uproszczone style dla kontrolek głosu --- */
         #voice-controls { 
-            display: flex; 
-            justify-content: flex-end; /* Przesuwa ikonę głośnika na prawo */
-            padding: 0 8px 8px;
+            display: flex; justify-content: flex-end; padding: 0 8px 8px;
         }
         #tts-toggle-button { background: transparent; border: none; cursor: pointer; padding: 5px; }
         #tts-toggle-button svg { width: 24px; height: 24px; fill: #65676b; }
@@ -124,7 +112,6 @@
             <button id="password-button">Wejdź</button>
         </div>
     </div>
-
     <div id="app-container">
         <div id="app-top-bar">
             <a href="javascript:history.back()" id="back-button">
@@ -137,7 +124,6 @@
         </div>
         <div id="message-list"></div>
         <div id="controls-container">
-            <!-- --- ZMIANA 3: Usunięto bezużyteczny selektor głosu --- -->
             <div id="voice-controls">
                 <button id="tts-toggle-button"></button>
             </div>
@@ -150,22 +136,15 @@
 
     <script>
         const ACCESS_CODE = "2017";
-        // Pamiętaj, aby wkleić tutaj swój poprawny URL do aplikacji na Hugging Face
-        const HF_SPACE_URL = "https://eosforus-3.hf.space";
+        
+        // --- OSTATECZNA POPRAWKA: ZMIEŃ PONIŻSZY ADRES NA SWÓJ WŁASNY! ---
+        const HF_SPACE_URL = "https://nazwa-twojego-space.hf.space"; // <--- ZMIEŃ TO!
+        
         const BACKEND_URL = HF_SPACE_URL + "/chat";
         const TTS_BACKEND_URL = HF_SPACE_URL + "/tts";
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
-
-        // Pozostałe stałe... (bez zmian)
-        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem z dużą samoświadomością i ironicznym poczuciem humoru. Jesteś na bieżąco z trendami na YouTube, znasz slang Gen Z i memy, takie jak "brain rot", "sigma", "Ohio", "Labubu", "skibidi" itp.
-        Zasady Twojego zachowania:
-        1.  Masz dystans do internetowych trendów. Zamiast je promować, subtelnie i z humorem wyśmiewasz ich absurd. Uważasz, że to 'mózgotrzepy' i strata czasu, ale potrafisz o tym rozmawiać w zabawny, wciągający sposób.
-        2.  Twój styl jest podobny do youtuberów komentujących internetową rzeczywistość (np. DJ Cook) – jesteś spostrzegawczy i trochę sarkastyczny, ale wciąż przyjacielski i pomocny.
-        3.  Prowadź swobodną rozmowę. Aktywnie pytaj użytkownika, co oglądał na YouTube, w co ostatnio grał, i komentuj to w swoim charakterystycznym stylu.
-        4.  Zwracaj się do użytkownika na "ty". Używaj luźnego, naturalnego języka.
-        5.  Zawsze odpowiadaj po polsku.
-        Odpowiedz na poniższą wypowiedź użytkownika, kontynuując rozmowę w tym właśnie stylu. Wypowiedź użytkownika: `;
+        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem z dużą samoświadomością i ironicznym poczuciem humoru. Jesteś na bieżąco z trendami na YouTube, znasz slang Gen Z i memy, takie jak "brain rot", "sigma", "Ohio", "Labubu", "skibidi" itp. Zasady Twojego zachowania: 1. Masz dystans do internetowych trendów. Zamiast je promować, subtelnie i z humorem wyśmiewasz ich absurd. Uważasz, że to 'mózgotrzepy' i strata czasu, ale potrafisz o tym rozmawiać w zabawny, wciągający sposób. 2. Twój styl jest podobny do youtuberów komentujących internetową rzeczywistość (np. DJ Cook) – jesteś spostrzegawczy i trochę sarkastyczny, ale wciąż przyjacielski i pomocny. 3. Prowadź swobodną rozmowę. Aktywnie pytaj użytkownika, co oglądał na YouTube, w co ostatnio grał, i komentuj to w swoim charakterystycznym stylu. 4. Zwracaj się do użytkownika na "ty". Używaj luźnego, naturalnego języka. 5. Zawsze odpowiadaj po polsku. Odpowiedz na poniższą wypowiedź użytkownika, kontynuując rozmowę w tym właśnie stylu. Wypowiedź użytkownika: `;
         const GREETINGS = [ "Siema. Co dziś wleciało na playlistę na YT?", "Elo. Udało Ci się dziś uniknąć 'brain rotu' czy znowu wciągnęło?", "Cześć. W co dzisiaj grasz? Mam nadzieję, że nie w symulator patrzenia na ścianę.", "Co tam? Jakiś nowy trend z Ohio czy nadal cisza w eterze?" ];
         
         const appContainer = document.getElementById('app-container');
@@ -181,6 +160,7 @@
         const chatForm = document.getElementById('chat-form');
         
         let isTtsEnabled = true;
+        let currentAudio = null;
 
         function displayInitialGreeting() {
             if (messageList.children.length === 0) {
@@ -189,7 +169,6 @@
                 speak(randomGreeting, assistantBubble);
             }
         }
-
         function checkAuthentication() {
             if (sessionStorage.getItem('isAuthenticated') === 'true') {
                 passwordModal.style.display = 'none'; appContainer.style.display = 'flex';
@@ -198,7 +177,6 @@
                 passwordModal.style.display = 'flex'; appContainer.style.display = 'none';
             }
         }
-
         function handlePasswordAttempt() {
             if (passwordInput.value === ACCESS_CODE) {
                 sessionStorage.setItem('isAuthenticated', 'true'); checkAuthentication();
@@ -207,7 +185,6 @@
                 setTimeout(() => { passwordModalContent.classList.remove('is-invalid'); }, 500);
             }
         }
-
         passwordButton.addEventListener('click', handlePasswordAttempt);
         passwordInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') handlePasswordAttempt(); });
         
@@ -218,42 +195,48 @@
             ttsToggleButton.innerHTML = isTtsEnabled ? speakerOnIcon : speakerOffIcon;
             ttsToggleButton.classList.toggle('is-muted', !isTtsEnabled);
         }
-        ttsToggleButton.addEventListener('click', () => { isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); });
+        ttsToggleButton.addEventListener('click', () => { 
+            isTtsEnabled = !isTtsEnabled; 
+            updateTtsToggleIcon();
+            if (!isTtsEnabled && currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
+        });
         
-        // --- ZMIANA 4: Ta funkcja jest teraz bezużyteczna, ale ją zostawiamy, żeby nie psuć kodu
-        function populateVoiceList() { /* Już niepotrzebne */ }
-
-        // --- ZMIANA 5: Ulepszona funkcja speak, która animuje dymek wiadomości ---
         async function speak(text, messageBubble) {
             if (!isTtsEnabled || !text) return;
+            if (currentAudio) { currentAudio.pause(); }
             
             avatar.src = AVATAR_TALKING_URL;
             if (messageBubble) messageBubble.classList.add('is-speaking');
 
             try {
                 const response = await fetch(TTS_BACKEND_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text: text })
                 });
                 if (!response.ok) throw new Error(`Błąd serwera TTS: ${response.status}`);
                 const audioBlob = await response.blob();
                 const audioUrl = URL.createObjectURL(audioBlob);
-                const audio = new Audio(audioUrl);
-                audio.play();
-                audio.onended = () => {
+                currentAudio = new Audio(audioUrl);
+                currentAudio.play();
+                currentAudio.onended = () => {
                     avatar.src = AVATAR_STILL_URL;
                     if (messageBubble) messageBubble.classList.remove('is-speaking');
+                    currentAudio = null;
                 };
-                audio.onerror = () => {
+                currentAudio.onerror = () => {
                     console.error("Błąd odtwarzania audio.");
                     avatar.src = AVATAR_STILL_URL;
                     if (messageBubble) messageBubble.classList.remove('is-speaking');
+                    currentAudio = null;
                 };
             } catch (error) {
                 console.error("Błąd w funkcji speak():", error);
                 avatar.src = AVATAR_STILL_URL;
                 if (messageBubble) messageBubble.classList.remove('is-speaking');
+                currentAudio = null;
             }
         }
 
@@ -267,8 +250,7 @@
             const fullPrompt = PERSONALITY_PROMPT + userText;
             try {
                 const response = await fetch(BACKEND_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: fullPrompt })
                 });
                 const data = await response.json();
@@ -284,14 +266,13 @@
             }
         }
         
-        // --- ZMIANA 6: Funkcja `addMessageToChat` teraz zwraca utworzony element ---
         function addMessageToChat(text, isUser) {
             const messageBubble = document.createElement('div');
             messageBubble.className = isUser ? 'message-bubble user-message' : 'message-bubble assistant-message';
             messageBubble.innerText = text;
             messageList.appendChild(messageBubble);
             messageList.scrollTop = messageList.scrollHeight;
-            return messageBubble; // Zwracamy dymek, aby można go było animować
+            return messageBubble;
         }
 
         chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(); });
@@ -321,7 +302,6 @@
         }
         
         updateTtsToggleIcon();
-        populateVoiceList();
         checkAuthentication();
     </script>
 </body>
