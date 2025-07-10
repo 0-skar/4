@@ -138,8 +138,9 @@
     <script>
         // --- KONFIGURACJA ---
         const ACCESS_CODE = "2017";
-        const BACKEND_URL = "http://127.0.0.1:8000/chat"; // Używamy Twojego serwera
-        const TTS_BACKEND_URL = "http://127.0.0.1:8000/tts"; // URL do endpointu TTS
+        // KLUCZOWA ZMIANA: Usunięto 'http://127.0.0.1:8000' aby używać względnych URL
+        const BACKEND_URL = "/chat"; 
+        const TTS_BACKEND_URL = "/tts";
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
@@ -180,7 +181,7 @@
             if (messageList.children.length === 0) {
                 const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
                 addMessageToChat(randomGreeting, false);
-                speak(randomGreeting); // Powitanie również jest czytane
+                speak(randomGreeting);
             }
         }
 
@@ -218,10 +219,8 @@
         }
         ttsToggleButton.addEventListener('click', () => { isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); });
         
-        // UWAGA: Ta funkcja jest teraz tylko dekoracją. Nie używamy już wbudowanych głosów.
         function populateVoiceList() { voiceSelect.innerHTML = '<option>Głos z ElevenLabs</option>'; }
 
-        // --- KLUCZOWA ZMIANA: FUNKCJA SPEAK UŻYWAJĄCA TWOJEGO BACKENDU ---
         async function speak(text) {
             if (!isTtsEnabled || !text) return;
             avatar.src = AVATAR_TALKING_URL;
@@ -281,7 +280,6 @@
 
         chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(); });
         
-        // --- LOGIKA ROZPOZNAWANIA MOWY ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
             const recognition = new SpeechRecognition();
