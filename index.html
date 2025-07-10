@@ -138,9 +138,14 @@
     <script>
         // --- KONFIGURACJA ---
         const ACCESS_CODE = "2017";
-        // KLUCZOWA ZMIANA: Usunięto 'http://127.0.0.1:8000' aby używać względnych URL
-        const BACKEND_URL = "/chat"; 
-        const TTS_BACKEND_URL = "/tts";
+
+        // --- KLUCZOWA ZMIANA: WPISZ TUTAJ PUBLICZNY ADRES SWOJEGO HUGGING FACE SPACE ---
+        const HF_SPACE_URL = "https://twoja-nazwa-space.hf.space"; // <--- ZMIEŃ TO!
+
+        // Poniższe adresy zostaną zbudowane automatycznie na podstawie powyższego URL
+        const BACKEND_URL = HF_SPACE_URL + "/chat"; 
+        const TTS_BACKEND_URL = HF_SPACE_URL + "/tts";
+        
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
@@ -160,7 +165,6 @@
             "Co tam? Jakiś nowy trend z Ohio czy nadal cisza w eterze?"
         ];
         
-        // --- REFERENCJE DO ELEMENTÓW DOM ---
         const appContainer = document.getElementById('app-container');
         const passwordModal = document.getElementById('password-modal');
         const passwordInput = document.getElementById('password-input');
@@ -174,7 +178,6 @@
         const ttsToggleButton = document.getElementById('tts-toggle-button');
         const chatForm = document.getElementById('chat-form');
         
-        // --- LOGIKA APLIKACJI ---
         let isTtsEnabled = true;
 
         function displayInitialGreeting() {
@@ -306,10 +309,9 @@
             micButton.style.display = 'none';
         }
         
-        // --- INICJALIZACJA ---
         updateTtsToggleIcon();
         populateVoiceList();
         checkAuthentication();
     </script>
 </body>
-</html>
+</html>```
