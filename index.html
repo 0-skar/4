@@ -15,9 +15,7 @@
             --border-color: #ced0d4;
         }
         html, body {
-            height: 100%;
-            margin: 0;
-            overflow: hidden;
+            height: 100%; margin: 0; overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--body-bg);
         }
@@ -40,8 +38,7 @@
             color: white; border: none; border-radius: 8px; cursor: pointer;
         }
         @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
             20%, 40%, 60%, 80% { transform: translateX(10px); }
         }
         .is-invalid { animation: shake 0.5s; }
@@ -78,15 +75,31 @@
         .message-bubble {
             padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4;
             word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
         }
         .user-message { background-color: var(--user-bubble-bg); color: white; }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
+        
+        /* --- ZMIANA 1: Nowa animacja dla "mówiącej" wiadomości --- */
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+            50% { transform: scale(1.01); box-shadow: 0 4px 10px rgba(0, 123, 255, 0.4); }
+            100% { transform: scale(1); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        }
+        .assistant-message.is-speaking {
+            animation: pulse 1.5s infinite;
+        }
+
         #controls-container {
             padding: 8px; border-top: 1px solid var(--border-color);
             background: var(--controls-bg); flex-shrink: 0;
         }
-        #voice-controls { display: flex; align-items: center; gap: 16px; padding: 0 8px 8px 8px; }
-        #voiceSelect { flex-grow: 1; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border-color); }
+        /* --- ZMIANA 2: Uproszczone style dla kontrolek głosu --- */
+        #voice-controls { 
+            display: flex; 
+            justify-content: flex-end; /* Przesuwa ikonę głośnika na prawo */
+            padding: 0 8px 8px;
+        }
         #tts-toggle-button { background: transparent; border: none; cursor: pointer; padding: 5px; }
         #tts-toggle-button svg { width: 24px; height: 24px; fill: #65676b; }
         #tts-toggle-button.is-muted svg { fill: #bec3c9; }
@@ -124,8 +137,8 @@
         </div>
         <div id="message-list"></div>
         <div id="controls-container">
+            <!-- --- ZMIANA 3: Usunięto bezużyteczny selektor głosu --- -->
             <div id="voice-controls">
-                <select id="voiceSelect"></select>
                 <button id="tts-toggle-button"></button>
             </div>
             <form id="chat-form">
@@ -136,19 +149,15 @@
     </div>
 
     <script>
-        // --- KONFIGURACJA ---
         const ACCESS_CODE = "2017";
-
-        // --- KLUCZOWA ZMIANA: WPISZ TUTAJ PUBLICZNY ADRES SWOJEGO HUGGING FACE SPACE ---
-        const HF_SPACE_URL = "https://eosforus-3.hf.space"; // <--- ZMIEŃ TO!
-
-        // Poniższe adresy zostaną zbudowane automatycznie na podstawie powyższego URL
-        const BACKEND_URL = HF_SPACE_URL + "/chat"; 
+        // Pamiętaj, aby wkleić tutaj swój poprawny URL do aplikacji na Hugging Face
+        const HF_SPACE_URL = "https://nazwa-twojego-space.hf.space";
+        const BACKEND_URL = HF_SPACE_URL + "/chat";
         const TTS_BACKEND_URL = HF_SPACE_URL + "/tts";
-        
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
+        // Pozostałe stałe... (bez zmian)
         const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem z dużą samoświadomością i ironicznym poczuciem humoru. Jesteś na bieżąco z trendami na YouTube, znasz slang Gen Z i memy, takie jak "brain rot", "sigma", "Ohio", "Labubu", "skibidi" itp.
         Zasady Twojego zachowania:
         1.  Masz dystans do internetowych trendów. Zamiast je promować, subtelnie i z humorem wyśmiewasz ich absurd. Uważasz, że to 'mózgotrzepy' i strata czasu, ale potrafisz o tym rozmawiać w zabawny, wciągający sposób.
@@ -157,13 +166,7 @@
         4.  Zwracaj się do użytkownika na "ty". Używaj luźnego, naturalnego języka.
         5.  Zawsze odpowiadaj po polsku.
         Odpowiedz na poniższą wypowiedź użytkownika, kontynuując rozmowę w tym właśnie stylu. Wypowiedź użytkownika: `;
-        
-        const GREETINGS = [
-            "Siema. Co dziś wleciało na playlistę na YT?",
-            "Elo. Udało Ci się dziś uniknąć 'brain rotu' czy znowu wciągnęło?",
-            "Cześć. W co dzisiaj grasz? Mam nadzieję, że nie w symulator patrzenia na ścianę.",
-            "Co tam? Jakiś nowy trend z Ohio czy nadal cisza w eterze?"
-        ];
+        const GREETINGS = [ "Siema. Co dziś wleciało na playlistę na YT?", "Elo. Udało Ci się dziś uniknąć 'brain rotu' czy znowu wciągnęło?", "Cześć. W co dzisiaj grasz? Mam nadzieję, że nie w symulator patrzenia na ścianę.", "Co tam? Jakiś nowy trend z Ohio czy nadal cisza w eterze?" ];
         
         const appContainer = document.getElementById('app-container');
         const passwordModal = document.getElementById('password-modal');
@@ -174,7 +177,6 @@
         const messageList = document.getElementById('message-list');
         const micButton = document.getElementById('micButton');
         const avatar = document.getElementById('avatar');
-        const voiceSelect = document.getElementById('voiceSelect');
         const ttsToggleButton = document.getElementById('tts-toggle-button');
         const chatForm = document.getElementById('chat-form');
         
@@ -183,29 +185,25 @@
         function displayInitialGreeting() {
             if (messageList.children.length === 0) {
                 const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
-                addMessageToChat(randomGreeting, false);
-                speak(randomGreeting);
+                const assistantBubble = addMessageToChat(randomGreeting, false);
+                speak(randomGreeting, assistantBubble);
             }
         }
 
         function checkAuthentication() {
             if (sessionStorage.getItem('isAuthenticated') === 'true') {
-                passwordModal.style.display = 'none';
-                appContainer.style.display = 'flex';
+                passwordModal.style.display = 'none'; appContainer.style.display = 'flex';
                 displayInitialGreeting();
             } else {
-                passwordModal.style.display = 'flex';
-                appContainer.style.display = 'none';
+                passwordModal.style.display = 'flex'; appContainer.style.display = 'none';
             }
         }
 
         function handlePasswordAttempt() {
             if (passwordInput.value === ACCESS_CODE) {
-                sessionStorage.setItem('isAuthenticated', 'true');
-                checkAuthentication();
+                sessionStorage.setItem('isAuthenticated', 'true'); checkAuthentication();
             } else {
-                passwordModalContent.classList.add('is-invalid');
-                passwordInput.value = '';
+                passwordModalContent.classList.add('is-invalid'); passwordInput.value = '';
                 setTimeout(() => { passwordModalContent.classList.remove('is-invalid'); }, 500);
             }
         }
@@ -222,11 +220,16 @@
         }
         ttsToggleButton.addEventListener('click', () => { isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); });
         
-        function populateVoiceList() { voiceSelect.innerHTML = '<option>Głos z ElevenLabs</option>'; }
+        // --- ZMIANA 4: Ta funkcja jest teraz bezużyteczna, ale ją zostawiamy, żeby nie psuć kodu
+        function populateVoiceList() { /* Już niepotrzebne */ }
 
-        async function speak(text) {
+        // --- ZMIANA 5: Ulepszona funkcja speak, która animuje dymek wiadomości ---
+        async function speak(text, messageBubble) {
             if (!isTtsEnabled || !text) return;
+            
             avatar.src = AVATAR_TALKING_URL;
+            if (messageBubble) messageBubble.classList.add('is-speaking');
+
             try {
                 const response = await fetch(TTS_BACKEND_URL, {
                     method: 'POST',
@@ -238,11 +241,19 @@
                 const audioUrl = URL.createObjectURL(audioBlob);
                 const audio = new Audio(audioUrl);
                 audio.play();
-                audio.onended = () => { avatar.src = AVATAR_STILL_URL; };
-                audio.onerror = () => { console.error("Błąd odtwarzania audio."); avatar.src = AVATAR_STILL_URL; };
+                audio.onended = () => {
+                    avatar.src = AVATAR_STILL_URL;
+                    if (messageBubble) messageBubble.classList.remove('is-speaking');
+                };
+                audio.onerror = () => {
+                    console.error("Błąd odtwarzania audio.");
+                    avatar.src = AVATAR_STILL_URL;
+                    if (messageBubble) messageBubble.classList.remove('is-speaking');
+                };
             } catch (error) {
                 console.error("Błąd w funkcji speak():", error);
                 avatar.src = AVATAR_STILL_URL;
+                if (messageBubble) messageBubble.classList.remove('is-speaking');
             }
         }
 
@@ -263,8 +274,8 @@
                 const data = await response.json();
                 if (response.ok) {
                     const assistantText = data.generated_text;
-                    addMessageToChat(assistantText, false);
-                    speak(assistantText);
+                    const assistantBubble = addMessageToChat(assistantText, false);
+                    speak(assistantText, assistantBubble);
                 } else {
                     addMessageToChat(`Błąd: ${data.error || 'Usługa niedostępna.'}`, false);
                 }
@@ -273,12 +284,14 @@
             }
         }
         
+        // --- ZMIANA 6: Funkcja `addMessageToChat` teraz zwraca utworzony element ---
         function addMessageToChat(text, isUser) {
             const messageBubble = document.createElement('div');
             messageBubble.className = isUser ? 'message-bubble user-message' : 'message-bubble assistant-message';
             messageBubble.innerText = text;
             messageList.appendChild(messageBubble);
             messageList.scrollTop = messageList.scrollHeight;
+            return messageBubble; // Zwracamy dymek, aby można go było animować
         }
 
         chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(); });
@@ -286,9 +299,7 @@
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
             const recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.lang = 'pl-PL';
+            recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'pl-PL';
             let isListening = false;
             micButton.addEventListener('click', () => {
                 if (sessionStorage.getItem('isAuthenticated') !== 'true') return;
@@ -314,4 +325,4 @@
         checkAuthentication();
     </script>
 </body>
-</html>```
+</html>
