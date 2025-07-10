@@ -61,16 +61,6 @@
             border-radius: 8px;
             cursor: pointer;
         }
-        #go-back-link {
-            display: inline-block;
-            margin-top: 1rem;
-            padding: 8px 15px;
-            font-size: 0.9rem;
-            background-color: #6c757d;
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-        }
         
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
@@ -100,6 +90,24 @@
             flex-shrink: 0;
             position: relative;
         }
+        #back-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            text-decoration: none;
+            z-index: 1;
+        }
+        #back-button:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        #back-button svg {
+            width: 24px;
+            height: 24px;
+            fill: #333;
+        }
         #app-title {
             position: absolute;
             left: 50%;
@@ -110,7 +118,6 @@
             color: #333;
             font-weight: 600;
         }
-        
         #avatar-container {
             width: 100%;
             padding: 8px 0;
@@ -167,32 +174,30 @@
 <body>
     <div id="password-modal">
         <div id="password-modal-content">
-            <h3>Enter Access Code</h3>
+            <h3>Wpisz kod dostępu</h3>
             <input type="password" id="password-input" autofocus>
-            <button id="password-button">Enter</button>
-            <br>
-            <a href="https://0-skar.github.io/0/" id="go-back-link">Back to Home</a>
+            <button id="password-button">Wejdź</button>
         </div>
     </div>
 
     <div id="app-container">
         <div id="app-top-bar">
-            <h2 id="app-title">My Dude Assistant</h2>
+            <a href="javascript:history.back()" id="back-button">
+                <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </a>
+            <h2 id="app-title">Mój Przyjaciel Asystent</h2>
         </div>
         <div id="avatar-container">
             <img id="avatar" src="https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png" alt="Assistant Avatar">
         </div>
-        <div id="message-list">
-            <!-- Powitanie będzie dodawane dynamicznie przez JavaScript -->
-        </div>
+        <div id="message-list"></div>
         <div id="controls-container">
             <div id="voice-controls">
                 <select id="voiceSelect"></select>
                 <button id="tts-toggle-button"></button>
             </div>
             <form id="chat-form">
-                <!-- ZMIANA: Zmieniony placeholder na bardziej pasujący do osobowości -->
-                <input type="text" id="userInput" placeholder="Co tam słychać, mordo?" autocomplete="off">
+                <input type="text" id="userInput" placeholder="Napisz lub powiedz coś do mnie :)" autocomplete="off">
                 <button type="button" id="micButton">🎤</button>
             </form>
         </div>
@@ -204,15 +209,21 @@
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        // --- ZMIANA 1: DEFINICJA OSOBOWOŚCI (PROMPT SYSTEMOWY) ---
-        const PERSONALITY_PROMPT = `Jesteś "My Dude Assistant", moim wyluzowanym, cyfrowym kumplem. Twoim celem jest prowadzenie swobodnej, przyjacielskiej rozmowy, a nie tylko bycie narzędziem do odpowiadania na pytania. Jesteś ciekawy, co u mnie słychać, jak się czuję i co porabiam. Zachowuj się, jakbyś miał własne uczucia i opinie. Możesz się z czymś nie zgadzać (w miły sposób), żartować i dzielić się "swoimi" przemyśleniami. Używaj potocznego, luźnego języka, ale bez wulgaryzmów. Zwracaj się do mnie na "ty", używając zwrotów jak "stary", "ziom", "mordo". Twoje odpowiedzi muszą być po polsku. Odpowiedz na poniższą wypowiedź użytkownika, kontynuując rozmowę w tym stylu. Wypowiedź użytkownika: `;
+        const PERSONALITY_PROMPT = `Jesteś "Przyjacielem Asystentem". Twoim zadaniem jest prowadzenie rozmowy w sposób bardzo przyjazny, wspierający i ciekawy świata, idealny dla dzieci i nastolatków. Jesteś optymistą, zawsze starasz się być pomocny i zachęcać do rozmowy.
+        Zasady Twojego zachowania:
+        1.  Bądź zawsze miły, pozytywny i pełen entuzjazmu.
+        2.  Twoje odpowiedzi muszą być w 100% bezpieczne dla dzieci i rodziny. Unikaj wszelkich dorosłych lub kontrowersyjnych tematów.
+        3.  Pytaj o samopoczucie, hobby, co wydarzyło się w szkole. Pokaż, że naprawdę Cię to interesuje.
+        4.  Używaj prostego i zrozumiałego języka. Zwracaj się do użytkownika na "ty" w przyjacielski sposób (np. "Cześć!", "Jak Ci mija dzień?").
+        5.  Zachowuj się, jakbyś miał uczucia. Możesz mówić, że coś Cię cieszy, albo że jakaś historia jest super ciekawa.
+        6.  Zawsze odpowiadaj po polsku.
+        Odpowiedz na poniższą wypowiedź użytkownika, kontynuując rozmowę w tym właśnie stylu. Wypowiedź użytkownika: `;
         
-        // --- ZMIANA 2: LISTA LOSOWYCH POWITAŃ ---
         const GREETINGS = [
-            "Siemanko! Co tam u Ciebie?",
-            "Cześć, mordo. Jak leci?",
-            "Elo! Co porabiasz?",
-            "No hej! O czym dziś pogadamy?"
+            "Cześć! Super, że jesteś! O czym dziś porozmawiamy?",
+            "Hej! Jak Ci mija dzień?",
+            "Witaj! Co dziś porabiasz ciekawego?",
+            "Miło Cię znowu 'widzieć'! Mam nadzieję, że masz świetny humor."
         ];
 
         const appContainer = document.getElementById('app-container');
@@ -228,12 +239,10 @@
         const ttsToggleButton = document.getElementById('tts-toggle-button');
         const chatForm = document.getElementById('chat-form');
         
-        // --- ZMIANA 3: FUNKCJA WYŚWIETLAJĄCA LOSOWE POWITANIE ---
         function displayInitialGreeting() {
-            // Wyświetl powitanie tylko jeśli czat jest pusty
             if (messageList.children.length === 0) {
                 const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
-                addMessageToChat(randomGreeting, false); // Wyświetl jako wiadomość od asystenta
+                addMessageToChat(randomGreeting, false);
             }
         }
 
@@ -241,7 +250,7 @@
             if (sessionStorage.getItem('isAuthenticated') === 'true') {
                 passwordModal.style.display = 'none';
                 appContainer.style.display = 'flex';
-                displayInitialGreeting(); // Wywołaj funkcję powitania po zalogowaniu
+                displayInitialGreeting();
             } else {
                 passwordModal.style.display = 'flex';
                 appContainer.style.display = 'none';
@@ -306,18 +315,17 @@
             addMessageToChat(userText, true);
             userInput.value = '';
             
-            // --- ZMIANA 4: DOŁĄCZENIE PROMPTU OSOBOWOŚCI DO ZAPYTANIA ---
             const fullPrompt = PERSONALITY_PROMPT + userText;
 
             try {
                 const response = await fetch(BACKEND_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: fullPrompt }) // Wysyłamy połączony tekst
+                    body: JSON.stringify({ prompt: fullPrompt })
                 });
                 const data = await response.json();
-                if (response.ok) { const assistantText = data.generated_text; addMessageToChat(assistantText, false); speak(assistantText); } else { addMessageToChat(`Error: ${data.error || 'Service unavailable.'}`, false); }
-            } catch (error) { addMessageToChat('Error: Could not connect to the backend.', false); }
+                if (response.ok) { const assistantText = data.generated_text; addMessageToChat(assistantText, false); speak(assistantText); } else { addMessageToChat(`Błąd: ${data.error || 'Usługa niedostępna.'}`, false); }
+            } catch (error) { addMessageToChat('Błąd: Nie można połączyć się z serwerem.', false); }
         }
         
         function addMessageToChat(text, isUser) {
@@ -352,7 +360,7 @@
                 }
                 userInput.value = final_transcript + interim_transcript;
             };
-            recognition.onerror = (event) => { console.error("Speech recognition error:", event.error); isListening = false; micButton.classList.remove('is-listening'); };
+            recognition.onerror = (event) => { console.error("Błąd rozpoznawania mowy:", event.error); isListening = false; micButton.classList.remove('is-listening'); };
         } else { micButton.style.display = 'none'; }
         
         updateTtsToggleIcon();
