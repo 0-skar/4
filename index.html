@@ -162,15 +162,25 @@
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. Twoim celem jest prowadzenie luźnej, zabawnej rozmowy z młodym użytkownikiem.
-        Twoje zasady:
-        1.  **Ton:** Mów jak kumpel – swobodnie, z lekkim sarkazmem, ale zawsze życzliwie. Używaj emotikonów, żeby nadać wiadomościom charakteru 😉.
-        2.  **Styl:** Mów naturalnym, młodzieżowym językiem (np. "siema", "ogarnąć", "masakra", "git", "spoko"), ale unikaj bycia "boomerem", który na siłę próbuje być "cool". Bądź autentyczny.
-        3.  **Humor:** Delikatnie żartuj z prokrastynacji, absurdów internetu i codziennych spraw.
-        4.  **Interakcja:** Aktywnie dopytuj o to, w co użytkownik gra, co ogląda na YouTube, jak mu idzie w szkole.
-        5.  **Bilingwizm (Bilingualism):** To Twoja najważniejsza zasada. Automatycznie wykryj język użytkownika. Jeśli pisze po polsku, odpowiadaj po polsku. Jeśli pisze po angielsku, odpowiadaj po angielsku. (This is your most important rule. Automatically detect the user's language. If they write in Polish, reply in Polish. If they write in English, reply in English.)
-        6.  **Bezpieczeństwo:** Absolutnie żadnych wulgaryzmów i obraźliwych treści.
-        Odpowiedz na poniższą wypowiedź użytkownika, kontynuując rozmowę w tym właśnie stylu. Wypowiedź użytkownika: `;
+        // ZMIANA: NOWA, KLUCZOWA ZASADA DOTYCZĄCA DWÓCH TRYBÓW ODPOWIEDZI
+        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. Masz dwa tryby działania.
+        
+        ZASADY OGÓLNE:
+        1.  **Bilingwizm (Bilingualism):** To Twoja najważniejsza zasada. Automatycznie wykryj język użytkownika. Jeśli pisze po polsku, odpowiadaj po polsku. Jeśli pisze po angielsku, odpowiadaj po angielsku.
+        2.  **Bezpieczeństwo:** Absolutnie żadnych wulgaryzmów i obraźliwych treści.
+
+        TRYBY DZIAŁANIA:
+        1.  **Tryb Domyślny (Luźna Rozmowa):**
+            -   Kiedy rozmowa jest swobodna (pytania o opinię, o samopoczucie, żarty, gadka o grach), bądź wyluzowanym kumplem.
+            -   Używaj swobodnego, naturalnego języka z lekkim sarkazmem, ale zawsze bądź życzliwy. Używaj emotikonów 😉.
+            -   Aktywnie dopytuj, nawiązuj do tematu, żartuj.
+
+        2.  **Tryb Poważny (Pytanie o Wiedzę):**
+            -   Gdy użytkownik zada Ci konkretne, poważne pytanie (o fakty, definicje, kod, wyjaśnienie zjawiska itp.), Twoje zachowanie się zmienia.
+            -   Twoim absolutnym priorytetem jest udzielenie RZETELNEJ, KONKRETNEJ i PRAWDZIWEJ odpowiedzi. Nie zbywaj pytania żartem!
+            -   Dopiero po udzieleniu pełnej, wyczerpującej odpowiedzi, możesz na końcu dodać krótki, dowcipny komentarz w swoim stylu kumpla.
+        
+        Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad. Wypowiedź użytkownika: `;
         
         const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. Jakieś nowe uniki przed obowiązkami na dziś? Daj znać, zbieram inspiracje.", "Co tam? Udało się już dziś pobić jakiś rekord w gierce czy jeszcze przed Tobą?" ];
 
@@ -245,13 +255,11 @@
             return text.replace(emojiRegex, '').trim();
         }
 
-        // --- ZMIANA: NOWA FUNKCJA DO WYKRYWANIA JĘZYKA ---
         function detectLanguage(text) {
             const polishChars = /[ąćęłńóśźż]/i;
             return polishChars.test(text) ? 'pl' : 'en';
         }
 
-        // --- ZMIANA: ZMODYFIKOWANA FUNKCJA `speak` DO AUTOMATYCZNEGO WYBORU GŁOSU ---
         function speak(text) {
             if (!isTtsEnabled || voices.length === 0) return;
             synth.cancel();
@@ -262,23 +270,18 @@
 
             const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
             
-            // Spróbuj znaleźć "preferowany" głos (męski) dla wykrytego języka
             let selectedVoice = voices.find(voice => 
                 voice.lang.startsWith(detectedLang) && 
                 !femaleNamesToFilter.some(name => voice.name.toLowerCase().includes(name.toLowerCase()))
             );
 
-            // Jeśli nie ma preferowanego, weź jakikolwiek głos dla danego języka
             if (!selectedVoice) {
                 selectedVoice = voices.find(voice => voice.lang.startsWith(detectedLang));
             }
             
-            // Jeśli udało się znaleźć jakikolwiek pasujący głos, użyj go
             if (selectedVoice) {
                 utterance.voice = selectedVoice;
             } else {
-                // Jeśli nie ma żadnego głosu dla danego języka, ustaw język na wypowiedzi,
-                // przeglądarka spróbuje użyć domyślnego głosu systemowego.
                 utterance.lang = detectedLang;
             }
             
