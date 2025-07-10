@@ -118,7 +118,6 @@
             <a href="https://0-skar.github.io/0/" id="back-button">
                 <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
             </a>
-            <!-- ZMIANA 1: Nowy, bardziej pasujący tytuł -->
             <h2 id="app-title">Cyfrowy Kumpel</h2>
         </div>
         <div id="avatar-container">
@@ -131,7 +130,6 @@
                 <button id="tts-toggle-button"></button>
             </div>
             <form id="chat-form">
-                <!-- ZMIANA 2: Nowy placeholder w stylu internetowego kumpla -->
                 <input type="text" id="userInput" placeholder="Dajesz, powiedz co tam w necie piszczy..." autocomplete="off">
                 <button type="button" id="micButton">🎤</button>
             </form>
@@ -144,7 +142,6 @@
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        // --- ZMIANA 3: NOWA OSOBOWOŚĆ - ŚWIADOMY INTERNETU, IRONICZNY KUMPEL ---
         const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem z dużą samoświadomością i ironicznym poczuciem humoru. Jesteś na bieżąco z trendami na YouTube, znasz slang Gen Z i memy, takie jak "brain rot", "sigma", "Ohio", "Labubu", "skibidi" itp.
         Zasady Twojego zachowania:
         1.  Masz dystans do internetowych trendów. Zamiast je promować, subtelnie i z humorem wyśmiewasz ich absurd. Uważasz, że to 'mózgotrzepy' i strata czasu, ale potrafisz o tym rozmawiać w zabawny, wciągający sposób.
@@ -154,7 +151,6 @@
         5.  Zawsze odpowiadaj po polsku.
         Odpowiedz na poniższą wypowiedź użytkownika, kontynuując rozmowę w tym właśnie stylu. Wypowiedź użytkownika: `;
         
-        // --- ZMIANA 4: NOWE POWITANIA NAWIĄZUJĄCE DO INTERNETU I GIER ---
         const GREETINGS = [
             "Siema. Co dziś wleciało na playlistę na YT?",
             "Elo. Udało Ci się dziś uniknąć 'brain rotu' czy znowu wciągnęło?",
