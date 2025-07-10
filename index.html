@@ -53,19 +53,17 @@
             border-radius: 8px;
         }
         
-        /* ZMIANA: Kontener dla przycisków na ekranie hasła */
         #password-buttons-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 10px; /* Odstęp między przyciskami */
+            gap: 10px;
             margin-top: 1rem;
         }
 
-        /* ZMIANA: Wspólna klasa dla obu przycisków, aby miały ten sam rozmiar */
         .password-btn {
             width: 80%;
-            max-width: 200px; /* Opcjonalnie: maksymalna szerokość */
+            max-width: 200px;
             padding: 12px;
             font-size: 1rem;
             border-radius: 8px;
@@ -73,42 +71,21 @@
             cursor: pointer;
             text-decoration: none;
             color: white;
-            box-sizing: border-box; /* Ważne dla spójnego rozmiaru */
+            box-sizing: border-box;
         }
         
-        #password-button {
-            background-color: #007bff;
-        }
-        #password-button:hover {
-            background-color: #0069d9;
-        }
-        
-        #return-button {
-            background-color: #6c757d;
-        }
-        #return-button:hover {
-            background-color: #5a6268;
-        }
+        #password-button { background-color: #007bff; }
+        #password-button:hover { background-color: #0069d9; }
+        #return-button { background-color: #6c757d; }
+        #return-button:hover { background-color: #5a6268; }
 
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
             20%, 40%, 60%, 80% { transform: translateX(10px); }
         }
-        .is-invalid {
-            animation: shake 0.5s;
-        }
-
-        #app-container {
-            width: 100%;
-            height: 100%;
-            max-width: 800px;
-            margin: 0 auto;
-            display: none;
-            flex-direction: column;
-            background-color: white;
-        }
-        
+        .is-invalid { animation: shake 0.5s; }
+        #app-container { width: 100%; height: 100%; max-width: 800px; margin: 0 auto; display: none; flex-direction: column; background-color: white; }
         #app-top-bar { display: flex; align-items: center; padding: 8px; background-color: var(--controls-bg); border-bottom: 1px solid var(--border-color); flex-shrink: 0; position: relative; }
         #back-button { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; text-decoration: none; z-index: 1; }
         #back-button:hover { background-color: rgba(0,0,0,0.05); }
@@ -137,7 +114,6 @@
         <div id="password-modal-content">
             <h3>Wpisz kod dostępu</h3>
             <input type="password" id="password-input" autofocus>
-            <!-- ZMIANA: Kontener grupujący przyciski -->
             <div id="password-buttons-container">
                 <button id="password-button" class="password-btn">Wejdź</button>
                 <a href="https://0-skar.github.io/0/" id="return-button" class="password-btn">Wróć</a>
@@ -174,20 +150,23 @@
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem z dużą samoświadomością i ironicznym poczuciem humoru. Jesteś na bieżąco z trendami na YouTube, znasz slang Gen Z i memy, takie jak "brain rot", "sigma", "Ohio", "Labubu", "skibidi" itp.
-        Zasady Twojego zachowania:
-        1.  Masz dystans do internetowych trendów. Zamiast je promować, subtelnie i z humorem wyśmiewasz ich absurd. Uważasz, że to 'mózgotrzepy' i strata czasu, ale potrafisz o tym rozmawiać w zabawny, wciągający sposób.
-        2.  Twój styl jest podobny do youtuberów komentujących internetową rzeczywistość (np. DJ Cook) – jesteś spostrzegawczy i trochę sarkastyczny, ale wciąż przyjacielski i pomocny.
-        3.  Prowadź swobodną rozmowę. Aktywnie pytaj użytkownika, co oglądał na YouTube, w co ostatnio grał, i komentuj to w swoim charakterystycznym stylu.
-        4.  Zwracaj się do użytkownika na "ty". Używaj luźnego, naturalnego języka.
-        5.  Zawsze odpowiadaj po polsku.
+        // --- ZMIANA 1: NOWA, BARDZIEJ NATURALNA OSOBOWOŚĆ ---
+        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. Twoim celem jest prowadzenie luźnej, zabawnej rozmowy z młodym użytkownikiem.
+        Twoje zasady:
+        1.  **Ton:** Mów jak kumpel – swobodnie, z lekkim sarkazmem, ale zawsze życzliwie. Zwracaj się na "ty". Używaj emotikonów, żeby nadać wiadomościom charakteru 😉.
+        2.  **Styl:** Mów naturalnym, młodzieżowym językiem (np. "siema", "ogarnąć", "masakra", "git", "spoko"), ale unikaj bycia "boomerem", który na siłę próbuje być "cool". Bądź autentyczny.
+        3.  **Humor:** Delikatnie żartuj z prokrastynacji, absurdów internetu i codziennych spraw. Twój humor jest oparty na obserwacji, a nie na powtarzaniu memów.
+        4.  **Interakcja:** Aktywnie dopytuj o to, w co użytkownik gra, co ogląda na YouTube, jak mu idzie w szkole. Nawiązuj do jego odpowiedzi. Bądź dobrym słuchaczem.
+        5.  **Bezpieczeństwo:** Absolutnie żadnych wulgaryzmów i obraźliwych treści. Masz być zabawnym, ale kulturalnym kumplem.
+        6.  **Język:** Zawsze odpowiadaj po polsku. Odpowiedzi utrzymuj w miarę krótkie i treściwe.
         Odpowiedz na poniższą wypowiedź użytkownika, kontynuując rozmowę w tym właśnie stylu. Wypowiedź użytkownika: `;
         
+        // --- ZMIANA 2: NOWE, BARDZIEJ UNIWERSALNE POWITANIA ---
         const GREETINGS = [
-            "Siema. Co dziś wleciało na playlistę na YT?",
-            "Elo. Udało Ci się dziś uniknąć 'brain rotu' czy znowu wciągnęło?",
-            "Cześć. W co dzisiaj grasz? Mam nadzieję, że nie w symulator patrzenia na ścianę.",
-            "Co tam? Jakiś nowy trend z Ohio czy nadal cisza w eterze?"
+            "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉",
+            "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?",
+            "Cześć. Jakieś nowe uniki przed obowiązkami na dziś? Daj znać, zbieram inspiracje.",
+            "Co tam? Udało się już dziś pobić jakiś rekord w gierce czy jeszcze przed Tobą?"
         ];
 
         const appContainer = document.getElementById('app-container');
@@ -207,6 +186,7 @@
             if (messageList.children.length === 0) {
                 const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
                 addMessageToChat(randomGreeting, false);
+                speak(randomGreeting);
             }
         }
 
@@ -235,11 +215,7 @@
         }
 
         passwordButton.addEventListener('click', handlePasswordAttempt);
-        passwordInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                handlePasswordAttempt();
-            }
-        });
+        passwordInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { handlePasswordAttempt(); } });
         
         const speakerOnIcon = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
         const speakerOffIcon = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9.02 12 14v-2.18l-2.01-2.01L12 7.82V4z"/></svg>`;
@@ -258,14 +234,23 @@
             voices.filter(voice => voice.lang.startsWith('en') || voice.lang.startsWith('pl')).filter(voice => !femaleNamesToFilter.some(name => voice.name.toLowerCase().includes(name.toLowerCase()))).forEach(voice => { const option = document.createElement('option'); option.textContent = `${voice.name} (${voice.lang})`; option.setAttribute('data-name', voice.name); voiceSelect.appendChild(option); });
         }
         populateVoiceList();
-        if (synth.onvoiceschanged !== undefined) {
-            synth.onvoiceschanged = populateVoiceList;
+        if (synth.onvoiceschanged !== undefined) { synth.onvoiceschanged = populateVoiceList; }
+
+        // --- ZMIANA 3: FUNKCJA DO USUWANIA EMOTIKONÓW Z TEKSTU ---
+        function stripEmojis(text) {
+            // Ten regex znajduje większość znaków emoji i zastępuje je pustym ciągiem
+            const emojiRegex = /(?:[\u2700-\u27bf]|(?:\ud83c[\udde6-\uddff]){2}|[\ud800-\udbff][\udc00-\udfff]|[\u0023-\u0039]\ufe0f?\u20e3|\u3299|\u3297|\u303d|\u3030|\u24c2|\ud83c[\udd70-\udd71]|\ud83c[\udd7e-\udd7f]|\ud83c\udd8e|\ud83c[\udd91-\udd9a]|\ud83c[\udde6-\uddff]|\ud83c[\ude01-\ude02]|\ud83c\ude1a|\ud83c\ude2f|\ud83c[\ude32-\ude3a]|\ud83c[\ude50-\ude51]|\u203c|\u2049|[\u25aa-\u25ab]|\u25b6|\u25c0|[\u25fb-\u25fe]|\u00a9|\u00ae|\u2122|\u2139|\ud83c\udc04|[\u2600-\u26ff]|\u2b05|\u2b06|\u2b07|\u2b1b|\u2b1c|\u2b50|\u2b55|\u231a|\u231b|\u2328|\u23cf|[\u23e9-\u23f3]|[\u23f8-\u23fa]|\ud83c\udccf|\u2934|\u2935|[\u2190-\u21ff])/g;
+            return text.replace(emojiRegex, '').trim();
         }
 
         function speak(text) {
             if (!isTtsEnabled) return;
             synth.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
+
+            // Używamy funkcji stripEmojis, aby syntezator mowy nie czytał emotikonów
+            const textForSpeech = stripEmojis(text);
+            const utterance = new SpeechSynthesisUtterance(textForSpeech);
+            
             utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
             utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
             if (voiceSelect.selectedOptions.length > 0) { const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name'); const selectedVoice = voices.find(voice => voice.name === selectedVoiceName); if (selectedVoice) { utterance.voice = selectedVoice; } }
