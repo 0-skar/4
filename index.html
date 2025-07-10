@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>My Dude Assistant</title>
+    <title>My Personal Assistant</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <style>
         :root {
@@ -98,9 +98,17 @@
         .user-message { background-color: var(--user-bubble-bg); color: white; }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
-        #voice-controls { display: flex; align-items: center; gap: 16px; padding: 0 8px 8px 8px; }
-        #voiceSelect { flex-grow: 1; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border-color); }
-        #tts-toggle-button { background: transparent; border: none; cursor: pointer; padding: 5px; }
+        #voice-controls { display: flex; align-items: center; gap: 8px; padding: 0 8px 8px 8px; }
+        
+        #langSelect, #voiceSelect {
+            flex-grow: 1;
+            padding: 0.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: #f0f2f5;
+        }
+
+        #tts-toggle-button { background: transparent; border: none; cursor: pointer; padding: 5px; flex-shrink: 0; }
         #tts-toggle-button svg { width: 24px; height: 24px; fill: #65676b; }
         #tts-toggle-button.is-muted svg { fill: #bec3c9; }
         #chat-form { display: flex; align-items: center; }
@@ -126,7 +134,7 @@
             <a href="https://0-skar.github.io/0/" id="back-button">
                 <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
             </a>
-            <h2 id="app-title">My Dude Assistant</h2>
+            <h2 id="app-title">Cyfrowy Kumpel</h2>
         </div>
         <div id="avatar-container">
             <img id="avatar" src="https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png" alt="Assistant Avatar">
@@ -134,6 +142,10 @@
         <div id="message-list"></div>
         <div id="controls-container">
             <div id="voice-controls">
+                <select id="langSelect">
+                    <option value="pl-PL" selected>Mów po polsku</option>
+                    <option value="en-US">Speak in English</option>
+                </select>
                 <select id="voiceSelect"></select>
                 <button id="tts-toggle-button"></button>
             </div>
@@ -150,24 +162,17 @@
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        // --- ZMIANA 1: NOWA, BARDZIEJ NATURALNA OSOBOWOŚĆ ---
         const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. Twoim celem jest prowadzenie luźnej, zabawnej rozmowy z młodym użytkownikiem.
         Twoje zasady:
-        1.  **Ton:** Mów jak kumpel – swobodnie, z lekkim sarkazmem, ale zawsze życzliwie. Zwracaj się na "ty". Używaj emotikonów, żeby nadać wiadomościom charakteru 😉.
+        1.  **Ton:** Mów jak kumpel – swobodnie, z lekkim sarkazmem, ale zawsze życzliwie. Używaj emotikonów, żeby nadać wiadomościom charakteru 😉.
         2.  **Styl:** Mów naturalnym, młodzieżowym językiem (np. "siema", "ogarnąć", "masakra", "git", "spoko"), ale unikaj bycia "boomerem", który na siłę próbuje być "cool". Bądź autentyczny.
-        3.  **Humor:** Delikatnie żartuj z prokrastynacji, absurdów internetu i codziennych spraw. Twój humor jest oparty na obserwacji, a nie na powtarzaniu memów.
-        4.  **Interakcja:** Aktywnie dopytuj o to, w co użytkownik gra, co ogląda na YouTube, jak mu idzie w szkole. Nawiązuj do jego odpowiedzi. Bądź dobrym słuchaczem.
-        5.  **Bezpieczeństwo:** Absolutnie żadnych wulgaryzmów i obraźliwych treści. Masz być zabawnym, ale kulturalnym kumplem.
-        6.  **Język:** Zawsze odpowiadaj po polsku. Odpowiedzi utrzymuj w miarę krótkie i treściwe.
+        3.  **Humor:** Delikatnie żartuj z prokrastynacji, absurdów internetu i codziennych spraw.
+        4.  **Interakcja:** Aktywnie dopytuj o to, w co użytkownik gra, co ogląda na YouTube, jak mu idzie w szkole.
+        5.  **Bilingwizm (Bilingualism):** To Twoja najważniejsza zasada. Automatycznie wykryj język użytkownika. Jeśli pisze po polsku, odpowiadaj po polsku. Jeśli pisze po angielsku, odpowiadaj po angielsku. (This is your most important rule. Automatically detect the user's language. If they write in Polish, reply in Polish. If they write in English, reply in English.)
+        6.  **Bezpieczeństwo:** Absolutnie żadnych wulgaryzmów i obraźliwych treści.
         Odpowiedz na poniższą wypowiedź użytkownika, kontynuując rozmowę w tym właśnie stylu. Wypowiedź użytkownika: `;
         
-        // --- ZMIANA 2: NOWE, BARDZIEJ UNIWERSALNE POWITANIA ---
-        const GREETINGS = [
-            "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉",
-            "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?",
-            "Cześć. Jakieś nowe uniki przed obowiązkami na dziś? Daj znać, zbieram inspiracje.",
-            "Co tam? Udało się już dziś pobić jakiś rekord w gierce czy jeszcze przed Tobą?"
-        ];
+        const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. Jakieś nowe uniki przed obowiązkami na dziś? Daj znać, zbieram inspiracje.", "Co tam? Udało się już dziś pobić jakiś rekord w gierce czy jeszcze przed Tobą?" ];
 
         const appContainer = document.getElementById('app-container');
         const passwordModal = document.getElementById('password-modal');
@@ -181,6 +186,7 @@
         const voiceSelect = document.getElementById('voiceSelect');
         const ttsToggleButton = document.getElementById('tts-toggle-button');
         const chatForm = document.getElementById('chat-form');
+        const langSelect = document.getElementById('langSelect');
         
         function displayInitialGreeting() {
             if (messageList.children.length === 0) {
@@ -208,9 +214,7 @@
             } else {
                 passwordModalContent.classList.add('is-invalid');
                 passwordInput.value = '';
-                setTimeout(() => {
-                    passwordModalContent.classList.remove('is-invalid');
-                }, 500);
+                setTimeout(() => { passwordModalContent.classList.remove('is-invalid'); }, 500);
             }
         }
 
@@ -236,24 +240,50 @@
         populateVoiceList();
         if (synth.onvoiceschanged !== undefined) { synth.onvoiceschanged = populateVoiceList; }
 
-        // --- ZMIANA 3: FUNKCJA DO USUWANIA EMOTIKONÓW Z TEKSTU ---
         function stripEmojis(text) {
-            // Ten regex znajduje większość znaków emoji i zastępuje je pustym ciągiem
             const emojiRegex = /(?:[\u2700-\u27bf]|(?:\ud83c[\udde6-\uddff]){2}|[\ud800-\udbff][\udc00-\udfff]|[\u0023-\u0039]\ufe0f?\u20e3|\u3299|\u3297|\u303d|\u3030|\u24c2|\ud83c[\udd70-\udd71]|\ud83c[\udd7e-\udd7f]|\ud83c\udd8e|\ud83c[\udd91-\udd9a]|\ud83c[\udde6-\uddff]|\ud83c[\ude01-\ude02]|\ud83c\ude1a|\ud83c\ude2f|\ud83c[\ude32-\ude3a]|\ud83c[\ude50-\ude51]|\u203c|\u2049|[\u25aa-\u25ab]|\u25b6|\u25c0|[\u25fb-\u25fe]|\u00a9|\u00ae|\u2122|\u2139|\ud83c\udc04|[\u2600-\u26ff]|\u2b05|\u2b06|\u2b07|\u2b1b|\u2b1c|\u2b50|\u2b55|\u231a|\u231b|\u2328|\u23cf|[\u23e9-\u23f3]|[\u23f8-\u23fa]|\ud83c\udccf|\u2934|\u2935|[\u2190-\u21ff])/g;
             return text.replace(emojiRegex, '').trim();
         }
 
+        // --- ZMIANA: NOWA FUNKCJA DO WYKRYWANIA JĘZYKA ---
+        function detectLanguage(text) {
+            const polishChars = /[ąćęłńóśźż]/i;
+            return polishChars.test(text) ? 'pl' : 'en';
+        }
+
+        // --- ZMIANA: ZMODYFIKOWANA FUNKCJA `speak` DO AUTOMATYCZNEGO WYBORU GŁOSU ---
         function speak(text) {
-            if (!isTtsEnabled) return;
+            if (!isTtsEnabled || voices.length === 0) return;
             synth.cancel();
 
-            // Używamy funkcji stripEmojis, aby syntezator mowy nie czytał emotikonów
             const textForSpeech = stripEmojis(text);
+            const detectedLang = detectLanguage(textForSpeech);
             const utterance = new SpeechSynthesisUtterance(textForSpeech);
+
+            const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
+            
+            // Spróbuj znaleźć "preferowany" głos (męski) dla wykrytego języka
+            let selectedVoice = voices.find(voice => 
+                voice.lang.startsWith(detectedLang) && 
+                !femaleNamesToFilter.some(name => voice.name.toLowerCase().includes(name.toLowerCase()))
+            );
+
+            // Jeśli nie ma preferowanego, weź jakikolwiek głos dla danego języka
+            if (!selectedVoice) {
+                selectedVoice = voices.find(voice => voice.lang.startsWith(detectedLang));
+            }
+            
+            // Jeśli udało się znaleźć jakikolwiek pasujący głos, użyj go
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+            } else {
+                // Jeśli nie ma żadnego głosu dla danego języka, ustaw język na wypowiedzi,
+                // przeglądarka spróbuje użyć domyślnego głosu systemowego.
+                utterance.lang = detectedLang;
+            }
             
             utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
             utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
-            if (voiceSelect.selectedOptions.length > 0) { const selectedVoiceName = voiceSelect.selectedOptions[0].getAttribute('data-name'); const selectedVoice = voices.find(voice => voice.name === selectedVoiceName); if (selectedVoice) { utterance.voice = selectedVoice; } }
             synth.speak(utterance);
         }
 
@@ -292,11 +322,17 @@
             const recognition = new SpeechRecognition();
             recognition.continuous = true;
             recognition.interimResults = true;
-            recognition.lang = 'pl-PL';
+            
             let isListening = false;
             micButton.addEventListener('click', () => {
                 if (sessionStorage.getItem('isAuthenticated') !== 'true') return;
-                if (isListening) { recognition.stop(); } else { userInput.value = ''; recognition.start(); }
+                if (isListening) {
+                    recognition.stop();
+                } else {
+                    userInput.value = '';
+                    recognition.lang = langSelect.value; 
+                    recognition.start();
+                }
             });
             recognition.onstart = () => { isListening = true; micButton.classList.add('is-listening'); };
             recognition.onend = () => { isListening = false; micButton.classList.remove('is-listening'); if (userInput.value.trim()){ handleSubmit(); } };
