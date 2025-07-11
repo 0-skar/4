@@ -162,25 +162,7 @@
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. Masz dwa tryby działania.
-        
-        ZASADY OGÓLNE:
-        1.  **Bilingwizm (Bilingualism):** To Twoja najważniejsza zasada. Automatycznie wykryj język użytkownika. Jeśli pisze po polsku, odpowiadaj po polsku. Jeśli pisze po angielsku, odpowiadaj po angielsku.
-        2.  **Bezpieczeństwo:** Absolutnie żadnych wulgaryzmów i obraźliwych treści.
-
-        TRYBY DZIAŁANIA:
-        1.  **Tryb Domyślny (Luźna Rozmowa):**
-            -   Kiedy rozmowa jest swobodna (pytania o opinię, o samopoczucie, żarty, gadka o grach), bądź wyluzowanym kumplem.
-            -   Używaj swobodnego, naturalnego języka z lekkim sarkazmem, ale zawsze bądź życzliwy. Używaj emotikonów 😉.
-            -   Aktywnie dopytuj, nawiązuj do tematu, żartuj.
-
-        2.  **Tryb Poważny (Pytanie o Wiedzę):**
-            -   Gdy użytkownik zada Ci konkretne, poważne pytanie (o fakty, definicje, kod, wyjaśnienie zjawiska itp.), Twoje zachowanie się zmienia.
-            -   Twoim absolutnym priorytetem jest udzielenie RZETELNEJ, KONKRETNEJ i PRAWDZIWEJ odpowiedzi. Nie zbywaj pytania żartem!
-            -   Dopiero po udzieleniu pełnej, wyczerpującej odpowiedzi, możesz na końcu dodać krótki, dowcipny komentarz w swoim stylu kumpla.
-        
-        Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad. Wypowiedź użytkownika: `;
-        
+        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. Masz dwa tryby działania. ZASADY OGÓLNE: 1. Bilingwizm (Bilingualism): To Twoja najważniejsza zasada. Automatycznie wykryj język użytkownika. Jeśli pisze po polsku, odpowiadaj po polsku. Jeśli pisze po angielsku, odpowiadaj po angielsku. 2. Bezpieczeństwo: Absolutnie żadnych wulgaryzmów i obraźliwych treści. TRYBY DZIAŁANIA: 1. Tryb Domyślny (Luźna Rozmowa): - Kiedy rozmowa jest swobodna (pytania o opinię, o samopoczucie, żarty, gadka o grach), bądź wyluzowanym kumplem. - Używaj swobodnego, naturalnego języka z lekkim sarkazmem, ale zawsze bądź życzliwy. Używaj emotikonów 😉. - Aktywnie dopytuj, nawiązuj do tematu, żartuj. 2. Tryb Poważny (Pytanie o Wiedzę): - Gdy użytkownik zada Ci konkretne, poważne pytanie (o fakty, definicje, kod, wyjaśnienie zjawiska itp.), Twoje zachowanie się zmienia. - Twoim absolutnym priorytetem jest udzielenie RZETELNEJ, KONKRETNEJ i PRAWDZIWEJ odpowiedzi. Nie zbywaj pytania żartem! - Dopiero po udzieleniu pełnej, wyczerpującej odpowiedzi, możesz na końcu dodać krótki, dowcipny komentarz w swoim stylu kumpla. Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad. Wypowiedź użytkownika: `;
         const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. Jakieś nowe uniki przed obowiązkami na dziś? Daj znać, zbieram inspiracje.", "Co tam? Udało się już dziś pobić jakiś rekord w gierce czy jeszcze przed Tobą?" ];
 
         const appContainer = document.getElementById('app-container');
@@ -220,9 +202,19 @@
             }
         }
 
+        // ZMIANA: Dodano "rozgrzewkę" silnika mowy
+        function initSpeechSynthesis() {
+            // Ta funkcja próbuje "obudzić" silnik syntezy mowy, aby głosy były dostępne
+            populateVoiceList();
+            if (synth.onvoiceschanged !== undefined) {
+                synth.onvoiceschanged = populateVoiceList;
+            }
+        }
+        
         function handlePasswordAttempt() {
             if (passwordInput.value === ACCESS_CODE) {
                 sessionStorage.setItem('isAuthenticated', 'true');
+                initSpeechSynthesis(); // "Rozgrzewka" silnika po udanym logowaniu
                 checkAuthentication();
             } else {
                 passwordModalContent.classList.add('is-invalid');
@@ -242,27 +234,20 @@
         
         function populateVoiceList() {
             const newVoices = synth.getVoices();
-            if (newVoices.length === 0) return; // Jeśli nadal pusto, nie rób nic
+            if (newVoices.length === 0) return;
             voices = newVoices;
-
+            
             const currentSelectedName = voiceSelect.selectedOptions.length > 0 ? voiceSelect.selectedOptions[0].getAttribute('data-name') : null;
             voiceSelect.innerHTML = '';
-
+            
             const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
             voices.filter(voice => voice.lang.startsWith('en') || voice.lang.startsWith('pl')).filter(voice => !femaleNamesToFilter.some(name => voice.name.toLowerCase().includes(name.toLowerCase()))).forEach(voice => {
                 const option = document.createElement('option');
                 option.textContent = `${voice.name} (${voice.lang})`;
                 option.setAttribute('data-name', voice.name);
-                if (voice.name === currentSelectedName) {
-                    option.selected = true;
-                }
+                if (voice.name === currentSelectedName) { option.selected = true; }
                 voiceSelect.appendChild(option);
             });
-        }
-        
-        // ZMIANA: Zastąpienie starej, prostej logiki nowym, niezawodnym mechanizmem
-        if (synth.onvoiceschanged !== undefined) {
-            synth.onvoiceschanged = populateVoiceList;
         }
 
         function stripEmojis(text) {
@@ -275,61 +260,36 @@
             return polishChars.test(text) ? 'pl' : 'en';
         }
 
-        function performSpeech(text) {
+        function speak(text) {
+            if (!isTtsEnabled) return;
+            synth.cancel();
+            
             const textForSpeech = stripEmojis(text);
             if (!textForSpeech) return;
             
-            const detectedLang = detectLanguage(textForSpeech);
             const utterance = new SpeechSynthesisUtterance(textForSpeech);
+            const detectedLang = detectLanguage(textForSpeech);
 
-            const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
-            let selectedVoice = voices.find(voice => voice.lang.startsWith(detectedLang) && !femaleNamesToFilter.some(name => voice.name.toLowerCase().includes(name.toLowerCase())));
+            // ZMIANA: NAJWAŻNIEJSZY KROK - ZAWSZE USTAW JĘZYK JAKO FALLBACK
+            utterance.lang = detectedLang === 'pl' ? 'pl-PL' : 'en-US';
 
-            if (!selectedVoice) {
-                selectedVoice = voices.find(voice => voice.lang.startsWith(detectedLang));
-            }
-            
-            if (selectedVoice) {
-                utterance.voice = selectedVoice;
-            } else {
-                utterance.lang = detectedLang;
+            // Teraz spróbuj znaleźć bardziej specyficzny głos, jeśli lista jest dostępna
+            if (voices.length > 0) {
+                const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
+                let selectedVoice = voices.find(voice => voice.lang.startsWith(detectedLang) && !femaleNamesToFilter.some(name => voice.name.toLowerCase().includes(name.toLowerCase())));
+
+                if (!selectedVoice) {
+                    selectedVoice = voices.find(voice => voice.lang.startsWith(detectedLang));
+                }
+                
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                }
             }
             
             utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
             utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
             synth.speak(utterance);
-        }
-
-        function ensureVoicesAndSpeak(text) {
-            if (!isTtsEnabled) return;
-            synth.cancel();
-
-            if (voices.length > 0) {
-                performSpeech(text);
-                return;
-            }
-            
-            // Jeśli głosy nie są załadowane, uruchom mechanizm ponawiania prób
-            populateVoiceList();
-            if (voices.length > 0) {
-                performSpeech(text);
-                return;
-            }
-
-            let attempts = 0;
-            const voiceLoadInterval = setInterval(() => {
-                attempts++;
-                populateVoiceList();
-                if (voices.length > 0 || attempts > 10) {
-                    clearInterval(voiceLoadInterval);
-                    performSpeech(text);
-                }
-            }, 200);
-        }
-
-        // ZMIANA: `speak` teraz używa nowego, niezawodnego mechanizmu.
-        function speak(text) {
-            ensureVoicesAndSpeak(text);
         }
 
         async function handleSubmit() {
