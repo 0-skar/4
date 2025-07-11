@@ -111,11 +111,11 @@
         .message-bubble { padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4; word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .user-message { background-color: var(--user-bubble-bg); color: white; }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
-        /* ZMIANA: Styl dla obrazów w dymkach */
         .assistant-message img {
             max-width: 100%;
             border-radius: 10px;
             margin-top: 8px;
+            display: block;
         }
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
         
@@ -160,27 +160,13 @@
     <script>
         const ACCESS_CODE = "2017";
         const BACKEND_URL = "https://eosforus-3.hf.space/chat";
-        // ZMIANA: Dodajemy URL do publicznego serwera generującego obrazy
-        const IMAGE_BACKEND_URL = "https://api-inference.huggingface.co/models/playgroundai/playground-v2.5-1024px-aesthetic";
+        // ZMIANA: Nowy, działający publicznie URL do generowania obrazów
+        const IMAGE_BACKEND_URL = "https://image.pollinations.ai/prompt/";
         
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        // ZMIANA: Nowa instrukcja dla AI, ucząca go tagu [IMG]
-        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI, który potrafi też tworzyć obrazy.
-
-        **ZASADA GENEROWANIA OBRAZÓW:**
-        Gdy użytkownik poprosi Cię o stworzenie, narysowanie lub wygenerowanie obrazu (np. "narysuj psa w kosmosie"), Twoim zadaniem jest przetłumaczenie tej prośby na zwięzły, angielski opis. Następnie **MUSISZ** odpowiedzieć tylko i wyłącznie w formacie: [IMG]zwięzły opis po angielsku[/IMG].
-        **Przykład:** Użytkownik: "Stwórz obraz astronauty na koniu". Twoja odpowiedź: "[IMG]an astronaut riding a horse[/IMG]".
-        Jeśli użytkownik prosi o obraz, ale jego opis jest niejasny, najpierw dopytaj go o szczegóły w normalnej rozmowie.
-
-        **POZOSTAŁE ZASADY:**
-        1.  **Przełączanie języków:** W normalnej rozmowie, jeśli masz użyć fragmentu w innym języku, użyj tagów [PL], [EN] itd.
-        2.  **Dwa tryby:** Zachowaj podział na tryb luźnej rozmowy i tryb poważnej odpowiedzi.
-        3.  **Bezpieczeństwo:** Żadnych wulgaryzmów.
-        
-        Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad. Poniżej znajduje się historia rozmowy, abyś miał pełen kontekst. Wypowiedź użytkownika: `;
-        
+        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI, który potrafi też tworzyć obrazy. **ZASADA GENEROWANIA OBRAZÓW:** Gdy użytkownik poprosi Cię o stworzenie, narysowanie lub wygenerowanie obrazu (np. "narysuj psa w kosmosie"), Twoim zadaniem jest przetłumaczenie tej prośby na zwięzły, angielski opis. Następnie **MUSISZ** odpowiedzieć tylko i wyłącznie w formacie: [IMG]zwięzły opis po angielsku[/IMG]. **Przykład:** Użytkownik: "Stwórz obraz astronauty na koniu". Twoja odpowiedź: "[IMG]an astronaut riding a horse[/IMG]". Jeśli użytkownik prosi o obraz, ale jego opis jest niejasny, najpierw dopytaj go o szczegóły w normalnej rozmowie. **POZOSTAŁE ZASADY:** 1.  **Przełączanie języków:** W normalnej rozmowie, jeśli masz użyć fragmentu w innym języku, użyj tagów [PL], [EN] itd. 2.  **Dwa tryby:** Zachowaj podział na tryb luźnej rozmowy i tryb poważnej odpowiedzi. 3.  **Bezpieczeństwo:** Żadnych wulgaryzmów. Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad. Poniżej znajduje się historia rozmowy, abyś miał pełen kontekst. Wypowiedź użytkownika: `;
         const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. W co dzisiaj grasz? A może chcesz, żebym coś namalował? 😎" ];
 
         const appContainer = document.getElementById('app-container');
@@ -309,15 +295,14 @@
             }
         }
 
-        // ZMIANA: Nowa funkcja do generowania obrazów
+        // ZMIANA: Modyfikacja funkcji, aby korzystała z nowego URL
         async function generateImage(prompt) {
             addMessageToChat("Chwileczkę, już się biorę za malowanie... 🎨", false);
             try {
-                const response = await fetch(IMAGE_BACKEND_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ "inputs": prompt })
-                });
+                // Nowy sposób tworzenia URL
+                const fullUrl = IMAGE_BACKEND_URL + encodeURIComponent(prompt);
+                
+                const response = await fetch(fullUrl, { method: 'POST' }); // Metoda POST jest często wymagana
 
                 if (!response.ok) {
                     throw new Error(`Błąd serwera malarskiego: ${response.statusText}`);
@@ -326,7 +311,6 @@
                 const blob = await response.blob();
                 const imageUrl = URL.createObjectURL(blob);
                 
-                // Tworzymy pustą wiadomość tekstową, aby dodać ją do historii
                 addMessageToChat(`[IMG]${prompt}[/IMG]`, false, imageUrl);
 
             } catch (error) {
@@ -356,7 +340,6 @@
                 if (response.ok) {
                     const assistantText = data.generated_text;
                     
-                    // Sprawdzamy, czy odpowiedź to polecenie generowania obrazu
                     const imgMatch = assistantText.match(/\[IMG\](.*?)\[\/IMG\]/);
                     if (imgMatch && imgMatch[1]) {
                         generateImage(imgMatch[1]);
@@ -372,7 +355,6 @@
             }
         }
         
-        // ZMIANA: Modyfikacja funkcji, aby mogła wyświetlać obrazy
         function addMessageToChat(text, isUser, imageUrl = null) {
             const messageBubble = document.createElement('div');
             const role = isUser ? 'user' : 'assistant';
@@ -381,17 +363,22 @@
             const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG)\]/gi, '');
             
             if (imageUrl) {
-                // Jeśli jest obraz, tworzymy tag img
                 const image = document.createElement('img');
                 image.src = imageUrl;
                 image.alt = cleanText;
                 messageBubble.appendChild(image);
             } else {
-                messageBubble.innerText = cleanText;
+                if (cleanText) {
+                    messageBubble.innerText = cleanText;
+                }
             }
 
-            messageList.appendChild(messageBubble);
-            messageList.scrollTop = messageList.scrollHeight;
+            // Dodajemy wiadomość tylko, jeśli ma treść (tekstową lub obrazek)
+            if (cleanText || imageUrl) {
+                messageList.appendChild(messageBubble);
+                messageList.scrollTop = messageList.scrollHeight;
+            }
+            
             conversationHistory.push({ role, content: text });
         }
 
