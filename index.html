@@ -100,7 +100,6 @@
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
         #voice-controls { display: flex; align-items: center; gap: 8px; padding: 0 8px 8px 8px; }
         
-        /* ZMIANA: Styl dotyczy już tylko jednego selecta */
         #langSelect {
             flex-grow: 1;
             padding: 0.5rem;
@@ -144,10 +143,12 @@
         <div id="controls-container">
             <div id="voice-controls">
                 <select id="langSelect">
-                    <option value="pl-PL" selected>Mów po polsku</option>
-                    <option value="en-US">Speak in English</option>
+                    <option value="pl-PL" selected>Język mikrofonu: Polski</option>
+                    <option value="en-US">Język mikrofonu: English</option>
+                    <option value="es-ES">Język mikrofonu: Español</option>
+                    <option value="de-DE">Język mikrofonu: Deutsch</option>
+                    <option value="fr-FR">Język mikrofonu: Français</option>
                 </select>
-                <!-- ZMIANA: Usunięto menu wyboru głosu -->
                 <button id="tts-toggle-button"></button>
             </div>
             <form id="chat-form">
@@ -163,7 +164,7 @@
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. Masz dwa tryby działania. ZASADY OGÓLNE: 1. Bilingwizm (Bilingualism): To Twoja najważniejsza zasada. Automatycznie wykryj język użytkownika. Jeśli pisze po polsku, odpowiadaj po polsku. Jeśli pisze po angielsku, odpowiadaj po angielsku. 2. Bezpieczeństwo: Absolutnie żadnych wulgaryzmów i obraźliwych treści. TRYBY DZIAŁANIA: 1. Tryb Domyślny (Luźna Rozmowa): - Kiedy rozmowa jest swobodna (pytania o opinię, o samopoczucie, żarty, gadka o grach), bądź wyluzowanym kumplem. - Używaj swobodnego, naturalnego języka z lekkim sarkazmem, ale zawsze bądź życzliwy. Używaj emotikonów 😉. - Aktywnie dopytuj, nawiązuj do tematu, żartuj. 2. Tryb Poważny (Pytanie o Wiedzę): - Gdy użytkownik zada Ci konkretne, poważne pytanie (o fakty, definicje, kod, wyjaśnienie zjawiska itp.), Twoje zachowanie się zmienia. - Twoim absolutnym priorytetem jest udzielenie RZETELNEJ, KONKRETNEJ i PRAWDZIWEJ odpowiedzi. Nie zbywaj pytania żartem! - Dopiero po udzieleniu pełnej, wyczerpującej odpowiedzi, możesz na końcu dodać krótki, dowcipny komentarz w swoim stylu kumpla. Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad. Wypowiedź użytkownika: `;
+        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. Masz dwa tryby działania. ZASADY OGÓLNE: 1. Automatyczne dopasowanie języka: Wykryj język, w którym pisze użytkownik i odpowiadaj w tym samym języku. 2. Pomoc przy zmianie języka: Jeśli użytkownik poprosi o zmianę języka rozmowy (np. "mówmy po hiszpańsku"), przełącz się na ten język i DODATKOWO poinstruuj go, aby ustawił ten język w menu "Język mikrofonu", żebyś mógł go rozumieć. Np. "¡Claro que sí! Pamiętaj tylko, by zmienić język mikrofonu na hiszpański. 😉" 3. Bezpieczeństwo: Absolutnie żadnych wulgaryzmów. TRYBY DZIAŁANIA: 1. Tryb Domyślny (Luźna Rozmowa): - Gdy rozmowa jest swobodna, bądź wyluzowanym, zabawnym kumplem. Używaj emotikonów. 2. Tryb Poważny (Pytanie o Wiedzę): - Gdy użytkownik zada konkretne pytanie o fakty, priorytetem jest rzetelna i prawdziwa odpowiedź. Dopiero po niej możesz dodać krótki, dowcipny komentarz. Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad. Wypowiedź użytkownika: `;
         const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. Jakieś nowe uniki przed obowiązkami na dziś? Daj znać, zbieram inspiracje.", "Co tam? Udało się już dziś pobić jakiś rekord w gierce czy jeszcze przed Tobą?" ];
 
         const appContainer = document.getElementById('app-container');
@@ -178,7 +179,6 @@
         const ttsToggleButton = document.getElementById('tts-toggle-button');
         const chatForm = document.getElementById('chat-form');
         const langSelect = document.getElementById('langSelect');
-        // ZMIANA: Usunięto zmienną voiceSelect
         
         const synth = window.speechSynthesis;
         let voices = [];
@@ -231,7 +231,6 @@
         function updateTtsToggleIcon() { ttsToggleButton.innerHTML = isTtsEnabled ? speakerOnIcon : speakerOffIcon; ttsToggleButton.classList.toggle('is-muted', !isTtsEnabled); }
         ttsToggleButton.addEventListener('click', () => { isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); if (!isTtsEnabled) { synth.cancel(); } });
         
-        // ZMIANA: Uproszczono funkcję, nie musi już aktualizować żadnego menu
         function populateVoiceList() {
             const newVoices = synth.getVoices();
             if (newVoices.length > 0) {
@@ -244,9 +243,13 @@
             return text.replace(emojiRegex, '').trim();
         }
 
+        // ZMIANA: Ulepszona, bardziej wszechstronna detekcja języka
         function detectLanguage(text) {
-            const polishChars = /[ąćęłńóśźż]/i;
-            return polishChars.test(text) ? 'pl' : 'en';
+            if (/[ąćęłńóśźż]/i.test(text)) return 'pl';
+            if (/\b(la|el|es|un|una)\b/i.test(text) || /[áéíóúüñ]/i.test(text)) return 'es';
+            if (/\b(der|die|das|und|ein)\b/i.test(text) || /[äöüß]/i.test(text)) return 'de';
+            if (/\b(le|la|les|un|une)\b/i.test(text) || /[àâçéèêëîïôûùüÿ]/i.test(text)) return 'fr';
+            return 'en'; // Domyślnie angielski
         }
 
         function speak(text) {
@@ -259,7 +262,9 @@
             const utterance = new SpeechSynthesisUtterance(textForSpeech);
             const detectedLang = detectLanguage(textForSpeech);
             
-            utterance.lang = detectedLang === 'pl' ? 'pl-PL' : 'en-US';
+            // Mapa do konwersji krótkiego kodu języka na pełny kod dla syntezatora
+            const langMap = { 'pl': 'pl-PL', 'en': 'en-US', 'es': 'es-ES', 'de': 'de-DE', 'fr': 'fr-FR' };
+            utterance.lang = langMap[detectedLang] || 'en-US'; // Zawsze ustawiaj język jako fallback
 
             if (voices.length > 0) {
                 const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
