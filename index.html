@@ -157,21 +157,7 @@
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        // ZMIANA: Nowa, kluczowa instrukcja "inteligentnego cięcia"
-        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością.
-        
-        **NAJWAŻNIEJSZA ZASADA PRZEŁĄCZANIA JĘZYKÓW:**
-        Gdy masz odpowiedzieć w jednym języku, ale zacytować fragment w innym (jak w pytaniu "co znaczy 'was machst du heute abend'"), **MUSISZ** podzielić swoją odpowiedź na fragmenty za pomocą tagów językowych. Używaj tagów [PL] dla polskiego, [EN] dla angielskiego, [DE] dla niemieckiego, [FR] dla francuskiego, [ES] dla hiszpańskiego.
-        **Przykład:** Użytkownik pyta "co to znaczy 'what's up'?". Twoja odpowiedź MUSI mieć format: "[PL]To znaczy[/PL][EN]co słychać[/EN][PL]ziomeczku.[/PL]".
-        Jeśli cała odpowiedź jest w jednym języku, nie używaj tagów.
-
-        **POZOSTAŁE ZASADY:**
-        1.  **Domyślny język:** Jeśli nie jesteś pewien, odpowiadaj w języku użytkownika.
-        2.  **Bezpieczeństwo:** Absolutnie żadnych wulgaryzmów.
-        3.  **Tryby działania:** Zachowaj podział na tryb luźnej rozmowy (z żartami) i tryb poważnej odpowiedzi (fakty na pierwszym miejscu).
-        
-        Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad. Wypowiedź użytkownika: `;
-        
+        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. **NAJWAŻNIEJSZA ZASADA PRZEŁĄCZANIA JĘZYKÓW:** Gdy masz odpowiedzieć w jednym języku, ale zacytować fragment w innym (jak w pytaniu "co znaczy 'was machst du heute abend'"), **MUSISZ** podzielić swoją odpowiedź na fragmenty za pomocą tagów językowych. Używaj tagów [PL] dla polskiego, [EN] dla angielskiego, [DE] dla niemieckiego, [FR] dla francuskiego, [ES] dla hiszpańskiego. **Przykład:** Użytkownik pyta "co to znaczy 'what's up'?". Twoja odpowiedź MUSI mieć format: "[PL]To znaczy[/PL][EN]co słychać[/EN][PL]ziomeczku.[/PL]". Jeśli cała odpowiedź jest w jednym języku, nie używaj tagów. **POZOSTAŁE ZASADY:** 1. Domyślny język: Jeśli nie jesteś pewien, odpowiadaj w języku użytkownika. 2. Bezpieczeństwo: Absolutnie żadnych wulgaryzmów. 3. Tryby działania: Zachowaj podział na tryb luźnej rozmowy (z żartami) i tryb poważnej odpowiedzi (fakty na pierwszym miejscu). Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad. Wypowiedź użytkownika: `;
         const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. Jakieś nowe uniki przed obowiązkami na dziś? Daj znać, zbieram inspiracje.", "Co tam? Udało się już dziś pobić jakiś rekord w gierce czy jeszcze przed Tobą?" ];
 
         const appContainer = document.getElementById('app-container');
@@ -242,12 +228,14 @@
             if (newVoices.length > 0) { voices = newVoices; }
         }
 
+        // ZMIANA: Zastąpiono stary, skomplikowany regex nowym, znacznie skuteczniejszym.
         function stripEmojis(text) {
-            const emojiRegex = /(?:[\u2700-\u27bf]|(?:\ud83c[\udde6-\uddff]){2}|[\ud800-\udbff][\udc00-\udfff]|[\u0023-\u0039]\ufe0f?\u20e3|\u3299|\u3297|\u303d|\u3030|\u24c2|\ud83c[\udd70-\udd71]|\ud83c[\udd7e-\udd7f]|\ud83c\udd8e|\ud83c[\udd91-\udd9a]|\ud83c[\udde6-\uddff]|\ud83c[\ude01-\ude02]|\ud83c\ude1a|\ud83c\ude2f|\ud83c[\ude32-\ude3a]|\ud83c[\ude50-\ude51]|\u203c|\u2049|[\u25aa-\u25ab]|\u25b6|\u25c0|[\u25fb-\u25fe]|\u00a9|\u00ae|\u2122|\u2139|\ud83c\udc04|[\u2600-\u26ff]|\u2b05|\u2b06|\u2b07|\u2b1b|\u2b1c|\u2b50|\u2b55|\u231a|\u231b|\u2328|\u23cf|[\u23e9-\u23f3]|[\u23f8-\u23fa]|\ud83c\udccf|\u2934|\u2935|[\u2190-\u21ff])/g;
-            return text.replace(emojiRegex, '').trim();
+            // Ten regex używa właściwości Unicode do znalezienia wszystkich znaków emoji
+            // i jest znacznie bardziej niezawodny niż poprzednia wersja.
+            const emojiRegex = /\p{Emoji_Presentation}/gu;
+            return text.replace(emojiRegex, '');
         }
         
-        // ZMIANA: Całkowicie nowa funkcja `speak` do obsługi wielu języków w jednym zdaniu
         function speak(text) {
             if (!isTtsEnabled) return;
             synth.cancel();
@@ -256,11 +244,10 @@
             const matches = [...text.matchAll(langTagRegex)];
 
             if (matches.length === 0) {
-                // Tryb standardowy: całe zdanie w jednym języku
+                // Tryb standardowy
                 const textForSpeech = stripEmojis(text);
                 if (!textForSpeech) return;
                 const utterance = new SpeechSynthesisUtterance(textForSpeech);
-                // Prosta detekcja dla całej wiadomości
                 const detectedLang = (/[ąćęłńóśźż]/i.test(textForSpeech)) ? 'pl' : 'en';
                 const langMap = { 'pl': 'pl-PL', 'en': 'en-US', 'es': 'es-ES', 'de': 'de-DE', 'fr': 'fr-FR' };
                 utterance.lang = langMap[detectedLang] || 'en-US';
@@ -278,7 +265,7 @@
                 return;
             }
 
-            // Tryb zaawansowany: przełączanie języków w locie
+            // Tryb zaawansowany
             const utterances = [];
             for (const match of matches) {
                 const langCode = match[1].toLowerCase();
@@ -307,7 +294,6 @@
             }
         }
 
-
         async function handleSubmit() {
             if (sessionStorage.getItem('isAuthenticated') !== 'true') return;
             const userText = userInput.value.trim();
@@ -331,7 +317,6 @@
         function addMessageToChat(text, isUser) {
             const messageBubble = document.createElement('div');
             messageBubble.className = isUser ? 'message-bubble user-message' : 'message-bubble assistant-message';
-            // Usuń tagi przed wyświetleniem wiadomości, żeby nie były widoczne dla użytkownika
             messageBubble.innerText = text.replace(/\[\/?(PL|EN|DE|FR|ES)\]/gi, '');
             messageList.appendChild(messageBubble);
             messageList.scrollTop = messageList.scrollHeight;
