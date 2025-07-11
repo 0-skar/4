@@ -157,7 +157,7 @@
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. **NAJWAŻNIEJSZA ZASADA PRZEŁĄCZANIA JĘZYKÓW:** Gdy masz odpowiedzieć w jednym języku, ale zacytować fragment w innym (jak w pytaniu "co znaczy 'was machst du heute abend'"), **MUSISZ** podzielić swoją odpowiedź na fragmenty za pomocą tagów językowych. Używaj tagów [PL] dla polskiego, [EN] dla angielskiego, [DE] dla niemieckiego, [FR] dla francuskiego, [ES] dla hiszpańskiego. **Przykład:** Użytkownik pyta "co to znaczy 'what's up'?". Twoja odpowiedź MUSI mieć format: "[PL]To znaczy[/PL][EN]co słychać[/EN][PL]ziomeczku.[/PL]". Jeśli cała odpowiedź jest w jednym języku, nie używaj tagów. **POZOSTAŁE ZASADY:** 1. Domyślny język: Jeśli nie jesteś pewien, odpowiadaj w języku użytkownika. 2. Bezpieczeństwo: Absolutnie żadnych wulgaryzmów. 3. Tryby działania: Zachowaj podział na tryb luźnej rozmowy (z żartami) i tryb poważnej odpowiedzi (fakty na pierwszym miejscu). Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad. Wypowiedź użytkownika: `;
+        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. **NAJWAŻNIEJSZA ZASADA PRZEŁĄCZANIA JĘZYKÓW:** Gdy masz odpowiedzieć w jednym języku, ale zacytować fragment w innym (jak w pytaniu "co znaczy 'was machst du heute abend'"), **MUSISZ** podzielić swoją odpowiedź na fragmenty za pomocą tagów językowych. Używaj tagów [PL] dla polskiego, [EN] dla angielskiego, [DE] dla niemieckiego, [FR] dla francuskiego, [ES] dla hiszpańskiego. **Przykład:** Użytkownik pyta "co to znaczy 'what's up'?". Twoja odpowiedź MUSI mieć format: "[PL]To znaczy[/PL][EN]co słychać[/EN][PL]ziomeczku.[/PL]". Jeśli cała odpowiedź jest w jednym języku, nie używaj tagów. **POZOSTAŁE ZASADY:** 1. Domyślny język: Jeśli nie jesteś pewien, odpowiadaj w języku użytkownika. 2. Bezpieczeństwo: Absolutnie żadnych wulgaryzmów. 3. Tryby działania: Zachowaj podział na tryb luźnej rozmowy (z żartami) i tryb poważnej odpowiedzi (fakty na pierwszym miejscu). Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad. Poniżej znajduje się historia rozmowy, abyś miał pełen kontekst. Wypowiedź użytkownika: `;
         const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. Jakieś nowe uniki przed obowiązkami na dziś? Daj znać, zbieram inspiracje.", "Co tam? Udało się już dziś pobić jakiś rekord w gierce czy jeszcze przed Tobą?" ];
 
         const appContainer = document.getElementById('app-container');
@@ -175,6 +175,9 @@
         const synth = window.speechSynthesis;
         let voices = [];
         let isTtsEnabled = true;
+
+        // ZMIANA: Dodajemy tablicę do przechowywania historii rozmowy
+        let conversationHistory = [];
         
         function displayInitialGreeting() {
             if (messageList.children.length === 0) {
@@ -228,10 +231,7 @@
             if (newVoices.length > 0) { voices = newVoices; }
         }
 
-        // ZMIANA: Zastąpiono stary, skomplikowany regex nowym, znacznie skuteczniejszym.
         function stripEmojis(text) {
-            // Ten regex używa właściwości Unicode do znalezienia wszystkich znaków emoji
-            // i jest znacznie bardziej niezawodny niż poprzednia wersja.
             const emojiRegex = /\p{Emoji_Presentation}/gu;
             return text.replace(emojiRegex, '');
         }
@@ -301,7 +301,14 @@
             addMessageToChat(userText, true);
             userInput.value = '';
             
-            const fullPrompt = PERSONALITY_PROMPT + userText;
+            // ZMIANA: Budowanie promptu z historią rozmowy
+            // Bierzemy ostatnie 10 wiadomości, aby nie przekroczyć limitu tokenów modelu
+            const historySlice = conversationHistory.slice(-10); 
+            const historyText = historySlice.map(msg => {
+                return `${msg.role === 'user' ? 'Użytkownik' : 'Asystent'}: ${msg.content}`;
+            }).join('\n');
+
+            const fullPrompt = `${PERSONALITY_PROMPT}\n\n--- HISTORIA ROZMOWY ---\n${historyText}\n\n--- KONIEC HISTORII ---\n\nUżytkownik: ${userText}`;
 
             try {
                 const response = await fetch(BACKEND_URL, {
@@ -314,12 +321,22 @@
             } catch (error) { addMessageToChat('Błąd: Nie można połączyć się z serwerem.', false); }
         }
         
+        // ZMIANA: Aktualizacja funkcji, aby zapisywała wiadomości w historii
         function addMessageToChat(text, isUser) {
             const messageBubble = document.createElement('div');
-            messageBubble.className = isUser ? 'message-bubble user-message' : 'message-bubble assistant-message';
-            messageBubble.innerText = text.replace(/\[\/?(PL|EN|DE|FR|ES)\]/gi, '');
+            const role = isUser ? 'user' : 'assistant';
+            
+            messageBubble.className = `message-bubble ${role}-message`;
+            
+            // Usuń tagi przed wyświetleniem wiadomości, żeby nie były widoczne dla użytkownika
+            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES)\]/gi, '');
+            messageBubble.innerText = cleanText;
+            
             messageList.appendChild(messageBubble);
             messageList.scrollTop = messageList.scrollHeight;
+
+            // Dodaj wiadomość (z oryginalnymi tagami) do historii
+            conversationHistory.push({ role, content: text });
         }
 
         chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(); });
