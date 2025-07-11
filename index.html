@@ -157,20 +157,7 @@
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        // ZMIANA: Bardziej stanowcza instrukcja dla modelu AI
-        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. Masz dwa tryby działania.
-        
-        ZASADY OGÓLNE:
-        1.  **Główna dyrektywa: Jesteś w pełni wielojęzycznym asystentem. Twoim najważniejszym zadaniem jest bezbłędne wykrycie języka użytkownika (włączając w to polski, angielski, niemiecki, francuski, hiszpański i inne) i odpowiadanie *wyłącznie* w tym języku.**
-        2.  **Bezpieczeństwo:** Absolutnie żadnych wulgaryzmów i obraźliwych treści.
-
-        TRYBY DZIAŁANIA:
-        1.  **Tryb Domyślny (Luźna Rozmowa):**
-            -   Gdy rozmowa jest swobodna, bądź wyluzowanym, zabawnym kumplem. Używaj emotikonów.
-        2.  **Tryb Poważny (Pytanie o Wiedzę):**
-            -   Gdy użytkownik zada konkretne pytanie o fakty, priorytetem jest rzetelna i prawdziwa odpowiedź. Dopiero po niej możesz dodać krótki, dowcipny komentarz.
-        
-        Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad. Wypowiedź użytkownika: `;
+        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. Masz dwa tryby działania. ZASADY OGÓLNE: 1. Główna dyrektywa: Jesteś w pełni wielojęzycznym asystentem. Twoim najważniejszym zadaniem jest bezbłędne wykrycie języka użytkownika (włączając w to polski, angielski, niemiecki, francuski, hiszpański i inne) i odpowiadanie *wyłącznie* w tym języku. 2. Bezpieczeństwo: Absolutnie żadnych wulgaryzmów i obraźliwych treści. TRYBY DZIAŁANIA: 1. Tryb Domyślny (Luźna Rozmowa): - Gdy rozmowa jest swobodna, bądź wyluzowanym, zabawnym kumplem. Używaj emotikonów. 2. Tryb Poważny (Pytanie o Wiedzę): - Gdy użytkownik zada konkretne pytanie o fakty, priorytetem jest rzetelna i prawdziwa odpowiedź. Dopiero po niej możesz dodać krótki, dowcipny komentarz. Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad. Wypowiedź użytkownika: `;
         const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. Jakieś nowe uniki przed obowiązkami na dziś? Daj znać, zbieram inspiracje.", "Co tam? Udało się już dziś pobić jakiś rekord w gierce czy jeszcze przed Tobą?" ];
 
         const appContainer = document.getElementById('app-container');
@@ -307,10 +294,27 @@
             } catch (error) { addMessageToChat('Błąd: Nie można połączyć się z serwerem.', false); }
         }
         
+        // ZMIANA: Dodano logikę dodawania flag językowych
+        const flagMap = {
+            'pl': '🇵🇱',
+            'en': '🇬🇧',
+            'de': '🇩🇪',
+            'fr': '🇫🇷',
+            'es': '🇪🇸',
+        };
+
         function addMessageToChat(text, isUser) {
             const messageBubble = document.createElement('div');
             messageBubble.className = isUser ? 'message-bubble user-message' : 'message-bubble assistant-message';
-            messageBubble.innerText = text;
+
+            if (!isUser) {
+                const lang = detectLanguage(text);
+                const flag = flagMap[lang] || '🌐'; // Domyślnie globus
+                messageBubble.innerText = `${flag} ${text}`;
+            } else {
+                messageBubble.innerText = text;
+            }
+
             messageList.appendChild(messageBubble);
             messageList.scrollTop = messageList.scrollHeight;
         }
