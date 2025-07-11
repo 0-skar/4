@@ -100,7 +100,8 @@
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
         #voice-controls { display: flex; align-items: center; gap: 8px; padding: 0 8px 8px 8px; }
         
-        #langSelect, #voiceSelect {
+        /* ZMIANA: Styl dotyczy już tylko jednego selecta */
+        #langSelect {
             flex-grow: 1;
             padding: 0.5rem;
             border-radius: 8px;
@@ -146,7 +147,7 @@
                     <option value="pl-PL" selected>Mów po polsku</option>
                     <option value="en-US">Speak in English</option>
                 </select>
-                <select id="voiceSelect"></select>
+                <!-- ZMIANA: Usunięto menu wyboru głosu -->
                 <button id="tts-toggle-button"></button>
             </div>
             <form id="chat-form">
@@ -174,10 +175,10 @@
         const messageList = document.getElementById('message-list');
         const micButton = document.getElementById('micButton');
         const avatar = document.getElementById('avatar');
-        const voiceSelect = document.getElementById('voiceSelect');
         const ttsToggleButton = document.getElementById('tts-toggle-button');
         const chatForm = document.getElementById('chat-form');
         const langSelect = document.getElementById('langSelect');
+        // ZMIANA: Usunięto zmienną voiceSelect
         
         const synth = window.speechSynthesis;
         let voices = [];
@@ -202,9 +203,7 @@
             }
         }
 
-        // ZMIANA: Dodano "rozgrzewkę" silnika mowy
         function initSpeechSynthesis() {
-            // Ta funkcja próbuje "obudzić" silnik syntezy mowy, aby głosy były dostępne
             populateVoiceList();
             if (synth.onvoiceschanged !== undefined) {
                 synth.onvoiceschanged = populateVoiceList;
@@ -214,7 +213,7 @@
         function handlePasswordAttempt() {
             if (passwordInput.value === ACCESS_CODE) {
                 sessionStorage.setItem('isAuthenticated', 'true');
-                initSpeechSynthesis(); // "Rozgrzewka" silnika po udanym logowaniu
+                initSpeechSynthesis();
                 checkAuthentication();
             } else {
                 passwordModalContent.classList.add('is-invalid');
@@ -232,22 +231,12 @@
         function updateTtsToggleIcon() { ttsToggleButton.innerHTML = isTtsEnabled ? speakerOnIcon : speakerOffIcon; ttsToggleButton.classList.toggle('is-muted', !isTtsEnabled); }
         ttsToggleButton.addEventListener('click', () => { isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); if (!isTtsEnabled) { synth.cancel(); } });
         
+        // ZMIANA: Uproszczono funkcję, nie musi już aktualizować żadnego menu
         function populateVoiceList() {
             const newVoices = synth.getVoices();
-            if (newVoices.length === 0) return;
-            voices = newVoices;
-            
-            const currentSelectedName = voiceSelect.selectedOptions.length > 0 ? voiceSelect.selectedOptions[0].getAttribute('data-name') : null;
-            voiceSelect.innerHTML = '';
-            
-            const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
-            voices.filter(voice => voice.lang.startsWith('en') || voice.lang.startsWith('pl')).filter(voice => !femaleNamesToFilter.some(name => voice.name.toLowerCase().includes(name.toLowerCase()))).forEach(voice => {
-                const option = document.createElement('option');
-                option.textContent = `${voice.name} (${voice.lang})`;
-                option.setAttribute('data-name', voice.name);
-                if (voice.name === currentSelectedName) { option.selected = true; }
-                voiceSelect.appendChild(option);
-            });
+            if (newVoices.length > 0) {
+                voices = newVoices;
+            }
         }
 
         function stripEmojis(text) {
@@ -269,11 +258,9 @@
             
             const utterance = new SpeechSynthesisUtterance(textForSpeech);
             const detectedLang = detectLanguage(textForSpeech);
-
-            // ZMIANA: NAJWAŻNIEJSZY KROK - ZAWSZE USTAW JĘZYK JAKO FALLBACK
+            
             utterance.lang = detectedLang === 'pl' ? 'pl-PL' : 'en-US';
 
-            // Teraz spróbuj znaleźć bardziej specyficzny głos, jeśli lista jest dostępna
             if (voices.length > 0) {
                 const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
                 let selectedVoice = voices.find(voice => voice.lang.startsWith(detectedLang) && !femaleNamesToFilter.some(name => voice.name.toLowerCase().includes(name.toLowerCase())));
