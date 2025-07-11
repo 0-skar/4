@@ -91,6 +91,21 @@
         #back-button:hover { background-color: rgba(0,0,0,0.05); }
         #back-button svg { width: 24px; height: 24px; fill: #333; }
         #app-title { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; font-size: 1.1rem; color: #333; font-weight: 600; }
+        
+        /* ZMIANA: Przeniesienie i ostylowanie przycisku wyciszenia */
+        #tts-toggle-button {
+            margin-left: auto; /* Przesuwa przycisk na prawo */
+            margin-right: 8px; /* Odstęp od krawędzi */
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+        }
+        #tts-toggle-button svg { width: 24px; height: 24px; fill: #65676b; }
+        #tts-toggle-button.is-muted svg { fill: #bec3c9; }
+        
         #avatar-container { width: 100%; padding: 8px 0; background-color: var(--controls-bg); text-align: center; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
         #avatar { width: 90%; max-width: 250px; height: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         #message-list { flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background-color: var(--chat-area-bg); }
@@ -98,19 +113,9 @@
         .user-message { background-color: var(--user-bubble-bg); color: white; }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
-        #voice-controls { display: flex; align-items: center; gap: 8px; padding: 0 8px 8px 8px; }
         
-        #langSelect {
-            flex-grow: 1;
-            padding: 0.5rem;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            background-color: #f0f2f5;
-        }
-
-        #tts-toggle-button { background: transparent; border: none; cursor: pointer; padding: 5px; flex-shrink: 0; }
-        #tts-toggle-button svg { width: 24px; height: 24px; fill: #65676b; }
-        #tts-toggle-button.is-muted svg { fill: #bec3c9; }
+        /* ZMIANA: Usunięto całą sekcję #voice-controls */
+        
         #chat-form { display: flex; align-items: center; }
         #userInput { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 18px; font-size: 1rem; background: #f0f2f5; }
         #micButton { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
@@ -135,22 +140,15 @@
                 <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
             </a>
             <h2 id="app-title">Cyfrowy Kumpel</h2>
+            <!-- ZMIANA: Przeniesiono przycisk wyciszania tutaj -->
+            <button id="tts-toggle-button"></button>
         </div>
         <div id="avatar-container">
             <img id="avatar" src="https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png" alt="Assistant Avatar">
         </div>
         <div id="message-list"></div>
         <div id="controls-container">
-            <div id="voice-controls">
-                <select id="langSelect">
-                    <option value="pl-PL" selected>Język mikrofonu: Polski</option>
-                    <option value="en-US">Język mikrofonu: English</option>
-                    <option value="es-ES">Język mikrofonu: Español</option>
-                    <option value="de-DE">Język mikrofonu: Deutsch</option>
-                    <option value="fr-FR">Język mikrofonu: Français</option>
-                </select>
-                <button id="tts-toggle-button"></button>
-            </div>
+            <!-- ZMIANA: Usunięto całą sekcję #voice-controls -->
             <form id="chat-form">
                 <input type="text" id="userInput" placeholder="Dajesz, powiedz co tam w necie piszczy..." autocomplete="off">
                 <button type="button" id="micButton">🎤</button>
@@ -164,7 +162,8 @@
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. Masz dwa tryby działania. ZASADY OGÓLNE: 1. Automatyczne dopasowanie języka: Wykryj język, w którym pisze użytkownik i odpowiadaj w tym samym języku. 2. Pomoc przy zmianie języka: Jeśli użytkownik poprosi o zmianę języka rozmowy (np. "mówmy po hiszpańsku"), przełącz się na ten język i DODATKOWO poinstruuj go, aby ustawił ten język w menu "Język mikrofonu", żebyś mógł go rozumieć. Np. "¡Claro que sí! Pamiętaj tylko, by zmienić język mikrofonu na hiszpański. 😉" 3. Bezpieczeństwo: Absolutnie żadnych wulgaryzmów. TRYBY DZIAŁANIA: 1. Tryb Domyślny (Luźna Rozmowa): - Gdy rozmowa jest swobodna, bądź wyluzowanym, zabawnym kumplem. Używaj emotikonów. 2. Tryb Poważny (Pytanie o Wiedzę): - Gdy użytkownik zada konkretne pytanie o fakty, priorytetem jest rzetelna i prawdziwa odpowiedź. Dopiero po niej możesz dodać krótki, dowcipny komentarz. Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad. Wypowiedź użytkownika: `;
+        // ZMIANA: Uproszczono osobowość, usunięto wzmiankę o menu mikrofonu
+        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. Masz dwa tryby działania. ZASADY OGÓLNE: 1. Automatyczne dopasowanie języka: Wykryj język, w którym pisze użytkownik i odpowiadaj w tym samym języku. 2. Bezpieczeństwo: Absolutnie żadnych wulgaryzmów. TRYBY DZIAŁANIA: 1. Tryb Domyślny (Luźna Rozmowa): - Gdy rozmowa jest swobodna, bądź wyluzowanym, zabawnym kumplem. Używaj emotikonów. 2. Tryb Poważny (Pytanie o Wiedzę): - Gdy użytkownik zada konkretne pytanie o fakty, priorytetem jest rzetelna i prawdziwa odpowiedź. Dopiero po niej możesz dodać krótki, dowcipny komentarz. Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad. Wypowiedź użytkownika: `;
         const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. Jakieś nowe uniki przed obowiązkami na dziś? Daj znać, zbieram inspiracje.", "Co tam? Udało się już dziś pobić jakiś rekord w gierce czy jeszcze przed Tobą?" ];
 
         const appContainer = document.getElementById('app-container');
@@ -178,7 +177,7 @@
         const avatar = document.getElementById('avatar');
         const ttsToggleButton = document.getElementById('tts-toggle-button');
         const chatForm = document.getElementById('chat-form');
-        const langSelect = document.getElementById('langSelect');
+        // ZMIANA: Usunięto `langSelect`
         
         const synth = window.speechSynthesis;
         let voices = [];
@@ -243,13 +242,12 @@
             return text.replace(emojiRegex, '').trim();
         }
 
-        // ZMIANA: Ulepszona, bardziej wszechstronna detekcja języka
         function detectLanguage(text) {
             if (/[ąćęłńóśźż]/i.test(text)) return 'pl';
             if (/\b(la|el|es|un|una)\b/i.test(text) || /[áéíóúüñ]/i.test(text)) return 'es';
             if (/\b(der|die|das|und|ein)\b/i.test(text) || /[äöüß]/i.test(text)) return 'de';
             if (/\b(le|la|les|un|une)\b/i.test(text) || /[àâçéèêëîïôûùüÿ]/i.test(text)) return 'fr';
-            return 'en'; // Domyślnie angielski
+            return 'en';
         }
 
         function speak(text) {
@@ -262,9 +260,8 @@
             const utterance = new SpeechSynthesisUtterance(textForSpeech);
             const detectedLang = detectLanguage(textForSpeech);
             
-            // Mapa do konwersji krótkiego kodu języka na pełny kod dla syntezatora
             const langMap = { 'pl': 'pl-PL', 'en': 'en-US', 'es': 'es-ES', 'de': 'de-DE', 'fr': 'fr-FR' };
-            utterance.lang = langMap[detectedLang] || 'en-US'; // Zawsze ustawiaj język jako fallback
+            utterance.lang = langMap[detectedLang] || 'en-US';
 
             if (voices.length > 0) {
                 const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
@@ -327,7 +324,8 @@
                     recognition.stop();
                 } else {
                     userInput.value = '';
-                    recognition.lang = langSelect.value; 
+                    // ZMIANA: Język mikrofonu jest teraz na stałe ustawiony na polski
+                    recognition.lang = 'pl-PL'; 
                     recognition.start();
                 }
             });
