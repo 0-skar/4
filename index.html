@@ -84,23 +84,24 @@
             gap: 0.8rem;
             margin-top: 1.5rem;
         }
+        /* ZMIANA: Przywrócenie stylistyki dla ekranu logowania */
         #password-modal-content .button-container {
             display: flex;
-            flex-direction: row;
-            gap: 1rem;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.8rem;
             margin-top: 1.5rem;
+            width: 90%;
+            margin-left: auto;
+            margin-right: auto;
         }
         #password-button { background-color: #007bff; }
-        #return-button { background-color: #6c757d; text-decoration: none; }
+        #return-button { background-color: #6c757d; text-decoration: none; display: block; line-height: 1.5; }
         #save-private-key-button { background-color: #007bff; }
         #donate-key-button { background-color: #28a745; }
         #close-api-key-modal { background-color: #6c757d; }
 
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
-            20%, 40%, 60%, 80% { transform: translateX(10px); }
-        }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); } 20%, 40%, 60%, 80% { transform: translateX(10px); } }
         .is-invalid { animation: shake 0.5s; }
         #app-container { width: 100%; height: 100%; max-width: 800px; margin: 0 auto; display: none; flex-direction: column; background-color: white; }
         #app-top-bar { display: flex; align-items: center; padding: 8px; background-color: var(--controls-bg); border-bottom: 1px solid var(--border-color); flex-shrink: 0; position: relative; }
@@ -108,19 +109,16 @@
         #back-button:hover { background-color: rgba(0,0,0,0.05); }
         #back-button svg { width: 24px; height: 24px; fill: #333; }
         #app-title { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; font-size: 1.1rem; color: #333; font-weight: 600; }
-        
-        #tts-toggle-button {
-            margin-left: auto; margin-right: 8px; background: transparent; border: none; cursor: pointer; padding: 5px; display: flex; align-items: center;
-        }
+        #tts-toggle-button { margin-left: auto; margin-right: 8px; background: transparent; border: none; cursor: pointer; padding: 5px; display: flex; align-items: center; }
         #tts-toggle-button svg { width: 24px; height: 24px; fill: #65676b; }
         #tts-toggle-button.is-muted svg { fill: #bec3c9; }
-        
         #avatar-container { width: 100%; padding: 8px 0; background-color: var(--controls-bg); text-align: center; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
         #avatar { width: 90%; max-width: 250px; height: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         #message-list { flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background-color: var(--chat-area-bg); }
         .message-bubble { padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4; word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .user-message { background-color: var(--user-bubble-bg); color: white; align-self: flex-end; }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
+        .assistant-message img { max-width: 100%; border-radius: 10px; margin-top: 8px; display: block; }
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
         #chat-form { display: flex; align-items: center; }
         #userInput { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 18px; font-size: 1rem; background: #f0f2f5; }
@@ -178,16 +176,15 @@
     <script>
         const ACCESS_CODE = "2017";
         // BARDZO WAŻNE: Podmień ten URL na adres swojego Space na Hugging Face
-        const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
+        const BASE_BACKEND_URL = "https://twoj-space-name.hf.space"; 
         const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
         const DONATE_URL = `${BASE_BACKEND_URL}/donate-key`;
+        const IMAGE_BACKEND_URL = "https://image.pollinations.ai/prompt/";
         
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        // Uwaga: Prompt jest teraz częścią backendu, ale zostawiamy go tu dla porządku
-        const PERSONALITY_PROMPT = `(This is now handled by the backend)`;
-        const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. Jakieś nowe uniki przed obowiązkami na dziś? Daj znać, zbieram inspiracje." ];
+        const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. W co dzisiaj grasz? A może chcesz, żebym coś namalował? 😎" ];
 
         const appContainer = document.getElementById('app-container');
         const passwordModal = document.getElementById('password-modal');
@@ -265,10 +262,8 @@
         function speak(text) {
             if (!isTtsEnabled) return;
             synth.cancel();
-
             const langTagRegex = /\[(PL|EN|DE|FR|ES)\](.*?)\[\/\1\]/gi;
             const matches = [...text.matchAll(langTagRegex)];
-
             if (matches.length === 0) {
                 const textForSpeech = stripEmojis(text);
                 if (!textForSpeech) return;
@@ -287,7 +282,6 @@
                 synth.speak(utterance);
                 return;
             }
-
             const utterances = [];
             for (const match of matches) {
                 const langCode = match[1].toLowerCase();
@@ -304,11 +298,25 @@
                 }
                 utterances.push(utterance);
             }
-
             if (utterances.length > 0) {
                 utterances[0].onstart = () => { avatar.src = AVATAR_TALKING_URL; };
                 utterances[utterances.length - 1].onend = () => { avatar.src = AVATAR_STILL_URL; };
                 utterances.forEach(u => synth.speak(u));
+            }
+        }
+        
+        async function generateImage(prompt) {
+            addMessageToChat("Chwileczkę, już się biorę za malowanie... 🎨", false, false);
+            try {
+                const fullUrl = IMAGE_BACKEND_URL + encodeURIComponent(prompt);
+                const response = await fetch(fullUrl, { method: 'POST' });
+                if (!response.ok) throw new Error(`Błąd serwera malarskiego: ${response.statusText}`);
+                const blob = await response.blob();
+                const imageUrl = URL.createObjectURL(blob);
+                addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, imageUrl);
+            } catch (error) {
+                addMessageToChat("Ajj, coś poszło nie tak i farby mi się rozlały. 😕", false, false);
+                console.error("Błąd generowania obrazu:", error);
             }
         }
         
@@ -320,7 +328,7 @@
             if (userKey) {
                 sessionStorage.setItem('userProvidedApiKey', userKey);
                 hideApiKeyModal();
-                addMessageToChat("Dzięki! Spróbujmy jeszcze raz z Twoim prywatnym kluczem... 👍", false);
+                addMessageToChat("Dzięki! Spróbujmy jeszcze raz z Twoim prywatnym kluczem... 👍", false, false);
                 handleSubmit(true); 
             }
         });
@@ -328,8 +336,7 @@
         donateKeyButton.addEventListener('click', async () => {
             const userKey = userApiKeyInput.value.trim();
             if (!userKey) return;
-            
-            addMessageToChat("Wysyłam Twój klucz do weryfikacji... Dziękuję za wsparcie! ❤️", false);
+            addMessageToChat("Wysyłam Twój klucz do weryfikacji... Dziękuję za wsparcie! ❤️", false, false);
             hideApiKeyModal();
             try {
                 const response = await fetch(DONATE_URL, {
@@ -341,15 +348,14 @@
                     const errorData = await response.json();
                     throw new Error(errorData.detail);
                 }
-                // Po udanej donacji, również używamy klucza w tej sesji
                 sessionStorage.setItem('userProvidedApiKey', userKey);
-                addMessageToChat("Donacja przyjęta! Używam Twojego klucza do odpowiedzi.", false);
+                addMessageToChat("Donacja przyjęta! Używam Twojego klucza do odpowiedzi.", false, false);
                 handleSubmit(true);
             } catch (error) {
-                addMessageToChat(`Błąd podczas donacji: ${error.message}`, false);
+                addMessageToChat(`Błąd podczas donacji: ${error.message}`, false, false);
             }
         });
-
+        
         closeApiKeyModal.addEventListener('click', hideApiKeyModal);
 
         async function handleSubmit(isRetry = false) {
@@ -361,18 +367,13 @@
             } else {
                 userText = userInput.value.trim();
                 if (!userText) return;
-                // Dodajemy wiadomość użytkownika do historii PRZED wysłaniem
-                addMessageToChat(userText, true); 
                 lastUserMessage = userText;
+                addMessageToChat(userText, true);
                 userInput.value = '';
             }
             
-            // Bierzemy ostatnie 10 wiadomości
             const historySlice = conversationHistory.slice(-10);
-            
-            const requestBody = {
-                history: historySlice.map(msg => ({ role: msg.role, content: msg.content }))
-            };
+            const requestBody = { history: historySlice };
             const userKey = sessionStorage.getItem('userProvidedApiKey');
             if (userKey) {
                 requestBody.apiKey = userKey;
@@ -388,34 +389,53 @@
                 if (!response.ok) {
                     const errorData = await response.json();
                     if (errorData.all_keys_exhausted) {
-                        addMessageToChat(errorData.error, false);
+                        addMessageToChat(errorData.error, false, false);
                         showApiKeyModal();
-                    } else {
-                        throw new Error(errorData.detail || 'Nieznany błąd serwera');
-                    }
+                    } else { throw new Error(errorData.detail || 'Nieznany błąd serwera'); }
                     return;
                 }
                 
                 const data = await response.json();
-                addMessageToChat(data.generated_text, false);
-                speak(data.generated_text);
+                const assistantText = data.generated_text;
+
+                const imgMatch = assistantText.match(/\[IMG\](.*?)\[\/IMG\]/);
+                if (imgMatch && imgMatch[1]) {
+                    addMessageToChat(assistantText, false); // Dodaj oryginalną wiadomość do historii
+                    generateImage(imgMatch[1]);
+                } else {
+                    addMessageToChat(assistantText, false);
+                    speak(assistantText);
+                }
 
             } catch (error) {
-                addMessageToChat(`Błąd: ${error.message}`, false);
+                addMessageToChat(`Błąd: ${error.message}`, false, false);
                 console.error("Błąd handleSubmit:", error);
             }
         }
         
-        function addMessageToChat(text, isUser) {
-            const role = isUser ? 'user' : 'assistant';
-            // Dodajemy wiadomość do historii PRZED jej wyświetleniem
-            conversationHistory.push({ role, content: text });
+        function addMessageToChat(text, isUser, addToHistory = true, imageUrl = null) {
+            if (addToHistory) {
+                conversationHistory.push({ role: isUser ? 'user' : 'assistant', content: text });
+            }
 
             const messageBubble = document.createElement('div');
-            messageBubble.className = `message-bubble ${role}-message`;
-            messageBubble.innerText = text.replace(/\[\/?(PL|EN|DE|FR|ES)\]/gi, '');
-            messageList.appendChild(messageBubble);
-            messageList.scrollTop = messageList.scrollHeight;
+            messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
+            
+            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG)\]/gi, '');
+            
+            if (imageUrl) {
+                const image = document.createElement('img');
+                image.src = imageUrl;
+                image.alt = cleanText;
+                messageBubble.appendChild(image);
+            } else {
+                if (cleanText) messageBubble.innerText = cleanText;
+            }
+
+            if (cleanText || imageUrl) {
+                messageList.appendChild(messageBubble);
+                messageList.scrollTop = messageList.scrollHeight;
+            }
         }
 
         chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(false); });
