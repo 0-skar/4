@@ -62,6 +62,7 @@
             border-radius: 8px;
             cursor: pointer;
             width: 100%;
+            box-sizing: border-box; /* Ważne dla spójnego rozmiaru */
         }
         #api-key-modal-content p {
             font-size: 0.9rem;
@@ -84,19 +85,21 @@
             gap: 0.8rem;
             margin-top: 1.5rem;
         }
-        /* ZMIANA: Przywrócenie stylistyki dla ekranu logowania */
+        
+        /* ZMIANA: Zaktualizowana stylistyka dla kontenera przycisków logowania */
         #password-modal-content .button-container {
             display: flex;
-            flex-direction: column;
+            flex-direction: column; /* Układ jeden pod drugim */
             align-items: center;
             gap: 0.8rem;
             margin-top: 1.5rem;
-            width: 90%;
+            width: 75%; /* Zmniejszona szerokość kontenera */
             margin-left: auto;
             margin-right: auto;
         }
-        #password-button { background-color: #007bff; }
-        #return-button { background-color: #6c757d; text-decoration: none; display: block; line-height: 1.5; }
+        
+        #password-button { background-color: #007bff; padding: 8px 16px; } /* Mniejszy padding */
+        #return-button { background-color: #6c757d; text-decoration: none; display: block; padding: 8px 16px; } /* Mniejszy padding */
         #save-private-key-button { background-color: #007bff; }
         #donate-key-button { background-color: #28a745; }
         #close-api-key-modal { background-color: #6c757d; }
@@ -373,7 +376,9 @@
             }
             
             const historySlice = conversationHistory.slice(-10);
-            const requestBody = { history: historySlice };
+            const requestBody = {
+                history: historySlice
+            };
             const userKey = sessionStorage.getItem('userProvidedApiKey');
             if (userKey) {
                 requestBody.apiKey = userKey;
@@ -400,7 +405,7 @@
 
                 const imgMatch = assistantText.match(/\[IMG\](.*?)\[\/IMG\]/);
                 if (imgMatch && imgMatch[1]) {
-                    addMessageToChat(assistantText, false); // Dodaj oryginalną wiadomość do historii
+                    addMessageToChat(assistantText, false);
                     generateImage(imgMatch[1]);
                 } else {
                     addMessageToChat(assistantText, false);
