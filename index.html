@@ -144,7 +144,6 @@
         <div id="api-key-modal-content" class="modal-content">
             <h3>Wspólne klucze wyczerpane</h3>
             <p>Aby kontynuować, możesz użyć swojego darmowego klucza Gemini. Będzie on używany tylko w tej sesji w Twojej przeglądarce.</p>
-            <!-- ZMIANA: Dodano bezpośredni link do generowania klucza -->
             <p>Możesz go uzyskać na stronie <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p>
             <p>Możesz też wesprzeć projekt, dodając swój klucz do wspólnej, rotacyjnej puli dla wszystkich użytkowników.</p>
             <input type="password" id="user-api-key-input" placeholder="Wklej swój klucz API tutaj">
@@ -179,14 +178,15 @@
     <script>
         const ACCESS_CODE = "2017";
         // BARDZO WAŻNE: Podmień ten URL na adres swojego Space na Hugging Face
-        const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
+        const BASE_BACKEND_URL = "https://twoj-space-name.hf.space"; 
         const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
         const DONATE_URL = `${BASE_BACKEND_URL}/donate-key`;
         
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. **NAJWAŻNIEJSZA ZASADA PRZEŁĄCZANIA JĘZYKÓW:** Gdy masz odpowiedzieć w jednym języku, ale zacytować fragment w innym (jak w pytaniu "co znaczy 'was machst du heute abend'"), **MUSISZ** podzielić swoją odpowiedź na fragmenty za pomocą tagów językowych. Używaj tagów [PL] dla polskiego, [EN] dla angielskiego, [DE] dla niemieckiego, [FR] dla francuskiego, [ES] dla hiszpańskiego. **Przykład:** Użytkownik pyta "co to znaczy 'what's up'?". Twoja odpowiedź MUSI mieć format: "[PL]To znaczy[/PL][EN]co słychać[/EN][PL]ziomeczku.[/PL]". Jeśli cała odpowiedź jest w jednym języku, nie używaj tagów. **POZOSTAŁE ZASADY:** 1. Domyślny język: Jeśli nie jesteś pewien, odpowiadaj w języku użytkownika. 2. Bezpieczeństwo: Absolutnie żadnych wulgaryzmów. 3. Tryby działania: Zachowaj podział na tryb luźnej rozmowy (z żartami) i tryb poważnej odpowiedzi (fakty na pierwszym miejscu). Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad.`;
+        // Uwaga: Prompt jest teraz częścią backendu, ale zostawiamy go tu dla porządku
+        const PERSONALITY_PROMPT = `(This is now handled by the backend)`;
         const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. Jakieś nowe uniki przed obowiązkami na dziś? Daj znać, zbieram inspiracje." ];
 
         const appContainer = document.getElementById('app-container');
@@ -320,7 +320,7 @@
             if (userKey) {
                 sessionStorage.setItem('userProvidedApiKey', userKey);
                 hideApiKeyModal();
-                addMessageToChat("Dzięki! Spróbujmy jeszcze raz z Twoim prywatnym kluczem... 👍", false, false);
+                addMessageToChat("Dzięki! Spróbujmy jeszcze raz z Twoim prywatnym kluczem... 👍", false);
                 handleSubmit(true); 
             }
         });
@@ -329,7 +329,7 @@
             const userKey = userApiKeyInput.value.trim();
             if (!userKey) return;
             
-            addMessageToChat("Wysyłam Twój klucz do weryfikacji... Dziękuję za wsparcie! ❤️", false, false);
+            addMessageToChat("Wysyłam Twój klucz do weryfikacji... Dziękuję za wsparcie! ❤️", false);
             hideApiKeyModal();
             try {
                 const response = await fetch(DONATE_URL, {
@@ -341,10 +341,12 @@
                     const errorData = await response.json();
                     throw new Error(errorData.detail);
                 }
+                // Po udanej donacji, również używamy klucza w tej sesji
                 sessionStorage.setItem('userProvidedApiKey', userKey);
+                addMessageToChat("Donacja przyjęta! Używam Twojego klucza do odpowiedzi.", false);
                 handleSubmit(true);
             } catch (error) {
-                addMessageToChat(`Błąd podczas donacji: ${error.message}`, false, false);
+                addMessageToChat(`Błąd podczas donacji: ${error.message}`, false);
             }
         });
 
@@ -359,16 +361,18 @@
             } else {
                 userText = userInput.value.trim();
                 if (!userText) return;
+                // Dodajemy wiadomość użytkownika do historii PRZED wysłaniem
+                addMessageToChat(userText, true); 
                 lastUserMessage = userText;
-                addMessageToChat(userText, true);
                 userInput.value = '';
             }
             
-            const historySlice = conversationHistory.slice(-10); 
-            const historyText = historySlice.map(msg => `${msg.role === 'user' ? 'Użytkownik' : 'Asystent'}: ${msg.content}`).join('\n');
-            const fullPrompt = `${PERSONALITY_PROMPT}\n\n--- HISTORIA ROZMOWY ---\n${historyText}\n\n--- KONIEC HISTORII ---\n\nUżytkownik: ${userText}`;
-
-            const requestBody = { prompt: fullPrompt };
+            // Bierzemy ostatnie 10 wiadomości
+            const historySlice = conversationHistory.slice(-10);
+            
+            const requestBody = {
+                history: historySlice.map(msg => ({ role: msg.role, content: msg.content }))
+            };
             const userKey = sessionStorage.getItem('userProvidedApiKey');
             if (userKey) {
                 requestBody.apiKey = userKey;
@@ -384,7 +388,7 @@
                 if (!response.ok) {
                     const errorData = await response.json();
                     if (errorData.all_keys_exhausted) {
-                        addMessageToChat(errorData.error, false, false);
+                        addMessageToChat(errorData.error, false);
                         showApiKeyModal();
                     } else {
                         throw new Error(errorData.detail || 'Nieznany błąd serwera');
@@ -397,21 +401,21 @@
                 speak(data.generated_text);
 
             } catch (error) {
-                addMessageToChat(`Błąd: ${error.message}`, false, false);
+                addMessageToChat(`Błąd: ${error.message}`, false);
                 console.error("Błąd handleSubmit:", error);
             }
         }
         
-        function addMessageToChat(text, isUser, addToHistory = true) {
-            const messageBubble = document.createElement('div');
+        function addMessageToChat(text, isUser) {
             const role = isUser ? 'user' : 'assistant';
+            // Dodajemy wiadomość do historii PRZED jej wyświetleniem
+            conversationHistory.push({ role, content: text });
+
+            const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${role}-message`;
             messageBubble.innerText = text.replace(/\[\/?(PL|EN|DE|FR|ES)\]/gi, '');
             messageList.appendChild(messageBubble);
             messageList.scrollTop = messageList.scrollHeight;
-            if (addToHistory) {
-                conversationHistory.push({ role, content: text });
-            }
         }
 
         chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(false); });
