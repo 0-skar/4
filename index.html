@@ -72,6 +72,10 @@
         #api-key-modal-content a {
             color: #007bff;
             text-decoration: none;
+            font-weight: bold;
+        }
+        #api-key-modal-content a:hover {
+            text-decoration: underline;
         }
         #api-key-modal-content .button-container {
             display: flex;
@@ -139,7 +143,9 @@
     <div id="api-key-modal" class="modal-overlay">
         <div id="api-key-modal-content" class="modal-content">
             <h3>Wspólne klucze wyczerpane</h3>
-            <p>Aby kontynuować, możesz użyć swojego darmowego klucza Gemini (będzie on używany tylko w tej sesji w Twojej przeglądarce).</p>
+            <p>Aby kontynuować, możesz użyć swojego darmowego klucza Gemini. Będzie on używany tylko w tej sesji w Twojej przeglądarce.</p>
+            <!-- ZMIANA: Dodano bezpośredni link do generowania klucza -->
+            <p>Możesz go uzyskać na stronie <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p>
             <p>Możesz też wesprzeć projekt, dodając swój klucz do wspólnej, rotacyjnej puli dla wszystkich użytkowników.</p>
             <input type="password" id="user-api-key-input" placeholder="Wklej swój klucz API tutaj">
             <div class="button-container">
