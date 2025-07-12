@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>My Dude Assistant</title>
+    <title>My Personal Assistant</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <style>
         :root {
@@ -22,7 +22,7 @@
             background-color: var(--body-bg);
         }
         
-        #password-modal {
+        .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
@@ -34,17 +34,19 @@
             align-items: center;
             z-index: 1000;
         }
-        #password-modal-content {
+        .modal-content {
             background: white;
             padding: 2rem 3rem;
             border-radius: 12px;
             text-align: center;
             color: #333;
             box-shadow: 0 5px 25px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
         }
-        #password-input {
+        .modal-content input[type="password"] {
             display: block;
-            width: 80%;
+            width: 90%;
             margin: 1.5rem auto;
             padding: 12px;
             font-size: 1.2rem;
@@ -52,32 +54,43 @@
             border: 2px solid var(--border-color);
             border-radius: 8px;
         }
-        
-        #password-buttons-container {
+        .modal-button {
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+        }
+        #api-key-modal-content p {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #65676b;
+            text-align: left;
+        }
+        #api-key-modal-content a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        #api-key-modal-content .button-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 10px;
-            margin-top: 1rem;
+            gap: 0.8rem;
+            margin-top: 1.5rem;
         }
-
-        .password-btn {
-            width: 80%;
-            max-width: 200px;
-            padding: 12px;
-            font-size: 1rem;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            text-decoration: none;
-            color: white;
-            box-sizing: border-box;
+        #password-modal-content .button-container {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+            margin-top: 1.5rem;
         }
-        
         #password-button { background-color: #007bff; }
-        #password-button:hover { background-color: #0069d9; }
-        #return-button { background-color: #6c757d; }
-        #return-button:hover { background-color: #5a6268; }
+        #return-button { background-color: #6c757d; text-decoration: none; }
+        #save-private-key-button { background-color: #007bff; }
+        #donate-key-button { background-color: #28a745; }
+        #close-api-key-modal { background-color: #6c757d; }
 
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
@@ -93,14 +106,7 @@
         #app-title { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; font-size: 1.1rem; color: #333; font-weight: 600; }
         
         #tts-toggle-button {
-            margin-left: auto;
-            margin-right: 8px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            padding: 5px;
-            display: flex;
-            align-items: center;
+            margin-left: auto; margin-right: 8px; background: transparent; border: none; cursor: pointer; padding: 5px; display: flex; align-items: center;
         }
         #tts-toggle-button svg { width: 24px; height: 24px; fill: #65676b; }
         #tts-toggle-button.is-muted svg { fill: #bec3c9; }
@@ -109,16 +115,9 @@
         #avatar { width: 90%; max-width: 250px; height: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         #message-list { flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background-color: var(--chat-area-bg); }
         .message-bubble { padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4; word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .user-message { background-color: var(--user-bubble-bg); color: white; }
+        .user-message { background-color: var(--user-bubble-bg); color: white; align-self: flex-end; }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
-        .assistant-message img {
-            max-width: 100%;
-            border-radius: 10px;
-            margin-top: 8px;
-            display: block;
-        }
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
-        
         #chat-form { display: flex; align-items: center; }
         #userInput { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 18px; font-size: 1rem; background: #f0f2f5; }
         #micButton { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
@@ -126,13 +125,27 @@
     </style>
 </head>
 <body>
-    <div id="password-modal">
-        <div id="password-modal-content">
+    <div id="password-modal" class="modal-overlay">
+        <div id="password-modal-content" class="modal-content">
             <h3>Wpisz kod dostępu</h3>
-            <input type="password" id="password-input" autofocus>
-            <div id="password-buttons-container">
-                <button id="password-button" class="password-btn">Wejdź</button>
-                <a href="https://0-skar.github.io/0/" id="return-button" class="password-btn">Wróć</a>
+            <input type="password" id="password-input">
+            <div class="button-container">
+                <button id="password-button" class="modal-button">Wejdź</button>
+                <a href="https://0-skar.github.io/0/" id="return-button" class="modal-button">Wróć</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="api-key-modal" class="modal-overlay">
+        <div id="api-key-modal-content" class="modal-content">
+            <h3>Wspólne klucze wyczerpane</h3>
+            <p>Aby kontynuować, możesz użyć swojego darmowego klucza Gemini (będzie on używany tylko w tej sesji w Twojej przeglądarce).</p>
+            <p>Możesz też wesprzeć projekt, dodając swój klucz do wspólnej, rotacyjnej puli dla wszystkich użytkowników.</p>
+            <input type="password" id="user-api-key-input" placeholder="Wklej swój klucz API tutaj">
+            <div class="button-container">
+                <button id="save-private-key-button" class="modal-button">Użyj tylko dla mnie</button>
+                <button id="donate-key-button" class="modal-button">Dodaj do wspólnej puli</button>
+                <button id="close-api-key-modal" class="modal-button">Anuluj</button>
             </div>
         </div>
     </div>
@@ -159,21 +172,21 @@
 
     <script>
         const ACCESS_CODE = "2017";
-        const BACKEND_URL = "https://eosforus-3.hf.space/chat";
-        // ZMIANA: Nowy, działający publicznie URL do generowania obrazów
-        const IMAGE_BACKEND_URL = "https://image.pollinations.ai/prompt/";
+        // BARDZO WAŻNE: Podmień ten URL na adres swojego Space na Hugging Face
+        const BASE_BACKEND_URL = "https://twoj-space-name.hf.space"; 
+        const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
+        const DONATE_URL = `${BASE_BACKEND_URL}/donate-key`;
         
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
 
-        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI, który potrafi też tworzyć obrazy. **ZASADA GENEROWANIA OBRAZÓW:** Gdy użytkownik poprosi Cię o stworzenie, narysowanie lub wygenerowanie obrazu (np. "narysuj psa w kosmosie"), Twoim zadaniem jest przetłumaczenie tej prośby na zwięzły, angielski opis. Następnie **MUSISZ** odpowiedzieć tylko i wyłącznie w formacie: [IMG]zwięzły opis po angielsku[/IMG]. **Przykład:** Użytkownik: "Stwórz obraz astronauty na koniu". Twoja odpowiedź: "[IMG]an astronaut riding a horse[/IMG]". Jeśli użytkownik prosi o obraz, ale jego opis jest niejasny, najpierw dopytaj go o szczegóły w normalnej rozmowie. **POZOSTAŁE ZASADY:** 1.  **Przełączanie języków:** W normalnej rozmowie, jeśli masz użyć fragmentu w innym języku, użyj tagów [PL], [EN] itd. 2.  **Dwa tryby:** Zachowaj podział na tryb luźnej rozmowy i tryb poważnej odpowiedzi. 3.  **Bezpieczeństwo:** Żadnych wulgaryzmów. Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad. Poniżej znajduje się historia rozmowy, abyś miał pełen kontekst. Wypowiedź użytkownika: `;
-        const GREETINGS = [ "Siema. Co tam dziś scrollujesz? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. W co dzisiaj grasz? A może chcesz, żebym coś namalował? 😎" ];
+        const PERSONALITY_PROMPT = `Jesteś "Cyfrowym Kumplem", asystentem AI z osobowością. **NAJWAŻNIEJSZA ZASADA PRZEŁĄCZANIA JĘZYKÓW:** Gdy masz odpowiedzieć w jednym języku, ale zacytować fragment w innym (jak w pytaniu "co znaczy 'was machst du heute abend'"), **MUSISZ** podzielić swoją odpowiedź na fragmenty za pomocą tagów językowych. Używaj tagów [PL] dla polskiego, [EN] dla angielskiego, [DE] dla niemieckiego, [FR] dla francuskiego, [ES] dla hiszpańskiego. **Przykład:** Użytkownik pyta "co to znaczy 'what's up'?". Twoja odpowiedź MUSI mieć format: "[PL]To znaczy[/PL][EN]co słychać[/EN][PL]ziomeczku.[/PL]". Jeśli cała odpowiedź jest w jednym języku, nie używaj tagów. **POZOSTAŁE ZASADY:** 1. Domyślny język: Jeśli nie jesteś pewien, odpowiadaj w języku użytkownika. 2. Bezpieczeństwo: Absolutnie żadnych wulgaryzmów. 3. Tryby działania: Zachowaj podział na tryb luźnej rozmowy (z żartami) i tryb poważnej odpowiedzi (fakty na pierwszym miejscu). Odpowiedz na poniższą wypowiedź użytkownika, stosując się do tych zasad.`;
+        const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. Jakieś nowe uniki przed obowiązkami na dziś? Daj znać, zbieram inspiracje." ];
 
         const appContainer = document.getElementById('app-container');
         const passwordModal = document.getElementById('password-modal');
         const passwordInput = document.getElementById('password-input');
         const passwordButton = document.getElementById('password-button');
-        const passwordModalContent = document.getElementById('password-modal-content');
         const userInput = document.getElementById('userInput');
         const messageList = document.getElementById('message-list');
         const micButton = document.getElementById('micButton');
@@ -181,13 +194,20 @@
         const ttsToggleButton = document.getElementById('tts-toggle-button');
         const chatForm = document.getElementById('chat-form');
         
+        const apiKeyModal = document.getElementById('api-key-modal');
+        const userApiKeyInput = document.getElementById('user-api-key-input');
+        const savePrivateKeyButton = document.getElementById('save-private-key-button');
+        const donateKeyButton = document.getElementById('donate-key-button');
+        const closeApiKeyModal = document.getElementById('close-api-key-modal');
+        
         const synth = window.speechSynthesis;
         let voices = [];
         let isTtsEnabled = true;
         let conversationHistory = [];
-        
+        let lastUserMessage = "";
+
         function displayInitialGreeting() {
-            if (messageList.children.length === 0) {
+            if (conversationHistory.length === 0) {
                 const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
                 addMessageToChat(randomGreeting, false);
                 speak(randomGreeting);
@@ -198,6 +218,7 @@
             if (sessionStorage.getItem('isAuthenticated') === 'true') {
                 passwordModal.style.display = 'none';
                 appContainer.style.display = 'flex';
+                initSpeechSynthesis();
                 displayInitialGreeting();
             } else {
                 passwordModal.style.display = 'flex';
@@ -215,33 +236,25 @@
         function handlePasswordAttempt() {
             if (passwordInput.value === ACCESS_CODE) {
                 sessionStorage.setItem('isAuthenticated', 'true');
-                initSpeechSynthesis();
                 checkAuthentication();
             } else {
-                passwordModalContent.classList.add('is-invalid');
-                passwordInput.value = '';
-                setTimeout(() => { passwordModalContent.classList.remove('is-invalid'); }, 500);
+                passwordInput.parentElement.classList.add('is-invalid');
+                setTimeout(() => { passwordInput.parentElement.classList.remove('is-invalid'); }, 500);
             }
         }
 
         passwordButton.addEventListener('click', handlePasswordAttempt);
-        passwordInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') { handlePasswordAttempt(); } });
+        passwordInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') handlePasswordAttempt(); });
         
         const speakerOnIcon = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
         const speakerOffIcon = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9.02 12 14v-2.18l-2.01-2.01L12 7.82V4z"/></svg>`;
         
         function updateTtsToggleIcon() { ttsToggleButton.innerHTML = isTtsEnabled ? speakerOnIcon : speakerOffIcon; ttsToggleButton.classList.toggle('is-muted', !isTtsEnabled); }
-        ttsToggleButton.addEventListener('click', () => { isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); if (!isTtsEnabled) { synth.cancel(); } });
+        ttsToggleButton.addEventListener('click', () => { isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); if (!isTtsEnabled) synth.cancel(); });
         
-        function populateVoiceList() {
-            const newVoices = synth.getVoices();
-            if (newVoices.length > 0) { voices = newVoices; }
-        }
+        function populateVoiceList() { voices = synth.getVoices(); }
 
-        function stripEmojis(text) {
-            const emojiRegex = /\p{Emoji_Presentation}/gu;
-            return text.replace(emojiRegex, '');
-        }
+        function stripEmojis(text) { const emojiRegex = /\p{Emoji_Presentation}/gu; return text.replace(emojiRegex, ''); }
         
         function speak(text) {
             if (!isTtsEnabled) return;
@@ -257,14 +270,12 @@
                 const detectedLang = (/[ąćęłńóśźż]/i.test(textForSpeech)) ? 'pl' : 'en';
                 const langMap = { 'pl': 'pl-PL', 'en': 'en-US', 'es': 'es-ES', 'de': 'de-DE', 'fr': 'fr-FR' };
                 utterance.lang = langMap[detectedLang] || 'en-US';
-                
                 if (voices.length > 0) {
                     const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
                     let selectedVoice = voices.find(v => v.lang.startsWith(detectedLang) && !femaleNamesToFilter.some(n => v.name.toLowerCase().includes(n.toLowerCase())));
                     if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith(detectedLang));
                     if (selectedVoice) utterance.voice = selectedVoice;
                 }
-                
                 utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
                 utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
                 synth.speak(utterance);
@@ -294,126 +305,125 @@
                 utterances.forEach(u => synth.speak(u));
             }
         }
+        
+        function showApiKeyModal() { apiKeyModal.style.display = 'flex'; }
+        function hideApiKeyModal() { apiKeyModal.style.display = 'none'; }
 
-        // ZMIANA: Modyfikacja funkcji, aby korzystała z nowego URL
-        async function generateImage(prompt) {
-            addMessageToChat("Chwileczkę, już się biorę za malowanie... 🎨", false);
-            try {
-                // Nowy sposób tworzenia URL
-                const fullUrl = IMAGE_BACKEND_URL + encodeURIComponent(prompt);
-                
-                const response = await fetch(fullUrl, { method: 'POST' }); // Metoda POST jest często wymagana
-
-                if (!response.ok) {
-                    throw new Error(`Błąd serwera malarskiego: ${response.statusText}`);
-                }
-                
-                const blob = await response.blob();
-                const imageUrl = URL.createObjectURL(blob);
-                
-                addMessageToChat(`[IMG]${prompt}[/IMG]`, false, imageUrl);
-
-            } catch (error) {
-                addMessageToChat("Ajj, coś poszło nie tak i farby mi się rozlały. Spróbujmy jeszcze raz. 😕", false);
-                console.error("Błąd generowania obrazu:", error);
+        savePrivateKeyButton.addEventListener('click', () => {
+            const userKey = userApiKeyInput.value.trim();
+            if (userKey) {
+                sessionStorage.setItem('userProvidedApiKey', userKey);
+                hideApiKeyModal();
+                addMessageToChat("Dzięki! Spróbujmy jeszcze raz z Twoim prywatnym kluczem... 👍", false, false);
+                handleSubmit(true); 
             }
-        }
+        });
+        
+        donateKeyButton.addEventListener('click', async () => {
+            const userKey = userApiKeyInput.value.trim();
+            if (!userKey) return;
+            
+            addMessageToChat("Wysyłam Twój klucz do weryfikacji... Dziękuję za wsparcie! ❤️", false, false);
+            hideApiKeyModal();
+            try {
+                const response = await fetch(DONATE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ apiKey: userKey })
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail);
+                }
+                sessionStorage.setItem('userProvidedApiKey', userKey);
+                handleSubmit(true);
+            } catch (error) {
+                addMessageToChat(`Błąd podczas donacji: ${error.message}`, false, false);
+            }
+        });
 
-        async function handleSubmit() {
+        closeApiKeyModal.addEventListener('click', hideApiKeyModal);
+
+        async function handleSubmit(isRetry = false) {
             if (sessionStorage.getItem('isAuthenticated') !== 'true') return;
-            const userText = userInput.value.trim();
-            if (!userText) return;
-            addMessageToChat(userText, true);
-            userInput.value = '';
+            
+            let userText;
+            if (isRetry) {
+                userText = lastUserMessage;
+            } else {
+                userText = userInput.value.trim();
+                if (!userText) return;
+                lastUserMessage = userText;
+                addMessageToChat(userText, true);
+                userInput.value = '';
+            }
             
             const historySlice = conversationHistory.slice(-10); 
             const historyText = historySlice.map(msg => `${msg.role === 'user' ? 'Użytkownik' : 'Asystent'}: ${msg.content}`).join('\n');
             const fullPrompt = `${PERSONALITY_PROMPT}\n\n--- HISTORIA ROZMOWY ---\n${historyText}\n\n--- KONIEC HISTORII ---\n\nUżytkownik: ${userText}`;
 
+            const requestBody = { prompt: fullPrompt };
+            const userKey = sessionStorage.getItem('userProvidedApiKey');
+            if (userKey) {
+                requestBody.apiKey = userKey;
+            }
+
             try {
-                const response = await fetch(BACKEND_URL, {
+                const response = await fetch(CHAT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: fullPrompt })
+                    body: JSON.stringify(requestBody)
                 });
-                const data = await response.json();
-                if (response.ok) {
-                    const assistantText = data.generated_text;
-                    
-                    const imgMatch = assistantText.match(/\[IMG\](.*?)\[\/IMG\]/);
-                    if (imgMatch && imgMatch[1]) {
-                        generateImage(imgMatch[1]);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    if (errorData.all_keys_exhausted) {
+                        addMessageToChat(errorData.error, false, false);
+                        showApiKeyModal();
                     } else {
-                        addMessageToChat(assistantText, false);
-                        speak(assistantText);
+                        throw new Error(errorData.detail || 'Nieznany błąd serwera');
                     }
-                } else {
-                    addMessageToChat(`Błąd: ${data.error || 'Usługa niedostępna.'}`, false);
+                    return;
                 }
+                
+                const data = await response.json();
+                addMessageToChat(data.generated_text, false);
+                speak(data.generated_text);
+
             } catch (error) {
-                addMessageToChat('Błąd: Nie można połączyć się z serwerem.', false);
+                addMessageToChat(`Błąd: ${error.message}`, false, false);
+                console.error("Błąd handleSubmit:", error);
             }
         }
         
-        function addMessageToChat(text, isUser, imageUrl = null) {
+        function addMessageToChat(text, isUser, addToHistory = true) {
             const messageBubble = document.createElement('div');
             const role = isUser ? 'user' : 'assistant';
             messageBubble.className = `message-bubble ${role}-message`;
-            
-            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG)\]/gi, '');
-            
-            if (imageUrl) {
-                const image = document.createElement('img');
-                image.src = imageUrl;
-                image.alt = cleanText;
-                messageBubble.appendChild(image);
-            } else {
-                if (cleanText) {
-                    messageBubble.innerText = cleanText;
-                }
+            messageBubble.innerText = text.replace(/\[\/?(PL|EN|DE|FR|ES)\]/gi, '');
+            messageList.appendChild(messageBubble);
+            messageList.scrollTop = messageList.scrollHeight;
+            if (addToHistory) {
+                conversationHistory.push({ role, content: text });
             }
-
-            // Dodajemy wiadomość tylko, jeśli ma treść (tekstową lub obrazek)
-            if (cleanText || imageUrl) {
-                messageList.appendChild(messageBubble);
-                messageList.scrollTop = messageList.scrollHeight;
-            }
-            
-            conversationHistory.push({ role, content: text });
         }
 
-        chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(); });
+        chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(false); });
         
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
             const recognition = new SpeechRecognition();
             recognition.continuous = true;
             recognition.interimResults = true;
-            
             let isListening = false;
-            micButton.addEventListener('click', () => {
-                if (sessionStorage.getItem('isAuthenticated') !== 'true') return;
-                if (isListening) {
-                    recognition.stop();
-                } else {
-                    userInput.value = '';
-                    recognition.lang = 'pl-PL'; 
-                    recognition.start();
-                }
-            });
+            micButton.addEventListener('click', () => { if (sessionStorage.getItem('isAuthenticated') !== 'true') return; if (isListening) { recognition.stop(); } else { userInput.value = ''; recognition.lang = 'pl-PL'; recognition.start(); } });
             recognition.onstart = () => { isListening = true; micButton.classList.add('is-listening'); };
-            recognition.onend = () => { isListening = false; micButton.classList.remove('is-listening'); if (userInput.value.trim()){ handleSubmit(); } };
-            recognition.onresult = (event) => {
-                let interim_transcript = '';
-                let final_transcript = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    const transcript = event.results[i][0].transcript;
-                    if (event.results[i].isFinal) { final_transcript += transcript; } else { interim_transcript += transcript; }
-                }
-                userInput.value = final_transcript + interim_transcript;
-            };
+            recognition.onend = () => { isListening = false; micButton.classList.remove('is-listening'); if (userInput.value.trim()){ handleSubmit(false); } };
+            recognition.onresult = (event) => { let interim_transcript = ''; let final_transcript = ''; for (let i = event.resultIndex; i < event.results.length; ++i) { const transcript = event.results[i][0].transcript; if (event.results[i].isFinal) { final_transcript += transcript; } else { interim_transcript += transcript; } } userInput.value = final_transcript + interim_transcript; };
             recognition.onerror = (event) => { console.error("Błąd rozpoznawania mowy:", event.error); isListening = false; micButton.classList.remove('is-listening'); };
-        } else { micButton.style.display = 'none'; }
+        } else {
+            micButton.style.display = 'none';
+        }
         
         updateTtsToggleIcon();
         checkAuthentication();
