@@ -83,7 +83,7 @@
         #save-private-key-button, #save-edited-button { background-color: #007bff; }
         #donate-key-button { background-color: #28a745; }
         #close-api-key-modal, #close-edit-modal { background-color: #6c757d; }
-        
+
         @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); } 20%, 40%, 60%, 80% { transform: translateX(10px); } }
         .is-invalid { animation: shake 0.5s; }
         #app-container { width: 100%; height: 100%; max-width: 800px; margin: 0 auto; display: none; flex-direction: column; background-color: white; }
@@ -182,7 +182,7 @@
 
     <script>
         const ACCESS_CODE = "2017";
-        const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
+        const BASE_BACKEND_URL = "https://twoj-space-name.hf.space"; 
         const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
         const DONATE_URL = `${BASE_BACKEND_URL}/donate-key`;
         const IMAGE_BACKEND_URL = "https://image.pollinations.ai/prompt/";
@@ -282,8 +282,8 @@
                 const blob = await response.blob();
                 const reader = new FileReader();
                 reader.onloadend = () => {
-                    const base64data = reader.result;
-                    const fileData = { name: `wygenerowany_obraz.png`, mime_type: 'image/png', data: base64data.split(',')[1] };
+                    const base64data = reader.result.split(',')[1];
+                    const fileData = { name: `generated_image.png`, mime_type: blob.type, data: base64data };
                     addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, fileData);
                 };
                 reader.readAsDataURL(blob);
@@ -351,6 +351,7 @@
         }
         
         function saveAndDownloadEdited() {
+            // Ta funkcja jest uproszczona, pozwala edytować i zapisać tekst jako notatkę.
             const editedText = editHistoryTextarea.value;
             const newHistory = [{ role: 'system', content: 'Edytowana transkrypcja rozmowy' }, { role: 'user', content: editedText }];
             exportConversation(newHistory);
@@ -406,7 +407,7 @@
             });
 
             if (attachmentsToSend.length > 0) {
-                requestBody.attachments = Array.from(new Map(attachmentsToSend.map(item => [item.data.slice(-20), item])).values());
+                requestBody.attachments = Array.from(new Map(attachmentsToSend.map(item => [item.data, item])).values());
             }
 
             const userKey = sessionStorage.getItem('userProvidedApiKey');
@@ -447,8 +448,6 @@
             const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
             const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG)\]/gi, '');
-            
-            // Logika wyświetlania: jeśli są dane pliku, użyj ich do wyświetlenia obrazu
             if (fileData && fileData.mime_type && fileData.mime_type.startsWith('image/')) {
                 const image = document.createElement('img');
                 image.src = `data:${fileData.mime_type};base64,${fileData.data}`;
@@ -457,7 +456,6 @@
             } else {
                 if (cleanText) messageBubble.innerText = cleanText;
             }
-
             if (cleanText || fileData) {
                 messageList.appendChild(messageBubble);
                 messageList.scrollTop = messageList.scrollHeight;
