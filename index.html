@@ -107,23 +107,12 @@
         #avatar { width: 90%; max-width: 250px; height: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         #message-list { flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background-color: var(--chat-area-bg); }
         .message-bubble { padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4; word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        
-        /* ZMIANA: Usunięto regułę wyrównującą wiadomości użytkownika do prawej */
-        .user-message { 
-            background-color: var(--user-bubble-bg); 
-            color: white;
-            /* align-self: flex-end; <-- Ta linia została usunięta */
-        }
-        
+        .user-message { background-color: var(--user-bubble-bg); color: white; align-self: flex-end; }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
         .assistant-message img { max-width: 100%; border-radius: 10px; margin-top: 8px; display: block; }
         
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
-        #attachment-preview-area { padding: 0 8px 8px 8px; display: none; }
-        .attachment-preview { display: flex; align-items: center; background: #e9ecef; padding: 5px 10px; border-radius: 12px; font-size: 0.8rem; }
-        .attachment-preview span { margin-left: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .remove-attachment-btn { background: none; border: none; cursor: pointer; margin-left: auto; font-size: 1.2rem; padding: 0 5px; opacity: 0.6; }
-        .remove-attachment-btn:hover { opacity: 1; }
+        /* ZMIANA: Usunięto style dla #attachment-preview-area */
         
         #chat-form { display: flex; align-items: center; }
         .chat-form-button { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
@@ -189,7 +178,7 @@
         </div>
         <div id="message-list"></div>
         <div id="controls-container">
-            <div id="attachment-preview-area"></div>
+            <!-- ZMIANA: Usunięto obszar podglądu załącznika -->
             <form id="chat-form">
                 <button type="button" id="attachment-button" class="chat-form-button" title="Załącz plik (txt, jpg, png)">📎</button>
                 <input type="text" id="userInput" placeholder="Opisz załączony plik lub zadaj pytanie...">
@@ -229,7 +218,6 @@
         const importButton = document.getElementById('import-button');
         const attachmentButton = document.getElementById('attachment-button');
         const fileInput = document.getElementById('file-input');
-        const attachmentPreviewArea = document.getElementById('attachment-preview-area');
         const editModal = document.getElementById('edit-modal');
         const editHistoryTextarea = document.getElementById('edit-history-textarea');
         const saveEditedButton = document.getElementById('save-edited-button');
@@ -313,70 +301,11 @@
         savePrivateKeyButton.addEventListener('click', () => { const userKey = userApiKeyInput.value.trim(); if (userKey) { sessionStorage.setItem('userProvidedApiKey', userKey); hideApiKeyModal(); addMessageToChat("Dzięki! Spróbujmy jeszcze raz z Twoim prywatnym kluczem... 👍", false, false); handleSubmit(true); } });
         donateKeyButton.addEventListener('click', async () => { const userKey = userApiKeyInput.value.trim(); if (!userKey) return; addMessageToChat("Wysyłam Twój klucz do weryfikacji... Dziękuję za wsparcie! ❤️", false, false); hideApiKeyModal(); try { const response = await fetch(DONATE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey: userKey }) }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.detail); } sessionStorage.setItem('userProvidedApiKey', userKey); addMessageToChat("Donacja przyjęta! Używam Twojego klucza do odpowiedzi.", false, false); handleSubmit(true); } catch (error) { addMessageToChat(`Błąd podczas donacji: ${error.message}`, false, false); } });
         closeApiKeyModal.addEventListener('click', hideApiKeyModal);
-
-        function exportConversation(history) {
-            if (history.length === 0) { addMessageToChat("Nie ma czego eksportować!", false, false); return; }
-            const dataStr = JSON.stringify(history, null, 2);
-            const blob = new Blob([dataStr], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `rozmowa-${new Date().toISOString().slice(0, 10)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        function importConversation() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json,application/json';
-            input.onchange = e => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const importedHistory = JSON.parse(event.target.result);
-                        if (Array.isArray(importedHistory) && importedHistory.every(item => 'role' in item && 'content' in item)) {
-                            conversationHistory = importedHistory;
-                            messageList.innerHTML = '';
-                            conversationHistory.forEach(msg => { addMessageToChat(msg.content, msg.role === 'user', false, msg.imageUrl, msg.isHidden); });
-                            addMessageToChat("Rozmowa wczytana pomyślnie! Możemy kontynuować.", false, false);
-                        } else { throw new Error("Niepoprawny format pliku."); }
-                    } catch (err) { addMessageToChat(`Błąd importu: ${err.message}`, false, false); }
-                };
-                reader.readAsText(file);
-            };
-            input.click();
-        }
-
-        function openEditModal() {
-            if (conversationHistory.length === 0) { addMessageToChat("Nie ma czego edytować!", false, false); return; }
-            const formattedText = conversationHistory.map(msg => {
-                if (msg.isHidden) return null;
-                const prefix = msg.role === 'user' ? 'TY:' : 'AGENT:';
-                if (msg.imageUrl) {
-                    const prompt = msg.content.replace(/\[IMG\]|\[\/IMG\]/g, '');
-                    return `${prefix} [OBRAZ: ${prompt}]`;
-                }
-                return `${prefix} ${msg.content}`;
-            }).filter(Boolean).join('\n\n');
-            editHistoryTextarea.value = formattedText;
-            editModal.style.display = 'flex';
-        }
         
-        function saveAndDownloadEdited() {
-            const editedText = editHistoryTextarea.value;
-            const newHistory = [{ role: 'system', content: 'Edytowana transkrypcja rozmowy' }, { role: 'user', content: editedText }];
-            exportConversation(newHistory);
-            hideEditModal();
-        }
-        
+        function openEditModal() { if (conversationHistory.length === 0) { addMessageToChat("Nie ma czego edytować!", false, false); return; } const formattedText = conversationHistory.map(msg => { if (msg.isHidden) return null; const prefix = msg.role === 'user' ? 'TY:' : 'AGENT:'; if (msg.imageUrl) { const prompt = msg.content.replace(/\[IMG\]|\[\/IMG\]/g, ''); return `${prefix} [OBRAZ: ${prompt}]`; } return `${prefix} ${msg.content}`; }).filter(Boolean).join('\n\n'); editHistoryTextarea.value = formattedText; editModal.style.display = 'flex'; }
+        function saveAndDownloadEdited() { const editedText = editHistoryTextarea.value; const newHistory = [{ role: 'system', content: 'Edytowana transkrypcja rozmowy' }, { role: 'user', content: editedText }]; exportConversation(newHistory); hideEditModal(); }
         function hideEditModal() { editModal.style.display = 'none'; }
-
-        importButton.addEventListener('click', importConversation);
+        importButton.addEventListener('click', () => { const input = document.createElement('input'); input.type = 'file'; input.accept = '.json,application/json'; input.onchange = e => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (event) => { try { const importedHistory = JSON.parse(event.target.result); if (Array.isArray(importedHistory) && importedHistory.every(item => 'role' in item && 'content' in item)) { conversationHistory = importedHistory; messageList.innerHTML = ''; conversationHistory.forEach(msg => { addMessageToChat(msg.content, msg.role === 'user', false, msg.imageUrl, msg.isHidden); }); addMessageToChat("Rozmowa wczytana pomyślnie! Możemy kontynuować.", false, false); } else { throw new Error("Niepoprawny format pliku."); } } catch (err) { addMessageToChat(`Błąd importu: ${err.message}`, false, false); } }; reader.readAsText(file); }; input.click(); });
         editExportButton.addEventListener('click', openEditModal);
         closeEditModal.addEventListener('click', hideEditModal);
         saveEditedButton.addEventListener('click', saveAndDownloadEdited);
@@ -387,21 +316,15 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 attachedFile = { name: file.name, mime_type: file.type, data: e.target.result.split(',')[1] };
-                showAttachmentPreview(file.name);
+                addMessageToChat(`Załączono plik: ${file.name}`, true, true, null, true); // Dodaj ukrytą wiadomość do historii
+                handleSubmit(); // Od razu wyślij wiadomość o załączonym pliku
             };
             reader.readAsDataURL(file);
-        }
-
-        function showAttachmentPreview(fileName) {
-            attachmentPreviewArea.style.display = 'block';
-            attachmentPreviewArea.innerHTML = `<div class="attachment-preview">📄 <span>${fileName}</span><button class="remove-attachment-btn" title="Usuń załącznik">×</button></div>`;
-            attachmentPreviewArea.querySelector('.remove-attachment-btn').addEventListener('click', clearAttachment);
         }
 
         function clearAttachment() {
             attachedFile = null;
             fileInput.value = '';
-            attachmentPreviewArea.style.display = 'none';
         }
         
         attachmentButton.addEventListener('click', () => fileInput.click());
@@ -422,24 +345,10 @@
             
             const historySlice = conversationHistory.slice(-30);
             const requestBody = { history: [] };
-            
             historySlice.forEach(msg => { requestBody.history.push({ role: msg.role, content: msg.content }); });
-
-            const attachmentsToSend = [];
-            if (attachedFile) {
-                attachmentsToSend.push(attachedFile);
-            }
             
-            historySlice.forEach(msg => {
-                if (msg.imageUrl && msg.imageUrl.startsWith('data:image')) {
-                    const mimeType = msg.imageUrl.substring(msg.imageUrl.indexOf(':') + 1, msg.imageUrl.indexOf(';'));
-                    const base64Data = msg.imageUrl.split(',')[1];
-                    attachmentsToSend.push({ mime_type: mimeType, data: base64Data });
-                }
-            });
-
-            if (attachmentsToSend.length > 0) {
-                requestBody.attachments = Array.from(new Map(attachmentsToSend.map(item => [item.data.slice(-20), item])).values());
+            if (attachedFile) {
+                requestBody.attachments = [attachedFile];
             }
 
             const userKey = sessionStorage.getItem('userProvidedApiKey');
