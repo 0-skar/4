@@ -107,13 +107,11 @@
         #avatar { width: 90%; max-width: 250px; height: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         #message-list { flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background-color: var(--chat-area-bg); }
         .message-bubble { padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4; word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .user-message { background-color: var(--user-bubble-bg); color: white; align-self: flex-end; }
+        .user-message { background-color: var(--user-bubble-bg); color: white; /* Usunięto align-self: flex-end; */ }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
         .assistant-message img { max-width: 100%; border-radius: 10px; margin-top: 8px; display: block; }
         
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
-        /* ZMIANA: Usunięto style dla #attachment-preview-area */
-        
         #chat-form { display: flex; align-items: center; }
         .chat-form-button { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
         #attachment-button { background-color: #17a2b8; font-size: 1.2rem; }
@@ -165,9 +163,10 @@
             <a href="https://0-skar.github.io/0/" id="back-button">
                 <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
             </a>
+            <!-- ZMIANA: Przycisk edycji przeniesiony na lewo -->
+            <button id="edit-export-button" class="top-bar-button" title="Edytuj i eksportuj">📝</button>
             <h2 id="app-title">Cyfrowy Kumpel</h2>
             <div id="top-right-buttons">
-                <button id="edit-export-button" class="top-bar-button" title="Edytuj i eksportuj">📝</button>
                 <button id="import-button" class="top-bar-button" title="Importuj rozmowę">📂</button>
                 <button id="api-key-button" class="top-bar-button" title="Zarządzaj kluczem API">🔑</button>
                 <button id="tts-toggle-button" class="top-bar-button"></button>
@@ -190,7 +189,7 @@
 
     <script>
         const ACCESS_CODE = "2017";
-        const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
+        const BASE_BACKEND_URL = "https://twoj-space-name.hf.space"; 
         const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
         const DONATE_URL = `${BASE_BACKEND_URL}/donate-key`;
         const IMAGE_BACKEND_URL = "https://image.pollinations.ai/prompt/";
@@ -301,11 +300,70 @@
         savePrivateKeyButton.addEventListener('click', () => { const userKey = userApiKeyInput.value.trim(); if (userKey) { sessionStorage.setItem('userProvidedApiKey', userKey); hideApiKeyModal(); addMessageToChat("Dzięki! Spróbujmy jeszcze raz z Twoim prywatnym kluczem... 👍", false, false); handleSubmit(true); } });
         donateKeyButton.addEventListener('click', async () => { const userKey = userApiKeyInput.value.trim(); if (!userKey) return; addMessageToChat("Wysyłam Twój klucz do weryfikacji... Dziękuję za wsparcie! ❤️", false, false); hideApiKeyModal(); try { const response = await fetch(DONATE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey: userKey }) }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.detail); } sessionStorage.setItem('userProvidedApiKey', userKey); addMessageToChat("Donacja przyjęta! Używam Twojego klucza do odpowiedzi.", false, false); handleSubmit(true); } catch (error) { addMessageToChat(`Błąd podczas donacji: ${error.message}`, false, false); } });
         closeApiKeyModal.addEventListener('click', hideApiKeyModal);
+
+        function exportConversation(history) {
+            if (history.length === 0) { addMessageToChat("Nie ma czego eksportować!", false, false); return; }
+            const dataStr = JSON.stringify(history, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `rozmowa-${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importConversation() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,application/json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const importedHistory = JSON.parse(event.target.result);
+                        if (Array.isArray(importedHistory) && importedHistory.every(item => 'role' in item && 'content' in item)) {
+                            conversationHistory = importedHistory;
+                            messageList.innerHTML = '';
+                            conversationHistory.forEach(msg => { addMessageToChat(msg.content, msg.role === 'user', false, msg.imageUrl, msg.isHidden); });
+                            addMessageToChat("Rozmowa wczytana pomyślnie! Możemy kontynuować.", false, false);
+                        } else { throw new Error("Niepoprawny format pliku."); }
+                    } catch (err) { addMessageToChat(`Błąd importu: ${err.message}`, false, false); }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function openEditModal() {
+            if (conversationHistory.length === 0) { addMessageToChat("Nie ma czego edytować!", false, false); return; }
+            const formattedText = conversationHistory.map(msg => {
+                if (msg.isHidden) return null;
+                const prefix = msg.role === 'user' ? 'TY:' : 'AGENT:';
+                if (msg.imageUrl) {
+                    const prompt = msg.content.replace(/\[IMG\]|\[\/IMG\]/g, '');
+                    return `${prefix} [OBRAZ: ${prompt}]`;
+                }
+                return `${prefix} ${msg.content}`;
+            }).filter(Boolean).join('\n\n');
+            editHistoryTextarea.value = formattedText;
+            editModal.style.display = 'flex';
+        }
         
-        function openEditModal() { if (conversationHistory.length === 0) { addMessageToChat("Nie ma czego edytować!", false, false); return; } const formattedText = conversationHistory.map(msg => { if (msg.isHidden) return null; const prefix = msg.role === 'user' ? 'TY:' : 'AGENT:'; if (msg.imageUrl) { const prompt = msg.content.replace(/\[IMG\]|\[\/IMG\]/g, ''); return `${prefix} [OBRAZ: ${prompt}]`; } return `${prefix} ${msg.content}`; }).filter(Boolean).join('\n\n'); editHistoryTextarea.value = formattedText; editModal.style.display = 'flex'; }
-        function saveAndDownloadEdited() { const editedText = editHistoryTextarea.value; const newHistory = [{ role: 'system', content: 'Edytowana transkrypcja rozmowy' }, { role: 'user', content: editedText }]; exportConversation(newHistory); hideEditModal(); }
+        function saveAndDownloadEdited() {
+            const editedText = editHistoryTextarea.value;
+            const newHistory = [{ role: 'system', content: 'Edytowana transkrypcja rozmowy' }, { role: 'user', content: editedText }];
+            exportConversation(newHistory);
+            hideEditModal();
+        }
+        
         function hideEditModal() { editModal.style.display = 'none'; }
-        importButton.addEventListener('click', () => { const input = document.createElement('input'); input.type = 'file'; input.accept = '.json,application/json'; input.onchange = e => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (event) => { try { const importedHistory = JSON.parse(event.target.result); if (Array.isArray(importedHistory) && importedHistory.every(item => 'role' in item && 'content' in item)) { conversationHistory = importedHistory; messageList.innerHTML = ''; conversationHistory.forEach(msg => { addMessageToChat(msg.content, msg.role === 'user', false, msg.imageUrl, msg.isHidden); }); addMessageToChat("Rozmowa wczytana pomyślnie! Możemy kontynuować.", false, false); } else { throw new Error("Niepoprawny format pliku."); } } catch (err) { addMessageToChat(`Błąd importu: ${err.message}`, false, false); } }; reader.readAsText(file); }; input.click(); });
+        
+        importButton.addEventListener('click', importConversation);
         editExportButton.addEventListener('click', openEditModal);
         closeEditModal.addEventListener('click', hideEditModal);
         saveEditedButton.addEventListener('click', saveAndDownloadEdited);
@@ -316,12 +374,12 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 attachedFile = { name: file.name, mime_type: file.type, data: e.target.result.split(',')[1] };
-                addMessageToChat(`Załączono plik: ${file.name}`, true, true, null, true); // Dodaj ukrytą wiadomość do historii
-                handleSubmit(); // Od razu wyślij wiadomość o załączonym pliku
+                addMessageToChat(`Załączono plik: ${file.name}`, true, true, null, true);
+                handleSubmit();
             };
             reader.readAsDataURL(file);
         }
-
+        
         function clearAttachment() {
             attachedFile = null;
             fileInput.value = '';
@@ -339,7 +397,7 @@
                 userText = userInput.value.trim();
                 if (!userText && !attachedFile) return;
                 lastUserMessage = userText;
-                addMessageToChat(userText, true);
+                if(userText || !attachedFile) addMessageToChat(userText, true);
                 userInput.value = '';
             }
             
@@ -347,8 +405,20 @@
             const requestBody = { history: [] };
             historySlice.forEach(msg => { requestBody.history.push({ role: msg.role, content: msg.content }); });
             
+            const attachmentsToSend = [];
             if (attachedFile) {
-                requestBody.attachments = [attachedFile];
+                attachmentsToSend.push(attachedFile);
+            }
+            historySlice.forEach(msg => {
+                if (msg.imageUrl && msg.imageUrl.startsWith('data:image')) {
+                    const mimeType = msg.imageUrl.substring(msg.imageUrl.indexOf(':') + 1, msg.imageUrl.indexOf(';'));
+                    const base64Data = msg.imageUrl.split(',')[1];
+                    attachmentsToSend.push({ mime_type: mimeType, data: base64Data });
+                }
+            });
+
+            if (attachmentsToSend.length > 0) {
+                requestBody.attachments = Array.from(new Map(attachmentsToSend.map(item => [item.data.slice(-20), item])).values());
             }
 
             const userKey = sessionStorage.getItem('userProvidedApiKey');
