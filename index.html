@@ -61,6 +61,7 @@
             font-size: 0.9rem;
             height: 40vh;
             resize: vertical;
+            font-family: "Courier New", Courier, monospace;
         }
         .modal-button {
             padding: 10px 20px;
@@ -82,11 +83,6 @@
         #save-private-key-button, #save-edited-button { background-color: #007bff; }
         #donate-key-button { background-color: #28a745; }
         #close-api-key-modal, #close-archive-modal, #close-edit-modal { background-color: #6c757d; }
-        #archive-list { list-style-type: none; padding: 0; max-height: 300px; overflow-y: auto; text-align: left; }
-        #archive-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
-        #archive-list li:hover { background-color: #f0f2f5; }
-        .delete-archive-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; opacity: 0.5; }
-        .delete-archive-btn:hover { opacity: 1; color: #dc3545; }
 
         @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); } 20%, 40%, 60%, 80% { transform: translateX(10px); } }
         .is-invalid { animation: shake 0.5s; }
@@ -121,16 +117,36 @@
         .chat-form-button { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
         #attachment-button { background-color: #17a2b8; font-size: 1.2rem; }
         #micButton.is-listening { background-color: #fa383e; }
-        #export-button { background-color: #6c757d; }
         #userInput { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 18px; font-size: 1rem; background: #f0f2f5; }
     </style>
 </head>
 <body>
-    <div id="password-modal" class="modal-overlay"> ... </div>
-    <div id="api-key-modal" class="modal-overlay"> ... </div>
-    <div id="archive-modal" class="modal-overlay"> ... </div>
+    <div id="password-modal" class="modal-overlay">
+        <div id="password-modal-content" class="modal-content">
+            <h3>Wpisz kod dostępu</h3>
+            <input type="password" id="password-input">
+            <div class="button-container">
+                <button id="password-button" class="modal-button">Wejdź</button>
+                <a href="https://0-skar.github.io/0/" id="return-button" class="modal-button">Wróć</a>
+            </div>
+        </div>
+    </div>
 
-    <!-- ZMIANA: Nowe okno do edycji i eksportu -->
+    <div id="api-key-modal" class="modal-overlay">
+        <div id="api-key-modal-content" class="modal-content">
+            <h3 id="api-key-modal-title">Podaj własny klucz API</h3>
+            <p id="api-key-modal-desc">Jeśli wspólne klucze API się wyczerpią, możesz kontynuować rozmowę używając swojego darmowego klucza Gemini.</p>
+            <p>Możesz go uzyskać na stronie <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p>
+            <p>Możesz też wesprzeć projekt, dodając swój klucz do wspólnej, rotacyjnej puli dla wszystkich użytkowników.</p>
+            <input type="password" id="user-api-key-input" placeholder="Wklej swój klucz API tutaj">
+            <div class="button-container">
+                <button id="save-private-key-button" class="modal-button">Użyj tylko dla mnie</button>
+                <button id="donate-key-button" class="modal-button">Dodaj do wspólnej puli</button>
+                <button id="close-api-key-modal" class="modal-button">Anuluj</button>
+            </div>
+        </div>
+    </div>
+
     <div id="edit-modal" class="modal-overlay">
         <div id="edit-modal-content" class="modal-content">
             <h3>Edytuj i Eksportuj Rozmowę</h3>
@@ -145,17 +161,20 @@
     
     <div id="app-container">
         <div id="app-top-bar">
-            <a href="https://0-skar.github.io/0/" id="back-button"> ... </a>
+            <a href="https://0-skar.github.io/0/" id="back-button">
+                <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </a>
             <h2 id="app-title">Cyfrowy Kumpel</h2>
             <div id="top-right-buttons">
-                <!-- ZMIANA: Przycisk eksportu/edycji -->
                 <button id="edit-export-button" class="top-bar-button" title="Edytuj i eksportuj">📝</button>
                 <button id="import-button" class="top-bar-button" title="Importuj rozmowę">📂</button>
                 <button id="api-key-button" class="top-bar-button" title="Zarządzaj kluczem API">🔑</button>
                 <button id="tts-toggle-button" class="top-bar-button"></button>
             </div>
         </div>
-        <div id="avatar-container"> ... </div>
+        <div id="avatar-container">
+            <img id="avatar" src="https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png" alt="Assistant Avatar">
+        </div>
         <div id="message-list"></div>
         <div id="controls-container">
             <div id="attachment-preview-area"></div>
@@ -169,75 +188,197 @@
     <input type="file" id="file-input" style="display: none;" accept="image/jpeg,image/png,text/plain">
 
     <script>
-        // ... (stałe i zmienne DOM, w tym nowe dla edycji) ...
+        const ACCESS_CODE = "2017";
+        const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
+        const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
+        const DONATE_URL = `${BASE_BACKEND_URL}/donate-key`;
+        const IMAGE_BACKEND_URL = "https://image.pollinations.ai/prompt/";
+        
+        const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
+        const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
+        const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. W co dzisiaj grasz? A może chcesz, żebym coś namalował? 😎" ];
+
+        const appContainer = document.getElementById('app-container');
+        const passwordModal = document.getElementById('password-modal');
+        const passwordInput = document.getElementById('password-input');
+        const passwordButton = document.getElementById('password-button');
+        const userInput = document.getElementById('userInput');
+        const messageList = document.getElementById('message-list');
+        const micButton = document.getElementById('micButton');
+        const avatar = document.getElementById('avatar');
+        const ttsToggleButton = document.getElementById('tts-toggle-button');
+        const chatForm = document.getElementById('chat-form');
+        const apiKeyModal = document.getElementById('api-key-modal');
+        const userApiKeyInput = document.getElementById('user-api-key-input');
+        const savePrivateKeyButton = document.getElementById('save-private-key-button');
+        const donateKeyButton = document.getElementById('donate-key-button');
+        const closeApiKeyModal = document.getElementById('close-api-key-modal');
+        const apiKeyButton = document.getElementById('api-key-button');
+        const importButton = document.getElementById('import-button');
+        const attachmentButton = document.getElementById('attachment-button');
+        const fileInput = document.getElementById('file-input');
+        const attachmentPreviewArea = document.getElementById('attachment-preview-area');
         const editModal = document.getElementById('edit-modal');
         const editHistoryTextarea = document.getElementById('edit-history-textarea');
         const saveEditedButton = document.getElementById('save-edited-button');
         const closeEditModal = document.getElementById('close-edit-modal');
         const editExportButton = document.getElementById('edit-export-button');
         
+        const synth = window.speechSynthesis;
+        let voices = [];
+        let isTtsEnabled = true;
         let conversationHistory = [];
-        // ... (reszta zmiennych) ...
+        let lastUserMessage = "";
+        let attachedFile = null;
 
-        // ... (funkcje displayInitialGreeting, checkAuthentication, etc. bez zmian) ...
+        function displayInitialGreeting() { if (conversationHistory.length === 0) { const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]; addMessageToChat(randomGreeting, false); speak(randomGreeting); } }
+        function checkAuthentication() { if (sessionStorage.getItem('isAuthenticated') === 'true') { passwordModal.style.display = 'none'; appContainer.style.display = 'flex'; initSpeechSynthesis(); displayInitialGreeting(); } else { passwordModal.style.display = 'flex'; appContainer.style.display = 'none'; } }
+        function initSpeechSynthesis() { populateVoiceList(); if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = populateVoiceList; }
+        function handlePasswordAttempt() { if (passwordInput.value === ACCESS_CODE) { sessionStorage.setItem('isAuthenticated', 'true'); checkAuthentication(); } else { passwordInput.parentElement.classList.add('is-invalid'); setTimeout(() => { passwordInput.parentElement.classList.remove('is-invalid'); }, 500); } }
+        passwordButton.addEventListener('click', handlePasswordAttempt);
+        passwordInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') handlePasswordAttempt(); });
         
-        // ZMIANA: Ulepszona funkcja `generateImage` z kodowaniem Base64
+        const speakerOnIcon = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
+        const speakerOffIcon = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9.02 12 14v-2.18l-2.01-2.01L12 7.82V4z"/></svg>`;
+        function updateTtsToggleIcon() { ttsToggleButton.innerHTML = isTtsEnabled ? speakerOnIcon : speakerOffIcon; ttsToggleButton.classList.toggle('is-muted', !isTtsEnabled); }
+        ttsToggleButton.addEventListener('click', () => { isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); if (!isTtsEnabled) synth.cancel(); });
+        
+        function populateVoiceList() { voices = synth.getVoices(); }
+        function stripEmojis(text) { const emojiRegex = /\p{Emoji_Presentation}/gu; return text.replace(emojiRegex, ''); }
+        
+        function speak(text) {
+            if (!isTtsEnabled) return;
+            synth.cancel();
+            const langTagRegex = /\[(PL|EN|DE|FR|ES)\](.*?)\[\/\1\]/gi;
+            const matches = [...text.matchAll(langTagRegex)];
+            if (matches.length === 0) {
+                const textForSpeech = stripEmojis(text);
+                if (!textForSpeech) return;
+                const utterance = new SpeechSynthesisUtterance(textForSpeech);
+                const detectedLang = (/[ąćęłńóśźż]/i.test(textForSpeech)) ? 'pl' : 'en';
+                const langMap = { 'pl': 'pl-PL', 'en': 'en-US', 'es': 'es-ES', 'de': 'de-DE', 'fr': 'fr-FR' };
+                utterance.lang = langMap[detectedLang] || 'en-US';
+                if (voices.length > 0) {
+                    const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
+                    let selectedVoice = voices.find(v => v.lang.startsWith(detectedLang) && !femaleNamesToFilter.some(n => v.name.toLowerCase().includes(n.toLowerCase())));
+                    if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith(detectedLang));
+                    if (selectedVoice) utterance.voice = selectedVoice;
+                }
+                utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
+                utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
+                synth.speak(utterance);
+                return;
+            }
+            const utterances = [];
+            for (const match of matches) {
+                const langCode = match[1].toLowerCase();
+                const segmentText = stripEmojis(match[2]);
+                if (!segmentText) continue;
+                const utterance = new SpeechSynthesisUtterance(segmentText);
+                const langMap = { 'pl': 'pl-PL', 'en': 'en-US', 'es': 'es-ES', 'de': 'de-DE', 'fr': 'fr-FR' };
+                utterance.lang = langMap[langCode] || 'en-US';
+                if (voices.length > 0) {
+                    const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
+                    let selectedVoice = voices.find(v => v.lang.startsWith(langCode) && !femaleNamesToFilter.some(n => v.name.toLowerCase().includes(n.toLowerCase())));
+                    if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith(langCode));
+                    if (selectedVoice) utterance.voice = selectedVoice;
+                }
+                utterances.push(utterance);
+            }
+            if (utterances.length > 0) {
+                utterances[0].onstart = () => { avatar.src = AVATAR_TALKING_URL; };
+                utterances[utterances.length - 1].onend = () => { avatar.src = AVATAR_STILL_URL; };
+                utterances.forEach(u => synth.speak(u));
+            }
+        }
+        
         async function generateImage(prompt) {
             addMessageToChat("Chwileczkę, już się biorę za malowanie... 🎨", false, false);
             try {
-                const fullUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
+                const fullUrl = IMAGE_BACKEND_URL + encodeURIComponent(prompt);
                 const response = await fetch(fullUrl, { method: 'POST' });
                 if (!response.ok) throw new Error(`Błąd serwera malarskiego: ${response.statusText}`);
-                
                 const blob = await response.blob();
-                
-                // Konwertujemy obraz do Base64, aby można go było zapisać
                 const reader = new FileReader();
                 reader.onloadend = () => {
                     const base64data = reader.result;
                     addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, base64data);
                 };
                 reader.readAsDataURL(blob);
-
             } catch (error) {
                 addMessageToChat("Ajj, coś poszło nie tak i farby mi się rozlały. 😕", false, false);
                 console.error("Błąd generowania obrazu:", error);
             }
         }
         
-        // Funkcje Eksportu/Importu/Edycji
+        function showApiKeyModal() { apiKeyModal.style.display = 'flex'; }
+        function hideApiKeyModal() { apiKeyModal.style.display = 'none'; }
+        apiKeyButton.addEventListener('click', showApiKeyModal);
+        savePrivateKeyButton.addEventListener('click', () => { const userKey = userApiKeyInput.value.trim(); if (userKey) { sessionStorage.setItem('userProvidedApiKey', userKey); hideApiKeyModal(); addMessageToChat("Dzięki! Spróbujmy jeszcze raz z Twoim prywatnym kluczem... 👍", false, false); handleSubmit(true); } });
+        donateKeyButton.addEventListener('click', async () => { const userKey = userApiKeyInput.value.trim(); if (!userKey) return; addMessageToChat("Wysyłam Twój klucz do weryfikacji... Dziękuję za wsparcie! ❤️", false, false); hideApiKeyModal(); try { const response = await fetch(DONATE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey: userKey }) }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.detail); } sessionStorage.setItem('userProvidedApiKey', userKey); addMessageToChat("Donacja przyjęta! Używam Twojego klucza do odpowiedzi.", false, false); handleSubmit(true); } catch (error) { addMessageToChat(`Błąd podczas donacji: ${error.message}`, false, false); } });
+        closeApiKeyModal.addEventListener('click', hideApiKeyModal);
+
         function exportConversation(history) {
             const dataStr = JSON.stringify(history, null, 2);
             const blob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `rozmowa-${new Date().toISOString().slice(0,10)}.json`;
+            a.download = `rozmowa-${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
 
+        function importConversation() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,application/json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const importedHistory = JSON.parse(event.target.result);
+                        if (Array.isArray(importedHistory) && importedHistory.every(item => 'role' in item && 'content' in item)) {
+                            conversationHistory = importedHistory;
+                            messageList.innerHTML = '';
+                            conversationHistory.forEach(msg => {
+                                addMessageToChat(msg.content, msg.role === 'user', false, msg.imageUrl, msg.isHidden);
+                            });
+                            addMessageToChat("Rozmowa wczytana pomyślnie! Możemy kontynuować.", false, false);
+                        } else {
+                            throw new Error("Niepoprawny format pliku.");
+                        }
+                    } catch (err) {
+                        addMessageToChat(`Błąd importu: ${err.message}`, false, false);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
         function openEditModal() {
-            if (conversationHistory.length === 0) {
-                addMessageToChat("Nie ma czego edytować!", false, false);
-                return;
-            }
-            // Formatujemy historię do czytelnej formy
+            if (conversationHistory.length === 0) { addMessageToChat("Nie ma czego edytować!", false, false); return; }
             const formattedText = conversationHistory.map(msg => {
                 const prefix = msg.role === 'user' ? 'TY:' : 'AGENT:';
                 if (msg.imageUrl) {
-                    return `${prefix} [OBRAZ: ${msg.content.replace(/\[IMG\]/g, '')}]`;
+                    const prompt = msg.content.replace(/\[IMG\]|\[\/IMG\]/g, '');
+                    return `${prefix} [OBRAZ: ${prompt}]`;
                 }
                 return `${prefix} ${msg.content}`;
             }).join('\n\n');
             editHistoryTextarea.value = formattedText;
             editModal.style.display = 'flex';
         }
-
+        
         function saveAndDownloadEdited() {
+            // Proste podejście: na razie zapisujemy tylko edytowany tekst jako notatkę.
+            // Bardziej zaawansowane parsowanie wymagałoby skomplikowanego regexa.
             const editedText = editHistoryTextarea.value;
-            // Tutaj można by dodać zaawansowane parsowanie, ale na razie zapisujemy surowy tekst
-            // Proste podejście: tworzymy nową historię na podstawie edytowanego tekstu
             const newHistory = [{ role: 'system', content: 'Edytowana transkrypcja rozmowy' }, { role: 'user', content: editedText }];
             exportConversation(newHistory);
             hideEditModal();
@@ -245,25 +386,86 @@
         
         function hideEditModal() { editModal.style.display = 'none'; }
 
-        importButton.addEventListener('click', () => { /* kod importu bez zmian */ });
+        importButton.addEventListener('click', importConversation);
         editExportButton.addEventListener('click', openEditModal);
         closeEditModal.addEventListener('click', hideEditModal);
         saveEditedButton.addEventListener('click', saveAndDownloadEdited);
 
-        async function handleSubmit(isRetry = false) {
-            // ZMIANA: Zwiększamy "pamięć" asystenta
-            const historySlice = conversationHistory.slice(-30); 
-            // ... (reszta kodu handleSubmit bez zmian, ale używa `historySlice`)
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                attachedFile = { name: file.name, mime_type: file.type, data: e.target.result.split(',')[1] };
+                showAttachmentPreview(file.name);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showAttachmentPreview(fileName) {
+            attachmentPreviewArea.style.display = 'block';
+            attachmentPreviewArea.innerHTML = `<div class="attachment-preview">📄 <span>${fileName}</span><button class="remove-attachment-btn" title="Usuń załącznik">×</button></div>`;
+            attachmentPreviewArea.querySelector('.remove-attachment-btn').addEventListener('click', clearAttachment);
+        }
+
+        function clearAttachment() {
+            attachedFile = null;
+            fileInput.value = '';
+            attachmentPreviewArea.style.display = 'none';
         }
         
-        // ZMIANA: addMessageToChat musi teraz obsługiwać `base64`
+        attachmentButton.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelect);
+
+        async function handleSubmit(isRetry = false) {
+            if (!sessionStorage.getItem('isAuthenticated')) return;
+            let userText;
+            if (isRetry) {
+                userText = lastUserMessage;
+            } else {
+                userText = userInput.value.trim();
+                if (!userText && !attachedFile) return;
+                lastUserMessage = userText;
+                addMessageToChat(userText, true);
+                userInput.value = '';
+            }
+            
+            const historySlice = conversationHistory.slice(-30);
+            const requestBody = { history: historySlice };
+            if (attachedFile) requestBody.attachments = [attachedFile];
+            const userKey = sessionStorage.getItem('userProvidedApiKey');
+            if (userKey) requestBody.apiKey = userKey;
+
+            try {
+                const response = await fetch(CHAT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
+                if (attachedFile) clearAttachment();
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    if (errorData.all_keys_exhausted) {
+                        showApiKeyModal();
+                    } else { throw new Error(errorData.detail || 'Nieznany błąd serwera'); }
+                    return;
+                }
+                const data = await response.json();
+                const assistantText = data.generated_text;
+                const imgMatch = assistantText.match(/\[IMG\](.*?)\[\/IMG\]/);
+                if (imgMatch && imgMatch[1]) {
+                    addMessageToChat(assistantText, false, true, null, true);
+                    generateImage(imgMatch[1]);
+                } else {
+                    addMessageToChat(assistantText, false);
+                    speak(assistantText);
+                }
+            } catch (error) {
+                addMessageToChat(`Błąd: ${error.message}`, false, false);
+                console.error("Błąd handleSubmit:", error);
+            }
+        }
+        
         function addMessageToChat(text, isUser, addToHistory = true, imageUrl = null, isHidden = false) {
             if (addToHistory) {
                 const historyEntry = { role: isUser ? 'user' : 'assistant', content: text };
-                // Zapisujemy obraz jako dane base64, jeśli istnieje
-                if (imageUrl && imageUrl.startsWith('data:image')) {
-                    historyEntry.imageUrl = imageUrl;
-                }
+                if (imageUrl) historyEntry.imageUrl = imageUrl;
                 if (isHidden) historyEntry.isHidden = true;
                 conversationHistory.push(historyEntry);
             }
@@ -284,8 +486,26 @@
                 messageList.scrollTop = messageList.scrollHeight;
             }
         }
+
+        chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(false); });
         
-        // ... (reszta kodu bez zmian) ...
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            let isListening = false;
+            micButton.addEventListener('click', () => { if (!sessionStorage.getItem('isAuthenticated')) return; if (isListening) { recognition.stop(); } else { userInput.value = ''; recognition.lang = 'pl-PL'; recognition.start(); } });
+            recognition.onstart = () => { isListening = true; micButton.classList.add('is-listening'); };
+            recognition.onend = () => { isListening = false; micButton.classList.remove('is-listening'); if (userInput.value.trim()){ handleSubmit(false); } };
+            recognition.onresult = (event) => { let interim_transcript = ''; let final_transcript = ''; for (let i = event.resultIndex; i < event.results.length; ++i) { const transcript = event.results[i][0].transcript; if (event.results[i].isFinal) { final_transcript += transcript; } else { interim_transcript += transcript; } } userInput.value = final_transcript + interim_transcript; };
+            recognition.onerror = (event) => { console.error("Błąd rozpoznawania mowy:", event.error); isListening = false; micButton.classList.remove('is-listening'); };
+        } else {
+            micButton.style.display = 'none';
+        }
+        
+        updateTtsToggleIcon();
+        checkAuthentication();
     </script>
 </body>
 </html>
