@@ -73,7 +73,7 @@
             width: 100%;
             box-sizing: border-box;
         }
-        #api-key-modal-content p, #archive-modal-content p, #edit-modal-content p { font-size: 0.9rem; line-height: 1.5; color: #65676b; text-align: left; }
+        #api-key-modal-content p, #edit-modal-content p { font-size: 0.9rem; line-height: 1.5; color: #65676b; text-align: left; }
         #api-key-modal-content a { color: #007bff; text-decoration: none; font-weight: bold; }
         #api-key-modal-content a:hover { text-decoration: underline; }
         .button-container { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; margin-top: 1.5rem; }
@@ -82,13 +82,8 @@
         #return-button { background-color: #6c757d; text-decoration: none; display: block; padding: 8px 16px; }
         #save-private-key-button, #save-edited-button { background-color: #007bff; }
         #donate-key-button { background-color: #28a745; }
-        #close-api-key-modal, #close-archive-modal, #close-edit-modal { background-color: #6c757d; }
-        #archive-list { list-style-type: none; padding: 0; max-height: 300px; overflow-y: auto; text-align: left; }
-        #archive-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
-        #archive-list li:hover { background-color: #f0f2f5; }
-        .delete-archive-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; opacity: 0.5; }
-        .delete-archive-btn:hover { opacity: 1; color: #dc3545; }
-
+        #close-api-key-modal, #close-edit-modal { background-color: #6c757d; }
+        
         @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); } 20%, 40%, 60%, 80% { transform: translateX(10px); } }
         .is-invalid { animation: shake 0.5s; }
         #app-container { width: 100%; height: 100%; max-width: 800px; margin: 0 auto; display: none; flex-direction: column; background-color: white; }
@@ -107,24 +102,11 @@
         #avatar { width: 90%; max-width: 250px; height: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         #message-list { flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background-color: var(--chat-area-bg); }
         .message-bubble { padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4; word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        
-        /* ZMIANA: Usunięto regułę wyrównującą wiadomości użytkownika do prawej */
-        .user-message { 
-            background-color: var(--user-bubble-bg); 
-            color: white;
-            /* align-self: flex-end; <-- Ta linia została usunięta */
-        }
-        
+        .user-message { background-color: var(--user-bubble-bg); color: white; }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
         .assistant-message img { max-width: 100%; border-radius: 10px; margin-top: 8px; display: block; }
         
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
-        #attachment-preview-area { padding: 0 8px 8px 8px; display: none; }
-        .attachment-preview { display: flex; align-items: center; background: #e9ecef; padding: 5px 10px; border-radius: 12px; font-size: 0.8rem; }
-        .attachment-preview span { margin-left: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .remove-attachment-btn { background: none; border: none; cursor: pointer; margin-left: auto; font-size: 1.2rem; padding: 0 5px; opacity: 0.6; }
-        .remove-attachment-btn:hover { opacity: 1; }
-        
         #chat-form { display: flex; align-items: center; }
         .chat-form-button { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
         #attachment-button { background-color: #17a2b8; font-size: 1.2rem; }
@@ -176,9 +158,9 @@
             <a href="https://0-skar.github.io/0/" id="back-button">
                 <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
             </a>
+            <button id="edit-export-button" class="top-bar-button" title="Edytuj i eksportuj">📝</button>
             <h2 id="app-title">Cyfrowy Kumpel</h2>
             <div id="top-right-buttons">
-                <button id="edit-export-button" class="top-bar-button" title="Edytuj i eksportuj">📝</button>
                 <button id="import-button" class="top-bar-button" title="Importuj rozmowę">📂</button>
                 <button id="api-key-button" class="top-bar-button" title="Zarządzaj kluczem API">🔑</button>
                 <button id="tts-toggle-button" class="top-bar-button"></button>
@@ -189,7 +171,6 @@
         </div>
         <div id="message-list"></div>
         <div id="controls-container">
-            <div id="attachment-preview-area"></div>
             <form id="chat-form">
                 <button type="button" id="attachment-button" class="chat-form-button" title="Załącz plik (txt, jpg, png)">📎</button>
                 <input type="text" id="userInput" placeholder="Opisz załączony plik lub zadaj pytanie...">
@@ -201,7 +182,7 @@
 
     <script>
         const ACCESS_CODE = "2017";
-        const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
+        const BASE_BACKEND_URL = "https://twoj-space-name.hf.space"; 
         const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
         const DONATE_URL = `${BASE_BACKEND_URL}/donate-key`;
         const IMAGE_BACKEND_URL = "https://image.pollinations.ai/prompt/";
@@ -229,7 +210,6 @@
         const importButton = document.getElementById('import-button');
         const attachmentButton = document.getElementById('attachment-button');
         const fileInput = document.getElementById('file-input');
-        const attachmentPreviewArea = document.getElementById('attachment-preview-area');
         const editModal = document.getElementById('edit-modal');
         const editHistoryTextarea = document.getElementById('edit-history-textarea');
         const saveEditedButton = document.getElementById('save-edited-button');
@@ -241,8 +221,7 @@
         let isTtsEnabled = true;
         let conversationHistory = [];
         let lastUserMessage = "";
-        let attachedFile = null;
-
+        
         function displayInitialGreeting() { if (conversationHistory.length === 0) { const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]; addMessageToChat(randomGreeting, false); speak(randomGreeting); } }
         function checkAuthentication() { if (sessionStorage.getItem('isAuthenticated') === 'true') { passwordModal.style.display = 'none'; appContainer.style.display = 'flex'; initSpeechSynthesis(); displayInitialGreeting(); } else { passwordModal.style.display = 'flex'; appContainer.style.display = 'none'; } }
         function initSpeechSynthesis() { populateVoiceList(); if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = populateVoiceList; }
@@ -302,7 +281,11 @@
                 if (!response.ok) throw new Error(`Błąd serwera malarskiego: ${response.statusText}`);
                 const blob = await response.blob();
                 const reader = new FileReader();
-                reader.onloadend = () => { const base64data = reader.result; addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, base64data); };
+                reader.onloadend = () => {
+                    const base64data = reader.result; // To jest już data:image/...;base64,...
+                    const fileData = { name: `generated_image.png`, mime_type: blob.type, data: base64data.split(',')[1] };
+                    addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, fileData);
+                };
                 reader.readAsDataURL(blob);
             } catch (error) { addMessageToChat("Ajj, coś poszło nie tak i farby mi się rozlały. 😕", false, false); console.error("Błąd generowania obrazu:", error); }
         }
@@ -342,7 +325,7 @@
                         if (Array.isArray(importedHistory) && importedHistory.every(item => 'role' in item && 'content' in item)) {
                             conversationHistory = importedHistory;
                             messageList.innerHTML = '';
-                            conversationHistory.forEach(msg => { addMessageToChat(msg.content, msg.role === 'user', false, msg.imageUrl, msg.isHidden); });
+                            conversationHistory.forEach(msg => { addMessageToChat(msg.content, msg.role === 'user', false, msg.fileData, msg.isHidden); });
                             addMessageToChat("Rozmowa wczytana pomyślnie! Możemy kontynuować.", false, false);
                         } else { throw new Error("Niepoprawny format pliku."); }
                     } catch (err) { addMessageToChat(`Błąd importu: ${err.message}`, false, false); }
@@ -357,9 +340,9 @@
             const formattedText = conversationHistory.map(msg => {
                 if (msg.isHidden) return null;
                 const prefix = msg.role === 'user' ? 'TY:' : 'AGENT:';
-                if (msg.imageUrl) {
-                    const prompt = msg.content.replace(/\[IMG\]|\[\/IMG\]/g, '');
-                    return `${prefix} [OBRAZ: ${prompt}]`;
+                if (msg.fileData) {
+                    const fileName = msg.fileData.name || 'załączony plik';
+                    return `${prefix} [PLIK: ${fileName}]`;
                 }
                 return `${prefix} ${msg.content}`;
             }).filter(Boolean).join('\n\n');
@@ -375,7 +358,7 @@
         }
         
         function hideEditModal() { editModal.style.display = 'none'; }
-
+        
         importButton.addEventListener('click', importConversation);
         editExportButton.addEventListener('click', openEditModal);
         closeEditModal.addEventListener('click', hideEditModal);
@@ -386,22 +369,11 @@
             if (!file) return;
             const reader = new FileReader();
             reader.onload = (e) => {
-                attachedFile = { name: file.name, mime_type: file.type, data: e.target.result.split(',')[1] };
-                showAttachmentPreview(file.name);
+                const fileData = { name: file.name, mime_type: file.type, data: e.target.result.split(',')[1] };
+                addMessageToChat(`Załączono plik: ${file.name}`, true, true, fileData, true);
+                handleSubmit();
             };
             reader.readAsDataURL(file);
-        }
-
-        function showAttachmentPreview(fileName) {
-            attachmentPreviewArea.style.display = 'block';
-            attachmentPreviewArea.innerHTML = `<div class="attachment-preview">📄 <span>${fileName}</span><button class="remove-attachment-btn" title="Usuń załącznik">×</button></div>`;
-            attachmentPreviewArea.querySelector('.remove-attachment-btn').addEventListener('click', clearAttachment);
-        }
-
-        function clearAttachment() {
-            attachedFile = null;
-            fileInput.value = '';
-            attachmentPreviewArea.style.display = 'none';
         }
         
         attachmentButton.addEventListener('click', () => fileInput.click());
@@ -414,9 +386,10 @@
                 userText = lastUserMessage;
             } else {
                 userText = userInput.value.trim();
-                if (!userText && !attachedFile) return;
+                const isFileAttached = conversationHistory.some(m => m.role === 'user' && m.fileData);
+                if (!userText && !isFileAttached) return;
                 lastUserMessage = userText;
-                addMessageToChat(userText, true);
+                if(userText || !isFileAttached) addMessageToChat(userText, true);
                 userInput.value = '';
             }
             
@@ -424,22 +397,16 @@
             const requestBody = { history: [] };
             
             historySlice.forEach(msg => { requestBody.history.push({ role: msg.role, content: msg.content }); });
-
-            const attachmentsToSend = [];
-            if (attachedFile) {
-                attachmentsToSend.push(attachedFile);
-            }
             
+            const attachmentsToSend = [];
             historySlice.forEach(msg => {
-                if (msg.imageUrl && msg.imageUrl.startsWith('data:image')) {
-                    const mimeType = msg.imageUrl.substring(msg.imageUrl.indexOf(':') + 1, msg.imageUrl.indexOf(';'));
-                    const base64Data = msg.imageUrl.split(',')[1];
-                    attachmentsToSend.push({ mime_type: mimeType, data: base64Data });
+                if (msg.fileData) {
+                    attachmentsToSend.push(msg.fileData);
                 }
             });
 
             if (attachmentsToSend.length > 0) {
-                requestBody.attachments = Array.from(new Map(attachmentsToSend.map(item => [item.data.slice(-20), item])).values());
+                requestBody.attachments = Array.from(new Map(attachmentsToSend.map(item => [item.data, item])).values());
             }
 
             const userKey = sessionStorage.getItem('userProvidedApiKey');
@@ -447,7 +414,6 @@
 
             try {
                 const response = await fetch(CHAT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
-                if (attachedFile) clearAttachment();
                 if (!response.ok) {
                     const errorData = await response.json();
                     if (errorData.all_keys_exhausted) { showApiKeyModal(); } 
@@ -470,10 +436,10 @@
             }
         }
         
-        function addMessageToChat(text, isUser, addToHistory = true, imageUrl = null, isHidden = false) {
+        function addMessageToChat(text, isUser, addToHistory = true, fileData = null, isHidden = false) {
             if (addToHistory) {
                 const historyEntry = { role: isUser ? 'user' : 'assistant', content: text };
-                if (imageUrl && imageUrl.startsWith('data:image')) historyEntry.imageUrl = imageUrl;
+                if (fileData) historyEntry.fileData = fileData;
                 if (isHidden) historyEntry.isHidden = true;
                 conversationHistory.push(historyEntry);
             }
@@ -481,15 +447,15 @@
             const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
             const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG)\]/gi, '');
-            if (imageUrl) {
+            if (fileData && fileData.mime_type && fileData.mime_type.startsWith('image/')) {
                 const image = document.createElement('img');
-                image.src = imageUrl;
+                image.src = `data:${fileData.mime_type};base64,${fileData.data}`;
                 image.alt = cleanText;
                 messageBubble.appendChild(image);
             } else {
                 if (cleanText) messageBubble.innerText = cleanText;
             }
-            if (cleanText || imageUrl) {
+            if (cleanText || fileData) {
                 messageList.appendChild(messageBubble);
                 messageList.scrollTop = messageList.scrollHeight;
             }
