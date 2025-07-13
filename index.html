@@ -83,6 +83,11 @@
         #save-private-key-button, #save-edited-button { background-color: #007bff; }
         #donate-key-button { background-color: #28a745; }
         #close-api-key-modal, #close-archive-modal, #close-edit-modal { background-color: #6c757d; }
+        #archive-list { list-style-type: none; padding: 0; max-height: 300px; overflow-y: auto; text-align: left; }
+        #archive-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+        #archive-list li:hover { background-color: #f0f2f5; }
+        .delete-archive-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; opacity: 0.5; }
+        .delete-archive-btn:hover { opacity: 1; color: #dc3545; }
 
         @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); } 20%, 40%, 60%, 80% { transform: translateX(10px); } }
         .is-invalid { animation: shake 0.5s; }
@@ -102,7 +107,14 @@
         #avatar { width: 90%; max-width: 250px; height: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         #message-list { flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background-color: var(--chat-area-bg); }
         .message-bubble { padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4; word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .user-message { background-color: var(--user-bubble-bg); color: white; align-self: flex-end; }
+        
+        /* ZMIANA: Usunięto regułę wyrównującą wiadomości użytkownika do prawej */
+        .user-message { 
+            background-color: var(--user-bubble-bg); 
+            color: white;
+            /* align-self: flex-end; <-- Ta linia została usunięta */
+        }
+        
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
         .assistant-message img { max-width: 100%; border-radius: 10px; margin-top: 8px; display: block; }
         
@@ -189,14 +201,14 @@
 
     <script>
         const ACCESS_CODE = "2017";
-        const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
+        const BASE_BACKEND_URL = "https://twoj-space-name.hf.space"; 
         const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
         const DONATE_URL = `${BASE_BACKEND_URL}/donate-key`;
         const IMAGE_BACKEND_URL = "https://image.pollinations.ai/prompt/";
         
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
-        const GREETINGS = [ "Siema. Co tam dziś scrollujesz? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. W co dzisiaj grasz? A może chcesz, żebym coś namalował? 😎" ];
+        const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. W co dzisiaj grasz? A może chcesz, żebym coś namalował? 😎" ];
 
         const appContainer = document.getElementById('app-container');
         const passwordModal = document.getElementById('password-modal');
@@ -258,12 +270,7 @@
                 const detectedLang = (/[ąćęłńóśźż]/i.test(textForSpeech)) ? 'pl' : 'en';
                 const langMap = { 'pl': 'pl-PL', 'en': 'en-US', 'es': 'es-ES', 'de': 'de-DE', 'fr': 'fr-FR' };
                 utterance.lang = langMap[detectedLang] || 'en-US';
-                if (voices.length > 0) {
-                    const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
-                    let selectedVoice = voices.find(v => v.lang.startsWith(detectedLang) && !femaleNamesToFilter.some(n => v.name.toLowerCase().includes(n.toLowerCase())));
-                    if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith(detectedLang));
-                    if (selectedVoice) utterance.voice = selectedVoice;
-                }
+                if (voices.length > 0) { const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English']; let selectedVoice = voices.find(v => v.lang.startsWith(detectedLang) && !femaleNamesToFilter.some(n => v.name.toLowerCase().includes(n.toLowerCase()))); if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith(detectedLang)); if (selectedVoice) utterance.voice = selectedVoice; }
                 utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
                 utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
                 synth.speak(utterance);
@@ -277,12 +284,7 @@
                 const utterance = new SpeechSynthesisUtterance(segmentText);
                 const langMap = { 'pl': 'pl-PL', 'en': 'en-US', 'es': 'es-ES', 'de': 'de-DE', 'fr': 'fr-FR' };
                 utterance.lang = langMap[langCode] || 'en-US';
-                if (voices.length > 0) {
-                    const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
-                    let selectedVoice = voices.find(v => v.lang.startsWith(langCode) && !femaleNamesToFilter.some(n => v.name.toLowerCase().includes(n.toLowerCase())));
-                    if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith(langCode));
-                    if (selectedVoice) utterance.voice = selectedVoice;
-                }
+                if (voices.length > 0) { const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English']; let selectedVoice = voices.find(v => v.lang.startsWith(langCode) && !femaleNamesToFilter.some(n => v.name.toLowerCase().includes(n.toLowerCase()))); if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith(langCode)); if (selectedVoice) utterance.voice = selectedVoice; }
                 utterances.push(utterance);
             }
             if (utterances.length > 0) {
@@ -300,15 +302,9 @@
                 if (!response.ok) throw new Error(`Błąd serwera malarskiego: ${response.statusText}`);
                 const blob = await response.blob();
                 const reader = new FileReader();
-                reader.onloadend = () => {
-                    const base64data = reader.result;
-                    addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, base64data);
-                };
+                reader.onloadend = () => { const base64data = reader.result; addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, base64data); };
                 reader.readAsDataURL(blob);
-            } catch (error) {
-                addMessageToChat("Ajj, coś poszło nie tak i farby mi się rozlały. 😕", false, false);
-                console.error("Błąd generowania obrazu:", error);
-            }
+            } catch (error) { addMessageToChat("Ajj, coś poszło nie tak i farby mi się rozlały. 😕", false, false); console.error("Błąd generowania obrazu:", error); }
         }
         
         function showApiKeyModal() { apiKeyModal.style.display = 'flex'; }
@@ -319,6 +315,7 @@
         closeApiKeyModal.addEventListener('click', hideApiKeyModal);
 
         function exportConversation(history) {
+            if (history.length === 0) { addMessageToChat("Nie ma czego eksportować!", false, false); return; }
             const dataStr = JSON.stringify(history, null, 2);
             const blob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(blob);
@@ -345,16 +342,10 @@
                         if (Array.isArray(importedHistory) && importedHistory.every(item => 'role' in item && 'content' in item)) {
                             conversationHistory = importedHistory;
                             messageList.innerHTML = '';
-                            conversationHistory.forEach(msg => {
-                                addMessageToChat(msg.content, msg.role === 'user', false, msg.imageUrl, msg.isHidden);
-                            });
+                            conversationHistory.forEach(msg => { addMessageToChat(msg.content, msg.role === 'user', false, msg.imageUrl, msg.isHidden); });
                             addMessageToChat("Rozmowa wczytana pomyślnie! Możemy kontynuować.", false, false);
-                        } else {
-                            throw new Error("Niepoprawny format pliku.");
-                        }
-                    } catch (err) {
-                        addMessageToChat(`Błąd importu: ${err.message}`, false, false);
-                    }
+                        } else { throw new Error("Niepoprawny format pliku."); }
+                    } catch (err) { addMessageToChat(`Błąd importu: ${err.message}`, false, false); }
                 };
                 reader.readAsText(file);
             };
@@ -364,20 +355,19 @@
         function openEditModal() {
             if (conversationHistory.length === 0) { addMessageToChat("Nie ma czego edytować!", false, false); return; }
             const formattedText = conversationHistory.map(msg => {
+                if (msg.isHidden) return null;
                 const prefix = msg.role === 'user' ? 'TY:' : 'AGENT:';
                 if (msg.imageUrl) {
                     const prompt = msg.content.replace(/\[IMG\]|\[\/IMG\]/g, '');
                     return `${prefix} [OBRAZ: ${prompt}]`;
                 }
                 return `${prefix} ${msg.content}`;
-            }).join('\n\n');
+            }).filter(Boolean).join('\n\n');
             editHistoryTextarea.value = formattedText;
             editModal.style.display = 'flex';
         }
         
         function saveAndDownloadEdited() {
-            // Proste podejście: na razie zapisujemy tylko edytowany tekst jako notatkę.
-            // Bardziej zaawansowane parsowanie wymagałoby skomplikowanego regexa.
             const editedText = editHistoryTextarea.value;
             const newHistory = [{ role: 'system', content: 'Edytowana transkrypcja rozmowy' }, { role: 'user', content: editedText }];
             exportConversation(newHistory);
@@ -390,7 +380,7 @@
         editExportButton.addEventListener('click', openEditModal);
         closeEditModal.addEventListener('click', hideEditModal);
         saveEditedButton.addEventListener('click', saveAndDownloadEdited);
-
+        
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -431,8 +421,27 @@
             }
             
             const historySlice = conversationHistory.slice(-30);
-            const requestBody = { history: historySlice };
-            if (attachedFile) requestBody.attachments = [attachedFile];
+            const requestBody = { history: [] };
+            
+            historySlice.forEach(msg => { requestBody.history.push({ role: msg.role, content: msg.content }); });
+
+            const attachmentsToSend = [];
+            if (attachedFile) {
+                attachmentsToSend.push(attachedFile);
+            }
+            
+            historySlice.forEach(msg => {
+                if (msg.imageUrl && msg.imageUrl.startsWith('data:image')) {
+                    const mimeType = msg.imageUrl.substring(msg.imageUrl.indexOf(':') + 1, msg.imageUrl.indexOf(';'));
+                    const base64Data = msg.imageUrl.split(',')[1];
+                    attachmentsToSend.push({ mime_type: mimeType, data: base64Data });
+                }
+            });
+
+            if (attachmentsToSend.length > 0) {
+                requestBody.attachments = Array.from(new Map(attachmentsToSend.map(item => [item.data.slice(-20), item])).values());
+            }
+
             const userKey = sessionStorage.getItem('userProvidedApiKey');
             if (userKey) requestBody.apiKey = userKey;
 
@@ -441,9 +450,8 @@
                 if (attachedFile) clearAttachment();
                 if (!response.ok) {
                     const errorData = await response.json();
-                    if (errorData.all_keys_exhausted) {
-                        showApiKeyModal();
-                    } else { throw new Error(errorData.detail || 'Nieznany błąd serwera'); }
+                    if (errorData.all_keys_exhausted) { showApiKeyModal(); } 
+                    else { throw new Error(errorData.detail || 'Nieznany błąd serwera'); }
                     return;
                 }
                 const data = await response.json();
@@ -465,7 +473,7 @@
         function addMessageToChat(text, isUser, addToHistory = true, imageUrl = null, isHidden = false) {
             if (addToHistory) {
                 const historyEntry = { role: isUser ? 'user' : 'assistant', content: text };
-                if (imageUrl) historyEntry.imageUrl = imageUrl;
+                if (imageUrl && imageUrl.startsWith('data:image')) historyEntry.imageUrl = imageUrl;
                 if (isHidden) historyEntry.isHidden = true;
                 conversationHistory.push(historyEntry);
             }
