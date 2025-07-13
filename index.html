@@ -175,14 +175,14 @@
 
     <script>
         const ACCESS_CODE = "2017";
-        const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
+        const BASE_BACKEND_URL = "https://twoj-space-name.hf.space"; 
         const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
         const DONATE_URL = `${BASE_BACKEND_URL}/donate-key`;
         const IMAGE_BACKEND_URL = "https://image.pollinations.ai/prompt/";
         
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
-        
+
         const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. W co dzisiaj grasz? A może chcesz, żebym coś namalował? 😎" ];
 
         const appContainer = document.getElementById('app-container');
@@ -312,7 +312,7 @@
                 if (!response.ok) throw new Error(`Błąd serwera malarskiego: ${response.statusText}`);
                 const blob = await response.blob();
                 const imageUrl = URL.createObjectURL(blob);
-                addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, imageUrl);
+                addMessageToChat(`Obraz dla: ${prompt}`, false, true, imageUrl);
             } catch (error) {
                 addMessageToChat("Ajj, coś poszło nie tak i farby mi się rozlały. 😕", false, false);
                 console.error("Błąd generowania obrazu:", error);
@@ -399,8 +399,7 @@
 
                 const imgMatch = assistantText.match(/\[IMG\](.*?)\[\/IMG\]/);
                 if (imgMatch && imgMatch[1]) {
-                    // ZMIANA: Dodajemy oryginalną wiadomość [IMG] do historii, ale jej nie wyświetlamy.
-                    addMessageToChat(assistantText, false, true, null, true); // Ostatni argument to `isHidden`
+                    addMessageToChat(assistantText, false, true, null, true); // Ukryj wiadomość [IMG]
                     generateImage(imgMatch[1]);
                 } else {
                     addMessageToChat(assistantText, false);
@@ -418,8 +417,7 @@
                 conversationHistory.push({ role: isUser ? 'user' : 'assistant', content: text });
             }
             
-            // ZMIANA: Jeśli wiadomość ma być ukryta, po prostu kończymy funkcję.
-            if(isHidden) return;
+            if (isHidden) return;
 
             const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
