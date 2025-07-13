@@ -83,6 +83,11 @@
         #save-private-key-button, #save-edited-button { background-color: #007bff; }
         #donate-key-button { background-color: #28a745; }
         #close-api-key-modal, #close-archive-modal, #close-edit-modal { background-color: #6c757d; }
+        #archive-list { list-style-type: none; padding: 0; max-height: 300px; overflow-y: auto; text-align: left; }
+        #archive-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+        #archive-list li:hover { background-color: #f0f2f5; }
+        .delete-archive-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; opacity: 0.5; }
+        .delete-archive-btn:hover { opacity: 1; color: #dc3545; }
 
         @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); } 20%, 40%, 60%, 80% { transform: translateX(10px); } }
         .is-invalid { animation: shake 0.5s; }
@@ -258,12 +263,7 @@
                 const detectedLang = (/[ąćęłńóśźż]/i.test(textForSpeech)) ? 'pl' : 'en';
                 const langMap = { 'pl': 'pl-PL', 'en': 'en-US', 'es': 'es-ES', 'de': 'de-DE', 'fr': 'fr-FR' };
                 utterance.lang = langMap[detectedLang] || 'en-US';
-                if (voices.length > 0) {
-                    const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
-                    let selectedVoice = voices.find(v => v.lang.startsWith(detectedLang) && !femaleNamesToFilter.some(n => v.name.toLowerCase().includes(n.toLowerCase())));
-                    if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith(detectedLang));
-                    if (selectedVoice) utterance.voice = selectedVoice;
-                }
+                if (voices.length > 0) { const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English']; let selectedVoice = voices.find(v => v.lang.startsWith(detectedLang) && !femaleNamesToFilter.some(n => v.name.toLowerCase().includes(n.toLowerCase()))); if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith(detectedLang)); if (selectedVoice) utterance.voice = selectedVoice; }
                 utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
                 utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
                 synth.speak(utterance);
@@ -277,12 +277,7 @@
                 const utterance = new SpeechSynthesisUtterance(segmentText);
                 const langMap = { 'pl': 'pl-PL', 'en': 'en-US', 'es': 'es-ES', 'de': 'de-DE', 'fr': 'fr-FR' };
                 utterance.lang = langMap[langCode] || 'en-US';
-                if (voices.length > 0) {
-                    const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English'];
-                    let selectedVoice = voices.find(v => v.lang.startsWith(langCode) && !femaleNamesToFilter.some(n => v.name.toLowerCase().includes(n.toLowerCase())));
-                    if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith(langCode));
-                    if (selectedVoice) utterance.voice = selectedVoice;
-                }
+                if (voices.length > 0) { const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English']; let selectedVoice = voices.find(v => v.lang.startsWith(langCode) && !femaleNamesToFilter.some(n => v.name.toLowerCase().includes(n.toLowerCase()))); if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith(langCode)); if (selectedVoice) utterance.voice = selectedVoice; }
                 utterances.push(utterance);
             }
             if (utterances.length > 0) {
@@ -345,16 +340,10 @@
                         if (Array.isArray(importedHistory) && importedHistory.every(item => 'role' in item && 'content' in item)) {
                             conversationHistory = importedHistory;
                             messageList.innerHTML = '';
-                            conversationHistory.forEach(msg => {
-                                addMessageToChat(msg.content, msg.role === 'user', false, msg.imageUrl, msg.isHidden);
-                            });
+                            conversationHistory.forEach(msg => { addMessageToChat(msg.content, msg.role === 'user', false, msg.imageUrl, msg.isHidden); });
                             addMessageToChat("Rozmowa wczytana pomyślnie! Możemy kontynuować.", false, false);
-                        } else {
-                            throw new Error("Niepoprawny format pliku.");
-                        }
-                    } catch (err) {
-                        addMessageToChat(`Błąd importu: ${err.message}`, false, false);
-                    }
+                        } else { throw new Error("Niepoprawny format pliku."); }
+                    } catch (err) { addMessageToChat(`Błąd importu: ${err.message}`, false, false); }
                 };
                 reader.readAsText(file);
             };
@@ -365,19 +354,20 @@
             if (conversationHistory.length === 0) { addMessageToChat("Nie ma czego edytować!", false, false); return; }
             const formattedText = conversationHistory.map(msg => {
                 const prefix = msg.role === 'user' ? 'TY:' : 'AGENT:';
+                if (msg.isHidden) return null; // Pomijaj ukryte wiadomości
                 if (msg.imageUrl) {
                     const prompt = msg.content.replace(/\[IMG\]|\[\/IMG\]/g, '');
                     return `${prefix} [OBRAZ: ${prompt}]`;
                 }
                 return `${prefix} ${msg.content}`;
-            }).join('\n\n');
+            }).filter(Boolean).join('\n\n');
             editHistoryTextarea.value = formattedText;
             editModal.style.display = 'flex';
         }
         
         function saveAndDownloadEdited() {
-            // Proste podejście: na razie zapisujemy tylko edytowany tekst jako notatkę.
-            // Bardziej zaawansowane parsowanie wymagałoby skomplikowanego regexa.
+            // Ta funkcja jest uproszczona, pozwala edytować i zapisać tekst jako notatkę.
+            // Konwersja z powrotem do formatu JSON wymagałaby skomplikowanego parsera.
             const editedText = editHistoryTextarea.value;
             const newHistory = [{ role: 'system', content: 'Edytowana transkrypcja rozmowy' }, { role: 'user', content: editedText }];
             exportConversation(newHistory);
@@ -431,8 +421,33 @@
             }
             
             const historySlice = conversationHistory.slice(-30);
-            const requestBody = { history: historySlice };
-            if (attachedFile) requestBody.attachments = [attachedFile];
+            const requestBody = { history: [] };
+            
+            // Przygotowujemy historię, usuwając zbędne pola, które backendu nie interesują
+            historySlice.forEach(msg => {
+                requestBody.history.push({ role: msg.role, content: msg.content });
+            });
+
+            // Dodajemy załączniki
+            const attachmentsToSend = [];
+            if (attachedFile) {
+                attachmentsToSend.push(attachedFile);
+            }
+            
+            // Skanujemy historię w poszukiwaniu "zapamiętanych" obrazów
+            historySlice.forEach(msg => {
+                if (msg.role === 'assistant' && msg.imageUrl && msg.imageUrl.startsWith('data:image')) {
+                    const mimeType = msg.imageUrl.substring(msg.imageUrl.indexOf(':') + 1, msg.imageUrl.indexOf(';'));
+                    const base64Data = msg.imageUrl.split(',')[1];
+                    attachmentsToSend.push({ mime_type: mimeType, data: base64Data });
+                }
+            });
+
+            if (attachmentsToSend.length > 0) {
+                // Usuwamy duplikaty, jeśli jakimś cudem się pojawią
+                requestBody.attachments = Array.from(new Map(attachmentsToSend.map(item => [item.data, item])).values());
+            }
+
             const userKey = sessionStorage.getItem('userProvidedApiKey');
             if (userKey) requestBody.apiKey = userKey;
 
@@ -465,7 +480,9 @@
         function addMessageToChat(text, isUser, addToHistory = true, imageUrl = null, isHidden = false) {
             if (addToHistory) {
                 const historyEntry = { role: isUser ? 'user' : 'assistant', content: text };
-                if (imageUrl) historyEntry.imageUrl = imageUrl;
+                if (imageUrl && imageUrl.startsWith('data:image')) {
+                    historyEntry.imageUrl = imageUrl;
+                }
                 if (isHidden) historyEntry.isHidden = true;
                 conversationHistory.push(historyEntry);
             }
