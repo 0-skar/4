@@ -64,16 +64,27 @@
             width: 100%;
             box-sizing: border-box;
         }
-        #api-key-modal-content p { font-size: 0.9rem; line-height: 1.5; color: #65676b; text-align: left; }
+        #api-key-modal-content p, #archive-modal-content p { font-size: 0.9rem; line-height: 1.5; color: #65676b; text-align: left; }
         #api-key-modal-content a { color: #007bff; text-decoration: none; font-weight: bold; }
         #api-key-modal-content a:hover { text-decoration: underline; }
-        #api-key-modal-content .button-container { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; margin-top: 1.5rem; }
+        #api-key-modal-content .button-container, #archive-modal-content .button-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.8rem;
+            margin-top: 1.5rem;
+        }
         #password-modal-content .button-container { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; margin-top: 1.5rem; width: 75%; margin-left: auto; margin-right: auto; }
         #password-button { background-color: #007bff; padding: 8px 16px; }
         #return-button { background-color: #6c757d; text-decoration: none; display: block; padding: 8px 16px; }
         #save-private-key-button { background-color: #007bff; }
         #donate-key-button { background-color: #28a745; }
-        #close-api-key-modal { background-color: #6c757d; }
+        #close-api-key-modal, #close-archive-modal { background-color: #6c757d; }
+        #archive-list { list-style-type: none; padding: 0; max-height: 300px; overflow-y: auto; text-align: left; }
+        #archive-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+        #archive-list li:hover { background-color: #f0f2f5; }
+        .delete-archive-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; opacity: 0.5; }
+        .delete-archive-btn:hover { opacity: 1; color: #dc3545; }
 
         @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); } 20%, 40%, 60%, 80% { transform: translateX(10px); } }
         .is-invalid { animation: shake 0.5s; }
@@ -96,12 +107,30 @@
         .user-message { background-color: var(--user-bubble-bg); color: white; align-self: flex-end; }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
         .assistant-message img { max-width: 100%; border-radius: 10px; margin-top: 8px; display: block; }
+        
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
+        #attachment-preview-area {
+            padding: 0 8px 8px 8px;
+            display: none;
+        }
+        .attachment-preview {
+            display: flex;
+            align-items: center;
+            background: #e9ecef;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        .attachment-preview span { margin-left: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .remove-attachment-btn { background: none; border: none; cursor: pointer; margin-left: auto; font-size: 1.2rem; padding: 0 5px; opacity: 0.6; }
+        .remove-attachment-btn:hover { opacity: 1; }
+        
         #chat-form { display: flex; align-items: center; }
-        #userInput { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 18px; font-size: 1rem; background: #f0f2f5; }
-        #micButton, #export-button { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+        .chat-form-button { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+        #attachment-button { background-color: #17a2b8; font-size: 1.2rem; }
         #micButton.is-listening { background-color: #fa383e; }
         #export-button { background-color: #6c757d; }
+        #userInput { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 18px; font-size: 1rem; background: #f0f2f5; }
     </style>
 </head>
 <body>
@@ -131,6 +160,17 @@
         </div>
     </div>
 
+    <div id="archive-modal" class="modal-overlay">
+        <div id="archive-modal-content" class="modal-content">
+            <h3>Archiwum Rozmów</h3>
+            <p>Tutaj znajdziesz swoje lokalnie zarchiwizowane rozmowy. Kliknij, aby wczytać, lub użyj kosza, aby usunąć.</p>
+            <ul id="archive-list"></ul>
+            <div class="button-container">
+                <button id="close-archive-modal" class="modal-button">Zamknij</button>
+            </div>
+        </div>
+    </div>
+
     <div id="app-container">
         <div id="app-top-bar">
             <a href="https://0-skar.github.io/0/" id="back-button">
@@ -148,17 +188,20 @@
         </div>
         <div id="message-list"></div>
         <div id="controls-container">
+            <div id="attachment-preview-area"></div>
             <form id="chat-form">
-                <input type="text" id="userInput" placeholder="Dajesz, powiedz co tam w necie piszczy..." autocomplete="off">
-                <button type="button" id="micButton">🎤</button>
-                <button type="button" id="export-button" title="Eksportuj rozmowę">💾</button>
+                <button type="button" id="attachment-button" class="chat-form-button" title="Załącz plik (txt, jpg, png)">📎</button>
+                <input type="text" id="userInput" placeholder="Opisz załączony plik lub zadaj pytanie...">
+                <button type="button" id="micButton" class="chat-form-button">🎤</button>
+                <button type="button" id="export-button" class="chat-form-button" title="Eksportuj rozmowę">💾</button>
             </form>
         </div>
     </div>
+    <input type="file" id="file-input" style="display: none;" accept="image/jpeg,image/png,text/plain">
 
     <script>
         const ACCESS_CODE = "2017";
-        const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
+        const BASE_BACKEND_URL = "https://twoj-space-name.hf.space"; 
         const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
         const DONATE_URL = `${BASE_BACKEND_URL}/donate-key`;
         const IMAGE_BACKEND_URL = "https://image.pollinations.ai/prompt/";
@@ -188,12 +231,19 @@
         
         const exportButton = document.getElementById('export-button');
         const importButton = document.getElementById('import-button');
+        const archiveModal = document.getElementById('archive-modal');
+        const archiveList = document.getElementById('archive-list');
+        const closeArchiveModal = document.getElementById('close-archive-modal');
+        const attachmentButton = document.getElementById('attachment-button');
+        const fileInput = document.getElementById('file-input');
+        const attachmentPreviewArea = document.getElementById('attachment-preview-area');
         
         const synth = window.speechSynthesis;
         let voices = [];
         let isTtsEnabled = true;
         let conversationHistory = [];
         let lastUserMessage = "";
+        let attachedFile = null;
 
         function displayInitialGreeting() {
             if (conversationHistory.length === 0) {
@@ -308,7 +358,6 @@
         
         function showApiKeyModal() { apiKeyModal.style.display = 'flex'; }
         function hideApiKeyModal() { apiKeyModal.style.display = 'none'; }
-
         apiKeyButton.addEventListener('click', showApiKeyModal);
         savePrivateKeyButton.addEventListener('click', () => {
             const userKey = userApiKeyInput.value.trim();
@@ -319,7 +368,6 @@
                 handleSubmit(true); 
             }
         });
-        
         donateKeyButton.addEventListener('click', async () => {
             const userKey = userApiKeyInput.value.trim();
             if (!userKey) return;
@@ -342,7 +390,6 @@
                 addMessageToChat(`Błąd podczas donacji: ${error.message}`, false, false);
             }
         });
-        
         closeApiKeyModal.addEventListener('click', hideApiKeyModal);
 
         function exportConversation() {
@@ -353,7 +400,6 @@
             const dataStr = JSON.stringify(conversationHistory, null, 2);
             const blob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(blob);
-            
             const a = document.createElement('a');
             a.href = url;
             a.download = `rozmowa-${new Date().toISOString().slice(0, 10)}.json`;
@@ -361,7 +407,6 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
             addMessageToChat("Rozmowa wyeksportowana do pliku! 💾", false, false);
         }
 
@@ -372,7 +417,6 @@
             input.onchange = e => {
                 const file = e.target.files[0];
                 if (!file) return;
-                
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     try {
@@ -381,9 +425,7 @@
                             conversationHistory = importedHistory;
                             messageList.innerHTML = '';
                             conversationHistory.forEach(msg => {
-                                const imageUrl = msg.imageUrl || null;
-                                const isHidden = msg.isHidden || false;
-                                addMessageToChat(msg.content, msg.role === 'user', false, imageUrl, isHidden);
+                                addMessageToChat(msg.content, msg.role === 'user', false, msg.imageUrl, msg.isHidden);
                             });
                             addMessageToChat("Rozmowa wczytana pomyślnie! Możemy kontynuować.", false, false);
                         } else {
@@ -400,16 +442,47 @@
 
         exportButton.addEventListener('click', exportConversation);
         importButton.addEventListener('click', importConversation);
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                attachedFile = { name: file.name, mime_type: file.type, data: e.target.result.split(',')[1] };
+                showAttachmentPreview(file.name);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showAttachmentPreview(fileName) {
+            attachmentPreviewArea.style.display = 'block';
+            attachmentPreviewArea.innerHTML = `
+                <div class="attachment-preview">
+                    📄 <span>${fileName}</span>
+                    <button class="remove-attachment-btn" title="Usuń załącznik">×</button>
+                </div>
+            `;
+            attachmentPreviewArea.querySelector('.remove-attachment-btn').addEventListener('click', clearAttachment);
+        }
+
+        function clearAttachment() {
+            attachedFile = null;
+            fileInput.value = '';
+            attachmentPreviewArea.style.display = 'none';
+            attachmentPreviewArea.innerHTML = '';
+        }
         
+        attachmentButton.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelect);
+
         async function handleSubmit(isRetry = false) {
-            if (sessionStorage.getItem('isAuthenticated') !== 'true') return;
-            
+            if (!sessionStorage.getItem('isAuthenticated')) return;
             let userText;
             if (isRetry) {
                 userText = lastUserMessage;
             } else {
                 userText = userInput.value.trim();
-                if (!userText) return;
+                if (!userText && !attachedFile) return;
                 lastUserMessage = userText;
                 addMessageToChat(userText, true);
                 userInput.value = '';
@@ -417,23 +490,20 @@
             
             const historySlice = conversationHistory.slice(-10);
             const requestBody = { history: historySlice };
-            const userKey = sessionStorage.getItem('userProvidedApiKey');
-            if (userKey) {
-                requestBody.apiKey = userKey;
+            if (attachedFile) {
+                requestBody.attachments = [attachedFile];
             }
+            const userKey = sessionStorage.getItem('userProvidedApiKey');
+            if (userKey) requestBody.apiKey = userKey;
 
             try {
-                const response = await fetch(CHAT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
-                });
-
+                const response = await fetch(CHAT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
+                
+                if (attachedFile) clearAttachment();
+                
                 if (!response.ok) {
                     const errorData = await response.json();
                     if (errorData.all_keys_exhausted) {
-                        document.getElementById('api-key-modal-title').innerText = "Wspólne klucze wyczerpane";
-                        document.getElementById('api-key-modal-desc').innerText = "Wszystkie publiczne klucze API osiągnęły swój dzienny limit. Aby kontynuować, podaj własny klucz.";
                         showApiKeyModal();
                     } else { throw new Error(errorData.detail || 'Nieznany błąd serwera'); }
                     return;
@@ -441,7 +511,6 @@
                 
                 const data = await response.json();
                 const assistantText = data.generated_text;
-
                 const imgMatch = assistantText.match(/\[IMG\](.*?)\[\/IMG\]/);
                 if (imgMatch && imgMatch[1]) {
                     addMessageToChat(assistantText, false, true, null, true);
@@ -450,7 +519,6 @@
                     addMessageToChat(assistantText, false);
                     speak(assistantText);
                 }
-
             } catch (error) {
                 addMessageToChat(`Błąd: ${error.message}`, false, false);
                 console.error("Błąd handleSubmit:", error);
