@@ -62,7 +62,7 @@
             border-radius: 8px;
             cursor: pointer;
             width: 100%;
-            box-sizing: border-box; /* Ważne dla spójnego rozmiaru */
+            box-sizing: border-box;
         }
         #api-key-modal-content p {
             font-size: 0.9rem;
@@ -85,21 +85,18 @@
             gap: 0.8rem;
             margin-top: 1.5rem;
         }
-        
-        /* ZMIANA: Zaktualizowana stylistyka dla kontenera przycisków logowania */
         #password-modal-content .button-container {
             display: flex;
-            flex-direction: column; /* Układ jeden pod drugim */
+            flex-direction: column;
             align-items: center;
             gap: 0.8rem;
             margin-top: 1.5rem;
-            width: 75%; /* Zmniejszona szerokość kontenera */
+            width: 75%;
             margin-left: auto;
             margin-right: auto;
         }
-        
-        #password-button { background-color: #007bff; padding: 8px 16px; } /* Mniejszy padding */
-        #return-button { background-color: #6c757d; text-decoration: none; display: block; padding: 8px 16px; } /* Mniejszy padding */
+        #password-button { background-color: #007bff; padding: 8px 16px; }
+        #return-button { background-color: #6c757d; text-decoration: none; display: block; padding: 8px 16px; }
         #save-private-key-button { background-color: #007bff; }
         #donate-key-button { background-color: #28a745; }
         #close-api-key-modal { background-color: #6c757d; }
@@ -178,15 +175,14 @@
 
     <script>
         const ACCESS_CODE = "2017";
-        // BARDZO WAŻNE: Podmień ten URL na adres swojego Space na Hugging Face
-        const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
+        const BASE_BACKEND_URL = "https://twoj-space-name.hf.space"; 
         const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
         const DONATE_URL = `${BASE_BACKEND_URL}/donate-key`;
         const IMAGE_BACKEND_URL = "https://image.pollinations.ai/prompt/";
         
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
-
+        
         const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. W co dzisiaj grasz? A może chcesz, żebym coś namalował? 😎" ];
 
         const appContainer = document.getElementById('app-container');
@@ -376,9 +372,7 @@
             }
             
             const historySlice = conversationHistory.slice(-10);
-            const requestBody = {
-                history: historySlice
-            };
+            const requestBody = { history: historySlice };
             const userKey = sessionStorage.getItem('userProvidedApiKey');
             if (userKey) {
                 requestBody.apiKey = userKey;
@@ -405,7 +399,8 @@
 
                 const imgMatch = assistantText.match(/\[IMG\](.*?)\[\/IMG\]/);
                 if (imgMatch && imgMatch[1]) {
-                    addMessageToChat(assistantText, false);
+                    // ZMIANA: Dodajemy oryginalną wiadomość [IMG] do historii, ale jej nie wyświetlamy.
+                    addMessageToChat(assistantText, false, true, null, true); // Ostatni argument to `isHidden`
                     generateImage(imgMatch[1]);
                 } else {
                     addMessageToChat(assistantText, false);
@@ -418,10 +413,13 @@
             }
         }
         
-        function addMessageToChat(text, isUser, addToHistory = true, imageUrl = null) {
+        function addMessageToChat(text, isUser, addToHistory = true, imageUrl = null, isHidden = false) {
             if (addToHistory) {
                 conversationHistory.push({ role: isUser ? 'user' : 'assistant', content: text });
             }
+            
+            // ZMIANA: Jeśli wiadomość ma być ukryta, po prostu kończymy funkcję.
+            if(isHidden) return;
 
             const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
