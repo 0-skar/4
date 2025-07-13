@@ -83,7 +83,7 @@
         #save-private-key-button, #save-edited-button { background-color: #007bff; }
         #donate-key-button { background-color: #28a745; }
         #close-api-key-modal, #close-edit-modal { background-color: #6c757d; }
-
+        
         @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); } 20%, 40%, 60%, 80% { transform: translateX(10px); } }
         .is-invalid { animation: shake 0.5s; }
         #app-container { width: 100%; height: 100%; max-width: 800px; margin: 0 auto; display: none; flex-direction: column; background-color: white; }
@@ -282,8 +282,8 @@
                 const blob = await response.blob();
                 const reader = new FileReader();
                 reader.onloadend = () => {
-                    const base64data = reader.result.split(',')[1];
-                    const fileData = { name: `generated_image.png`, mime_type: blob.type, data: base64data };
+                    const base64data = reader.result; // To jest już data:image/...;base64,...
+                    const fileData = { name: `generated_image.png`, mime_type: blob.type, data: base64data.split(',')[1] };
                     addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, fileData);
                 };
                 reader.readAsDataURL(blob);
@@ -351,7 +351,6 @@
         }
         
         function saveAndDownloadEdited() {
-            // Ta funkcja jest uproszczona, pozwala edytować i zapisać tekst jako notatkę.
             const editedText = editHistoryTextarea.value;
             const newHistory = [{ role: 'system', content: 'Edytowana transkrypcja rozmowy' }, { role: 'user', content: editedText }];
             exportConversation(newHistory);
@@ -371,7 +370,7 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 const fileData = { name: file.name, mime_type: file.type, data: e.target.result.split(',')[1] };
-                addMessageToChat(`Załączono plik: ${file.name}`, true, true, fileData);
+                addMessageToChat(`Załączono plik: ${file.name}`, true, true, fileData, true);
                 handleSubmit();
             };
             reader.readAsDataURL(file);
