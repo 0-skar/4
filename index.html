@@ -282,8 +282,8 @@
                 const blob = await response.blob();
                 const reader = new FileReader();
                 reader.onloadend = () => {
-                    const base64data = reader.result; // To jest już data:image/...;base64,...
-                    const fileData = { name: `generated_image.png`, mime_type: blob.type, data: base64data.split(',')[1] };
+                    const base64data = reader.result;
+                    const fileData = { name: `wygenerowany_obraz.png`, mime_type: 'image/png', data: base64data.split(',')[1] };
                     addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, fileData);
                 };
                 reader.readAsDataURL(blob);
@@ -370,7 +370,7 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 const fileData = { name: file.name, mime_type: file.type, data: e.target.result.split(',')[1] };
-                addMessageToChat(`Załączono plik: ${file.name}`, true, true, fileData, true);
+                addMessageToChat(`Załączono plik: ${file.name}`, true, true, fileData);
                 handleSubmit();
             };
             reader.readAsDataURL(file);
@@ -406,7 +406,7 @@
             });
 
             if (attachmentsToSend.length > 0) {
-                requestBody.attachments = Array.from(new Map(attachmentsToSend.map(item => [item.data, item])).values());
+                requestBody.attachments = Array.from(new Map(attachmentsToSend.map(item => [item.data.slice(-20), item])).values());
             }
 
             const userKey = sessionStorage.getItem('userProvidedApiKey');
@@ -447,6 +447,8 @@
             const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
             const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG)\]/gi, '');
+            
+            // Logika wyświetlania: jeśli są dane pliku, użyj ich do wyświetlenia obrazu
             if (fileData && fileData.mime_type && fileData.mime_type.startsWith('image/')) {
                 const image = document.createElement('img');
                 image.src = `data:${fileData.mime_type};base64,${fileData.data}`;
@@ -455,6 +457,7 @@
             } else {
                 if (cleanText) messageBubble.innerText = cleanText;
             }
+
             if (cleanText || fileData) {
                 messageList.appendChild(messageBubble);
                 messageList.scrollTop = messageList.scrollHeight;
