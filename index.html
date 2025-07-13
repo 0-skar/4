@@ -43,8 +43,10 @@
             box-shadow: 0 5px 25px rgba(0,0,0,0.3);
             max-width: 500px;
             width: 90%;
+            display: flex;
+            flex-direction: column;
         }
-        .modal-content input[type="password"] {
+        .modal-content input[type="password"], #edit-history-textarea {
             display: block;
             width: 90%;
             margin: 1.5rem auto;
@@ -53,6 +55,13 @@
             text-align: center;
             border: 2px solid var(--border-color);
             border-radius: 8px;
+        }
+        #edit-history-textarea {
+            text-align: left;
+            font-size: 0.9rem;
+            height: 40vh;
+            resize: vertical;
+            font-family: "Courier New", Courier, monospace;
         }
         .modal-button {
             padding: 10px 20px;
@@ -64,27 +73,16 @@
             width: 100%;
             box-sizing: border-box;
         }
-        #api-key-modal-content p, #archive-modal-content p { font-size: 0.9rem; line-height: 1.5; color: #65676b; text-align: left; }
+        #api-key-modal-content p, #archive-modal-content p, #edit-modal-content p { font-size: 0.9rem; line-height: 1.5; color: #65676b; text-align: left; }
         #api-key-modal-content a { color: #007bff; text-decoration: none; font-weight: bold; }
         #api-key-modal-content a:hover { text-decoration: underline; }
-        #api-key-modal-content .button-container, #archive-modal-content .button-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.8rem;
-            margin-top: 1.5rem;
-        }
-        #password-modal-content .button-container { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; margin-top: 1.5rem; width: 75%; margin-left: auto; margin-right: auto; }
+        .button-container { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; margin-top: 1.5rem; }
+        #password-modal-content .button-container { width: 75%; margin-left: auto; margin-right: auto; }
         #password-button { background-color: #007bff; padding: 8px 16px; }
         #return-button { background-color: #6c757d; text-decoration: none; display: block; padding: 8px 16px; }
-        #save-private-key-button { background-color: #007bff; }
+        #save-private-key-button, #save-edited-button { background-color: #007bff; }
         #donate-key-button { background-color: #28a745; }
-        #close-api-key-modal, #close-archive-modal { background-color: #6c757d; }
-        #archive-list { list-style-type: none; padding: 0; max-height: 300px; overflow-y: auto; text-align: left; }
-        #archive-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
-        #archive-list li:hover { background-color: #f0f2f5; }
-        .delete-archive-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; opacity: 0.5; }
-        .delete-archive-btn:hover { opacity: 1; color: #dc3545; }
+        #close-api-key-modal, #close-archive-modal, #close-edit-modal { background-color: #6c757d; }
 
         @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); } 20%, 40%, 60%, 80% { transform: translateX(10px); } }
         .is-invalid { animation: shake 0.5s; }
@@ -109,18 +107,8 @@
         .assistant-message img { max-width: 100%; border-radius: 10px; margin-top: 8px; display: block; }
         
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
-        #attachment-preview-area {
-            padding: 0 8px 8px 8px;
-            display: none;
-        }
-        .attachment-preview {
-            display: flex;
-            align-items: center;
-            background: #e9ecef;
-            padding: 5px 10px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-        }
+        #attachment-preview-area { padding: 0 8px 8px 8px; display: none; }
+        .attachment-preview { display: flex; align-items: center; background: #e9ecef; padding: 5px 10px; border-radius: 12px; font-size: 0.8rem; }
         .attachment-preview span { margin-left: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .remove-attachment-btn { background: none; border: none; cursor: pointer; margin-left: auto; font-size: 1.2rem; padding: 0 5px; opacity: 0.6; }
         .remove-attachment-btn:hover { opacity: 1; }
@@ -129,7 +117,6 @@
         .chat-form-button { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
         #attachment-button { background-color: #17a2b8; font-size: 1.2rem; }
         #micButton.is-listening { background-color: #fa383e; }
-        #export-button { background-color: #6c757d; }
         #userInput { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 18px; font-size: 1rem; background: #f0f2f5; }
     </style>
 </head>
@@ -160,17 +147,18 @@
         </div>
     </div>
 
-    <div id="archive-modal" class="modal-overlay">
-        <div id="archive-modal-content" class="modal-content">
-            <h3>Archiwum Rozmów</h3>
-            <p>Tutaj znajdziesz swoje lokalnie zarchiwizowane rozmowy. Kliknij, aby wczytać, lub użyj kosza, aby usunąć.</p>
-            <ul id="archive-list"></ul>
+    <div id="edit-modal" class="modal-overlay">
+        <div id="edit-modal-content" class="modal-content">
+            <h3>Edytuj i Eksportuj Rozmowę</h3>
+            <p>Możesz tutaj poprawić lub skrócić transkrypcję przed zapisaniem jej do pliku.</p>
+            <textarea id="edit-history-textarea"></textarea>
             <div class="button-container">
-                <button id="close-archive-modal" class="modal-button">Zamknij</button>
+                <button id="save-edited-button" class="modal-button">Zapisz i Pobierz</button>
+                <button id="close-edit-modal" class="modal-button">Anuluj</button>
             </div>
         </div>
     </div>
-
+    
     <div id="app-container">
         <div id="app-top-bar">
             <a href="https://0-skar.github.io/0/" id="back-button">
@@ -178,6 +166,7 @@
             </a>
             <h2 id="app-title">Cyfrowy Kumpel</h2>
             <div id="top-right-buttons">
+                <button id="edit-export-button" class="top-bar-button" title="Edytuj i eksportuj">📝</button>
                 <button id="import-button" class="top-bar-button" title="Importuj rozmowę">📂</button>
                 <button id="api-key-button" class="top-bar-button" title="Zarządzaj kluczem API">🔑</button>
                 <button id="tts-toggle-button" class="top-bar-button"></button>
@@ -193,7 +182,6 @@
                 <button type="button" id="attachment-button" class="chat-form-button" title="Załącz plik (txt, jpg, png)">📎</button>
                 <input type="text" id="userInput" placeholder="Opisz załączony plik lub zadaj pytanie...">
                 <button type="button" id="micButton" class="chat-form-button">🎤</button>
-                <button type="button" id="export-button" class="chat-form-button" title="Eksportuj rozmowę">💾</button>
             </form>
         </div>
     </div>
@@ -201,14 +189,13 @@
 
     <script>
         const ACCESS_CODE = "2017";
-        const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
+        const BASE_BACKEND_URL = "https://twoj-space-name.hf.space"; 
         const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
         const DONATE_URL = `${BASE_BACKEND_URL}/donate-key`;
         const IMAGE_BACKEND_URL = "https://image.pollinations.ai/prompt/";
         
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
-
         const GREETINGS = [ "Siema. Co tam dziś scrollujesz zamiast robić coś pożytecznego? 😉", "Elo. Zasilanie włączone. Gotów na marnowanie czasu w necie?", "Cześć. W co dzisiaj grasz? A może chcesz, żebym coś namalował? 😎" ];
 
         const appContainer = document.getElementById('app-container');
@@ -221,22 +208,21 @@
         const avatar = document.getElementById('avatar');
         const ttsToggleButton = document.getElementById('tts-toggle-button');
         const chatForm = document.getElementById('chat-form');
-        
         const apiKeyModal = document.getElementById('api-key-modal');
         const userApiKeyInput = document.getElementById('user-api-key-input');
         const savePrivateKeyButton = document.getElementById('save-private-key-button');
         const donateKeyButton = document.getElementById('donate-key-button');
         const closeApiKeyModal = document.getElementById('close-api-key-modal');
         const apiKeyButton = document.getElementById('api-key-button');
-        
-        const exportButton = document.getElementById('export-button');
         const importButton = document.getElementById('import-button');
-        const archiveModal = document.getElementById('archive-modal');
-        const archiveList = document.getElementById('archive-list');
-        const closeArchiveModal = document.getElementById('close-archive-modal');
         const attachmentButton = document.getElementById('attachment-button');
         const fileInput = document.getElementById('file-input');
         const attachmentPreviewArea = document.getElementById('attachment-preview-area');
+        const editModal = document.getElementById('edit-modal');
+        const editHistoryTextarea = document.getElementById('edit-history-textarea');
+        const saveEditedButton = document.getElementById('save-edited-button');
+        const closeEditModal = document.getElementById('close-edit-modal');
+        const editExportButton = document.getElementById('edit-export-button');
         
         const synth = window.speechSynthesis;
         let voices = [];
@@ -245,54 +231,19 @@
         let lastUserMessage = "";
         let attachedFile = null;
 
-        function displayInitialGreeting() {
-            if (conversationHistory.length === 0) {
-                const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
-                addMessageToChat(randomGreeting, false);
-                speak(randomGreeting);
-            }
-        }
-
-        function checkAuthentication() {
-            if (sessionStorage.getItem('isAuthenticated') === 'true') {
-                passwordModal.style.display = 'none';
-                appContainer.style.display = 'flex';
-                initSpeechSynthesis();
-                displayInitialGreeting();
-            } else {
-                passwordModal.style.display = 'flex';
-                appContainer.style.display = 'none';
-            }
-        }
-
-        function initSpeechSynthesis() {
-            populateVoiceList();
-            if (synth.onvoiceschanged !== undefined) {
-                synth.onvoiceschanged = populateVoiceList;
-            }
-        }
-        
-        function handlePasswordAttempt() {
-            if (passwordInput.value === ACCESS_CODE) {
-                sessionStorage.setItem('isAuthenticated', 'true');
-                checkAuthentication();
-            } else {
-                passwordInput.parentElement.classList.add('is-invalid');
-                setTimeout(() => { passwordInput.parentElement.classList.remove('is-invalid'); }, 500);
-            }
-        }
-
+        function displayInitialGreeting() { if (conversationHistory.length === 0) { const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]; addMessageToChat(randomGreeting, false); speak(randomGreeting); } }
+        function checkAuthentication() { if (sessionStorage.getItem('isAuthenticated') === 'true') { passwordModal.style.display = 'none'; appContainer.style.display = 'flex'; initSpeechSynthesis(); displayInitialGreeting(); } else { passwordModal.style.display = 'flex'; appContainer.style.display = 'none'; } }
+        function initSpeechSynthesis() { populateVoiceList(); if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = populateVoiceList; }
+        function handlePasswordAttempt() { if (passwordInput.value === ACCESS_CODE) { sessionStorage.setItem('isAuthenticated', 'true'); checkAuthentication(); } else { passwordInput.parentElement.classList.add('is-invalid'); setTimeout(() => { passwordInput.parentElement.classList.remove('is-invalid'); }, 500); } }
         passwordButton.addEventListener('click', handlePasswordAttempt);
         passwordInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') handlePasswordAttempt(); });
         
         const speakerOnIcon = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
         const speakerOffIcon = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9.02 12 14v-2.18l-2.01-2.01L12 7.82V4z"/></svg>`;
-        
         function updateTtsToggleIcon() { ttsToggleButton.innerHTML = isTtsEnabled ? speakerOnIcon : speakerOffIcon; ttsToggleButton.classList.toggle('is-muted', !isTtsEnabled); }
         ttsToggleButton.addEventListener('click', () => { isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); if (!isTtsEnabled) synth.cancel(); });
         
         function populateVoiceList() { voices = synth.getVoices(); }
-
         function stripEmojis(text) { const emojiRegex = /\p{Emoji_Presentation}/gu; return text.replace(emojiRegex, ''); }
         
         function speak(text) {
@@ -348,8 +299,12 @@
                 const response = await fetch(fullUrl, { method: 'POST' });
                 if (!response.ok) throw new Error(`Błąd serwera malarskiego: ${response.statusText}`);
                 const blob = await response.blob();
-                const imageUrl = URL.createObjectURL(blob);
-                addMessageToChat(`Obraz dla: ${prompt}`, false, true, imageUrl);
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64data = reader.result;
+                    addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, base64data);
+                };
+                reader.readAsDataURL(blob);
             } catch (error) {
                 addMessageToChat("Ajj, coś poszło nie tak i farby mi się rozlały. 😕", false, false);
                 console.error("Błąd generowania obrazu:", error);
@@ -359,45 +314,12 @@
         function showApiKeyModal() { apiKeyModal.style.display = 'flex'; }
         function hideApiKeyModal() { apiKeyModal.style.display = 'none'; }
         apiKeyButton.addEventListener('click', showApiKeyModal);
-        savePrivateKeyButton.addEventListener('click', () => {
-            const userKey = userApiKeyInput.value.trim();
-            if (userKey) {
-                sessionStorage.setItem('userProvidedApiKey', userKey);
-                hideApiKeyModal();
-                addMessageToChat("Dzięki! Spróbujmy jeszcze raz z Twoim prywatnym kluczem... 👍", false, false);
-                handleSubmit(true); 
-            }
-        });
-        donateKeyButton.addEventListener('click', async () => {
-            const userKey = userApiKeyInput.value.trim();
-            if (!userKey) return;
-            addMessageToChat("Wysyłam Twój klucz do weryfikacji... Dziękuję za wsparcie! ❤️", false, false);
-            hideApiKeyModal();
-            try {
-                const response = await fetch(DONATE_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ apiKey: userKey })
-                });
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail);
-                }
-                sessionStorage.setItem('userProvidedApiKey', userKey);
-                addMessageToChat("Donacja przyjęta! Używam Twojego klucza do odpowiedzi.", false, false);
-                handleSubmit(true);
-            } catch (error) {
-                addMessageToChat(`Błąd podczas donacji: ${error.message}`, false, false);
-            }
-        });
+        savePrivateKeyButton.addEventListener('click', () => { const userKey = userApiKeyInput.value.trim(); if (userKey) { sessionStorage.setItem('userProvidedApiKey', userKey); hideApiKeyModal(); addMessageToChat("Dzięki! Spróbujmy jeszcze raz z Twoim prywatnym kluczem... 👍", false, false); handleSubmit(true); } });
+        donateKeyButton.addEventListener('click', async () => { const userKey = userApiKeyInput.value.trim(); if (!userKey) return; addMessageToChat("Wysyłam Twój klucz do weryfikacji... Dziękuję za wsparcie! ❤️", false, false); hideApiKeyModal(); try { const response = await fetch(DONATE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey: userKey }) }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.detail); } sessionStorage.setItem('userProvidedApiKey', userKey); addMessageToChat("Donacja przyjęta! Używam Twojego klucza do odpowiedzi.", false, false); handleSubmit(true); } catch (error) { addMessageToChat(`Błąd podczas donacji: ${error.message}`, false, false); } });
         closeApiKeyModal.addEventListener('click', hideApiKeyModal);
 
-        function exportConversation() {
-            if (conversationHistory.length === 0) {
-                addMessageToChat("Nie ma czego eksportować!", false, false);
-                return;
-            }
-            const dataStr = JSON.stringify(conversationHistory, null, 2);
+        function exportConversation(history) {
+            const dataStr = JSON.stringify(history, null, 2);
             const blob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -407,7 +329,6 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            addMessageToChat("Rozmowa wyeksportowana do pliku! 💾", false, false);
         }
 
         function importConversation() {
@@ -440,8 +361,35 @@
             input.click();
         }
 
-        exportButton.addEventListener('click', exportConversation);
+        function openEditModal() {
+            if (conversationHistory.length === 0) { addMessageToChat("Nie ma czego edytować!", false, false); return; }
+            const formattedText = conversationHistory.map(msg => {
+                const prefix = msg.role === 'user' ? 'TY:' : 'AGENT:';
+                if (msg.imageUrl) {
+                    const prompt = msg.content.replace(/\[IMG\]|\[\/IMG\]/g, '');
+                    return `${prefix} [OBRAZ: ${prompt}]`;
+                }
+                return `${prefix} ${msg.content}`;
+            }).join('\n\n');
+            editHistoryTextarea.value = formattedText;
+            editModal.style.display = 'flex';
+        }
+        
+        function saveAndDownloadEdited() {
+            // Proste podejście: na razie zapisujemy tylko edytowany tekst jako notatkę.
+            // Bardziej zaawansowane parsowanie wymagałoby skomplikowanego regexa.
+            const editedText = editHistoryTextarea.value;
+            const newHistory = [{ role: 'system', content: 'Edytowana transkrypcja rozmowy' }, { role: 'user', content: editedText }];
+            exportConversation(newHistory);
+            hideEditModal();
+        }
+        
+        function hideEditModal() { editModal.style.display = 'none'; }
+
         importButton.addEventListener('click', importConversation);
+        editExportButton.addEventListener('click', openEditModal);
+        closeEditModal.addEventListener('click', hideEditModal);
+        saveEditedButton.addEventListener('click', saveAndDownloadEdited);
 
         function handleFileSelect(event) {
             const file = event.target.files[0];
@@ -456,12 +404,7 @@
 
         function showAttachmentPreview(fileName) {
             attachmentPreviewArea.style.display = 'block';
-            attachmentPreviewArea.innerHTML = `
-                <div class="attachment-preview">
-                    📄 <span>${fileName}</span>
-                    <button class="remove-attachment-btn" title="Usuń załącznik">×</button>
-                </div>
-            `;
+            attachmentPreviewArea.innerHTML = `<div class="attachment-preview">📄 <span>${fileName}</span><button class="remove-attachment-btn" title="Usuń załącznik">×</button></div>`;
             attachmentPreviewArea.querySelector('.remove-attachment-btn').addEventListener('click', clearAttachment);
         }
 
@@ -469,7 +412,6 @@
             attachedFile = null;
             fileInput.value = '';
             attachmentPreviewArea.style.display = 'none';
-            attachmentPreviewArea.innerHTML = '';
         }
         
         attachmentButton.addEventListener('click', () => fileInput.click());
@@ -488,19 +430,15 @@
                 userInput.value = '';
             }
             
-            const historySlice = conversationHistory.slice(-10);
+            const historySlice = conversationHistory.slice(-30);
             const requestBody = { history: historySlice };
-            if (attachedFile) {
-                requestBody.attachments = [attachedFile];
-            }
+            if (attachedFile) requestBody.attachments = [attachedFile];
             const userKey = sessionStorage.getItem('userProvidedApiKey');
             if (userKey) requestBody.apiKey = userKey;
 
             try {
                 const response = await fetch(CHAT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
-                
                 if (attachedFile) clearAttachment();
-                
                 if (!response.ok) {
                     const errorData = await response.json();
                     if (errorData.all_keys_exhausted) {
@@ -508,7 +446,6 @@
                     } else { throw new Error(errorData.detail || 'Nieznany błąd serwera'); }
                     return;
                 }
-                
                 const data = await response.json();
                 const assistantText = data.generated_text;
                 const imgMatch = assistantText.match(/\[IMG\](.*?)\[\/IMG\]/);
