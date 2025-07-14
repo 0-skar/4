@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>My Personal Assistant</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
-    <!-- Biblioteki do podświetlania kodu -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js" defer></script>
-    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script src="https://unpkg.com/docx@8.5.0/build/index.js" defer></script>
     <style>
         :root {
             --body-bg: #f0f2f5;
@@ -342,8 +342,8 @@
                 const blob = await response.blob();
                 const reader = new FileReader();
                 reader.onloadend = () => {
-                    const base64data = reader.result.split(',')[1];
-                    const fileData = { name: `generated_image.png`, mime_type: blob.type, data: base64data };
+                    const base64data = reader.result;
+                    const fileData = { name: `generated_image.png`, mime_type: blob.type, data: base64data.split(',')[1] };
                     addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, fileData);
                 };
                 reader.readAsDataURL(blob);
@@ -471,10 +471,10 @@
                 userText = lastUserMessage;
             } else {
                 userText = userInput.value.trim();
-                const lastMessage = conversationHistory.some(m => m.role === 'user' && m.fileData);
-                if (!userText && !lastMessage) return;
+                const lastMessage = conversationHistory[conversationHistory.length - 1];
+                if (!userText && !(lastMessage && lastMessage.role === 'user' && lastMessage.fileData)) return;
                 lastUserMessage = userText;
-                if(userText || !lastMessage) addMessageToChat(userText, true);
+                if(userText || !(lastMessage && lastMessage.fileData)) addMessageToChat(userText, true);
                 userInput.value = '';
             }
             
