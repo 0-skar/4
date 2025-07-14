@@ -5,13 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>My Personal Assistant</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
-    <!-- Biblioteki do podświetlania kodu, generowania PDF i DOCX -->
+    <!-- Biblioteki do podświetlania kodu -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-    <script src="https://unpkg.com/docx@8.5.0/build/index.js" defer></script>
+    
     <style>
         :root {
             --body-bg: #f0f2f5;
@@ -206,7 +205,7 @@
                 <div id="export-options">
                     <a href="#" id="export-json">Zapisz sesję (.json)</a>
                     <a href="#" id="export-pdf">Eksportuj do .pdf</a>
-                    <a href="#" id="export-docx">Eksportuj do .docx</a>
+                    <a href="#" id="edit-export-button">Edytuj i Zapisz...</a>
                 </div>
             </div>
             <h2 id="app-title">Cyfrowy Kumpel</h2>
@@ -235,6 +234,7 @@
         const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
         const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
         const DONATE_URL = `${BASE_BACKEND_URL}/donate-key`;
+        const EXPORT_PDF_URL = `${BASE_BACKEND_URL}/export-pdf`;
         const IMAGE_BACKEND_URL = "https://image.pollinations.ai/prompt/";
         
         const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
@@ -268,7 +268,7 @@
         const exportOptions = document.getElementById('export-options');
         const exportJsonBtn = document.getElementById('export-json');
         const exportPdfBtn = document.getElementById('export-pdf');
-        const exportDocxBtn = document.getElementById('export-docx');
+        const editExportButton = document.getElementById('edit-export-button');
         
         const synth = window.speechSynthesis;
         let voices = [];
@@ -342,8 +342,8 @@
                 const blob = await response.blob();
                 const reader = new FileReader();
                 reader.onloadend = () => {
-                    const base64data = reader.result;
-                    const fileData = { name: `generated_image.png`, mime_type: blob.type, data: base64data.split(',')[1] };
+                    const base64data = reader.result.split(',')[1];
+                    const fileData = { name: `generated_image.png`, mime_type: blob.type, data: base64data };
                     addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, fileData);
                 };
                 reader.readAsDataURL(blob);
@@ -370,69 +370,82 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
-
+        
         async function exportToPdf() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            let y = 15;
-            doc.setFont("helvetica", "normal");
-            
-            for (const msg of conversationHistory) {
-                if (y > 270) { doc.addPage(); y = 15; }
-                const prefix = msg.role === 'user' ? 'Ty: ' : 'Agent: ';
-                doc.setFont("helvetica", "bold");
-                doc.text(prefix, 10, y);
-                doc.setFont("helvetica", "normal");
-
-                if (msg.fileData && msg.fileData.mime_type.startsWith('image/')) {
-                    const imgData = `data:${msg.fileData.mime_type};base64,${msg.fileData.data}`;
-                    doc.addImage(imgData, 'JPEG', 15, y + 5, 80, 80);
-                    y += 90;
-                } else {
-                    const text = msg.content.replace(/\[\/?(PL|EN|DE|FR|ES|IMG)\]/gi, '');
-                    const splitText = doc.splitTextToSize(text, 170);
-                    doc.text(splitText, 10 + doc.getStringUnitWidth(prefix) * 4, y);
-                    y += (splitText.length * 5) + 5;
-                }
-            }
-            doc.save('rozmowa.pdf');
-        }
-
-        async function exportToDocx() {
-            const { Document, Packer, Paragraph, TextRun, ImageRun } = docx;
-            const docChildren = [];
-            for (const msg of conversationHistory) {
-                if (msg.fileData && msg.fileData.mime_type.startsWith('image/')) {
-                    const buffer = Uint8Array.from(atob(msg.fileData.data), c => c.charCodeAt(0));
-                    docChildren.push(new Paragraph({ children: [ new ImageRun({ data: buffer, transformation: { width: 400, height: 400 } }) ]}));
-                } else {
-                    const text = msg.content.replace(/\[\/?(PL|EN|DE|FR|ES|IMG)\]/gi, '');
-                    docChildren.push(new Paragraph({ children: [ new TextRun({ text: `${msg.role === 'user' ? 'TY' : 'AGENT'}: `, bold: true }), new TextRun(text) ] }));
-                }
-            }
-            const doc = new Document({ sections: [{ children: docChildren }] });
-            Packer.toBlob(doc).then(blob => {
+            if (conversationHistory.length === 0) { addMessageToChat("Nie ma czego eksportować!", false, false); return; }
+            addMessageToChat("Przygotowuję PDF... to może chwilę potrwać.", false, false);
+            try {
+                const response = await fetch(EXPORT_PDF_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ history: conversationHistory })
+                });
+                if (!response.ok) throw new Error("Błąd podczas generowania PDF na serwerze.");
+                const blob = await response.blob();
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'rozmowa.docx';
+                a.download = 'rozmowa.pdf';
                 a.click();
                 URL.revokeObjectURL(url);
-            });
+            } catch (error) { addMessageToChat(`Błąd eksportu do PDF: ${error.message}`, false, false); }
         }
 
-        function importConversation() { /* ... bez zmian ... */ }
-        function openEditModal() { /* ... bez zmian ... */ }
-        function saveAndDownloadEdited() { /* ... bez zmian ... */ }
+        function importConversation() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,application/json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const importedHistory = JSON.parse(event.target.result);
+                        if (Array.isArray(importedHistory) && importedHistory.every(item => 'role' in item && 'content' in item)) {
+                            conversationHistory = importedHistory;
+                            messageList.innerHTML = '';
+                            conversationHistory.forEach(msg => { addMessageToChat(msg.content, msg.role === 'user', false, msg.fileData, msg.isHidden); });
+                            addMessageToChat("Rozmowa wczytana pomyślnie! Możemy kontynuować.", false, false);
+                        } else { throw new Error("Niepoprawny format pliku."); }
+                    } catch (err) { addMessageToChat(`Błąd importu: ${err.message}`, false, false); }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function openEditModal() {
+            if (conversationHistory.length === 0) { addMessageToChat("Nie ma czego edytować!", false, false); return; }
+            const formattedText = conversationHistory.map(msg => {
+                if (msg.isHidden) return null;
+                const prefix = msg.role === 'user' ? 'TY:' : 'AGENT:';
+                if (msg.fileData) {
+                    const fileName = msg.fileData.name || 'załączony plik';
+                    return `${prefix} [PLIK: ${fileName}]`;
+                }
+                return `${prefix} ${msg.content}`;
+            }).filter(Boolean).join('\n\n');
+            editHistoryTextarea.value = formattedText;
+            editModal.style.display = 'flex';
+        }
+        
+        function saveAndDownloadEdited() {
+            const editedText = editHistoryTextarea.value;
+            const newHistory = [{ role: 'system', content: 'Edytowana transkrypcja rozmowy' }, { role: 'user', content: editedText }];
+            exportConversation(newHistory);
+            hideEditModal();
+        }
+        
         function hideEditModal() { editModal.style.display = 'none'; }
         
         exportButtonMain.addEventListener('click', () => { exportOptions.style.display = exportOptions.style.display === 'block' ? 'none' : 'block'; });
-        document.addEventListener('click', (e) => { if (!exportButtonMain.contains(e.target)) exportOptions.style.display = 'none'; });
+        document.addEventListener('click', (e) => { if (!exportButtonMain.contains(e.target) && !exportOptions.contains(e.target)) exportOptions.style.display = 'none'; });
         exportJsonBtn.addEventListener('click', (e) => { e.preventDefault(); exportConversation(conversationHistory); exportOptions.style.display = 'none'; });
         exportPdfBtn.addEventListener('click', (e) => { e.preventDefault(); exportToPdf(); exportOptions.style.display = 'none'; });
-        exportDocxBtn.addEventListener('click', (e) => { e.preventDefault(); exportToDocx(); exportOptions.style.display = 'none'; });
+        editExportButton.addEventListener('click', (e) => { e.preventDefault(); openEditModal(); exportOptions.style.display = 'none'; });
+        
         importButton.addEventListener('click', importConversation);
-        editExportButton.addEventListener('click', openEditModal);
         closeEditModal.addEventListener('click', hideEditModal);
         saveEditedButton.addEventListener('click', saveAndDownloadEdited);
         
@@ -458,15 +471,16 @@
                 userText = lastUserMessage;
             } else {
                 userText = userInput.value.trim();
-                const lastMessage = conversationHistory[conversationHistory.length - 1];
-                if (!userText && !(lastMessage && lastMessage.role === 'user' && lastMessage.fileData)) return;
+                const lastMessage = conversationHistory.some(m => m.role === 'user' && m.fileData);
+                if (!userText && !lastMessage) return;
                 lastUserMessage = userText;
-                if(userText || !(lastMessage && lastMessage.fileData)) addMessageToChat(userText, true);
+                if(userText || !lastMessage) addMessageToChat(userText, true);
                 userInput.value = '';
             }
             
             const historySlice = conversationHistory.slice(-30);
             const requestBody = { history: [] };
+            
             historySlice.forEach(msg => { requestBody.history.push({ role: msg.role, content: msg.content }); });
             
             const attachmentsToSend = [];
