@@ -464,6 +464,27 @@
         attachmentButton.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', handleFileSelect);
 
+        // --- NOWA FUNKCJA DO POBIERANIA PDF Z BASE64 ---
+        function downloadPdfFromBase64(filename, base64Data) {
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // --- ZAKTUALIZOWANA FUNKCJA handleSubmit ---
         async function handleSubmit(isRetry = false) {
             if (!sessionStorage.getItem('isAuthenticated')) return;
             let userText;
@@ -506,20 +527,26 @@
                     return;
                 }
                 const data = await response.json();
-                const assistantText = data.generated_text;
                 
-                const fileMatch = assistantText.match(/\[FILE:([^\]]+)\]([\s\S]*)\[\/FILE\]/);
-                const imgMatch = assistantText.match(/\[IMG\](.*?)\[\/IMG\]/);
+                // Nowa logika sprawdzająca odpowiedź serwera
+                if (data.pdf_file) {
+                    addMessageToChat(`Jasne, oto Twój plik PDF: ${data.pdf_file.filename}. Pobieranie rozpocznie się automatycznie.`, false, false);
+                    downloadPdfFromBase64(data.pdf_file.filename, data.pdf_file.data);
+                } else if (data.generated_text) {
+                    const assistantText = data.generated_text;
+                    const fileMatch = assistantText.match(/\[FILE:([^\]]+)\]([\s\S]*)\[\/FILE\]/);
+                    const imgMatch = assistantText.match(/\[IMG\](.*?)\[\/IMG\]/);
 
-                if (fileMatch) {
-                    addMessageToChat(assistantText, false, true, null, true);
-                    downloadFile(fileMatch[1], fileMatch[2]);
-                } else if (imgMatch && imgMatch[1]) {
-                    addMessageToChat(assistantText, false, true, null, true);
-                    generateImage(imgMatch[1]);
-                } else {
-                    addMessageToChat(assistantText, false);
-                    speak(assistantText);
+                    if (fileMatch) {
+                        addMessageToChat(assistantText, false, true, null, true);
+                        downloadFile(fileMatch[1], fileMatch[2]);
+                    } else if (imgMatch && imgMatch[1]) {
+                        addMessageToChat(assistantText, false, true, null, true);
+                        generateImage(imgMatch[1]);
+                    } else {
+                        addMessageToChat(assistantText, false);
+                        speak(assistantText);
+                    }
                 }
             } catch (error) {
                 addMessageToChat(`Błąd: ${error.message}`, false, false);
@@ -553,7 +580,7 @@
             if (isHidden) return;
             const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
-            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG|FILE:.+?)\]/gi, '');
+            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG|FILE:.+?|PDF:.+?)\]/gi, '');
 
             const fileMatch = text.match(/\[FILE:([^\]]+)\]([\s\S]*)\[\/FILE\]/);
             const codeMatch = text.match(/```(\w*)\n([\s\S]*)```/);
