@@ -464,7 +464,6 @@
         attachmentButton.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', handleFileSelect);
 
-        // --- NOWA FUNKCJA DO POBIERANIA PDF Z BASE64 ---
         function downloadPdfFromBase64(filename, base64Data) {
             const byteCharacters = atob(base64Data);
             const byteNumbers = new Array(byteCharacters.length);
@@ -473,7 +472,6 @@
             }
             const byteArray = new Uint8Array(byteNumbers);
             const blob = new Blob([byteArray], { type: 'application/pdf' });
-
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -484,7 +482,6 @@
             URL.revokeObjectURL(url);
         }
 
-        // --- ZAKTUALIZOWANA FUNKCJA handleSubmit ---
         async function handleSubmit(isRetry = false) {
             if (!sessionStorage.getItem('isAuthenticated')) return;
             let userText;
@@ -527,12 +524,14 @@
                     return;
                 }
                 const data = await response.json();
-                
-                // Nowa logika sprawdzająca odpowiedź serwera
+
+                // POPRAWIONA LOGIKA: Najpierw sprawdzamy, czy jest plik PDF
                 if (data.pdf_file) {
                     addMessageToChat(`Jasne, oto Twój plik PDF: ${data.pdf_file.filename}. Pobieranie rozpocznie się automatycznie.`, false, false);
                     downloadPdfFromBase64(data.pdf_file.filename, data.pdf_file.data);
-                } else if (data.generated_text) {
+                } 
+                // Jeśli nie ma PDF, sprawdzamy, czy jest zwykły tekst
+                else if (data.generated_text) {
                     const assistantText = data.generated_text;
                     const fileMatch = assistantText.match(/\[FILE:([^\]]+)\]([\s\S]*)\[\/FILE\]/);
                     const imgMatch = assistantText.match(/\[IMG\](.*?)\[\/IMG\]/);
