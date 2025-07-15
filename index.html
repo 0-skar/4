@@ -482,6 +482,7 @@
             URL.revokeObjectURL(url);
         }
 
+        // --- OSTATECZNIE POPRAWIONA FUNKCJA handleSubmit ---
         async function handleSubmit(isRetry = false) {
             if (!sessionStorage.getItem('isAuthenticated')) return;
             let userText;
@@ -499,24 +500,33 @@
             const historySlice = conversationHistory.slice(-30);
             const requestBody = { history: [] };
             
-            historySlice.forEach(msg => { requestBody.history.push({ role: msg.role, content: msg.content }); });
-            
-            const attachmentsToSend = [];
+            // Poprawiona pętla budująca historię
             historySlice.forEach(msg => {
+                const historyItem = {
+                    role: msg.role,
+                    content: msg.content
+                };
+                // Dołączamy `fileData` do wiadomości, jeśli istnieje
                 if (msg.fileData) {
-                    attachmentsToSend.push(msg.fileData);
+                    historyItem.fileData = msg.fileData;
                 }
+                requestBody.history.push(historyItem);
             });
-
-            if (attachmentsToSend.length > 0) {
-                requestBody.attachments = Array.from(new Map(attachmentsToSend.map(item => [item.data, item])).values());
-            }
+            
+            // Usunięta zbędna logika `attachmentsToSend`
 
             const userKey = sessionStorage.getItem('userProvidedApiKey');
-            if (userKey) requestBody.apiKey = userKey;
+            if (userKey) {
+                // Ta część była niepoprawna, `apiKey` jest na poziomie głównym, nie w `history`
+                requestBody.apiKey = userKey;
+            }
 
             try {
-                const response = await fetch(CHAT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
+                const response = await fetch(CHAT_URL, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(requestBody) 
+                });
                 if (!response.ok) {
                     const errorData = await response.json();
                     if (errorData.all_keys_exhausted) { showApiKeyModal(); } 
@@ -525,12 +535,10 @@
                 }
                 const data = await response.json();
 
-                // POPRAWIONA LOGIKA: Najpierw sprawdzamy, czy jest plik PDF
                 if (data.pdf_file) {
-                    addMessageToChat(`Jasne, oto Twój plik PDF: ${data.pdf_file.filename}. Pobieranie rozpocznie się automatycznie.`, false, false);
+                    addMessageToChat(`Oto Twój wypełniony plik: ${data.pdf_file.filename}. Pobieranie rozpocznie się automatycznie.`, false, false);
                     downloadPdfFromBase64(data.pdf_file.filename, data.pdf_file.data);
                 } 
-                // Jeśli nie ma PDF, sprawdzamy, czy jest zwykły tekst
                 else if (data.generated_text) {
                     const assistantText = data.generated_text;
                     const fileMatch = assistantText.match(/\[FILE:([^\]]+)\]([\s\S]*)\[\/FILE\]/);
@@ -626,4 +634,4 @@
         checkAuthentication();
     </script>
 </body>
-</html>
+</html>```
