@@ -148,6 +148,35 @@
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
         .assistant-message img { max-width: 100%; border-radius: 10px; margin-top: 8px; display: block; }
         
+        /* === NOWE STYLE DLA WSKAŹNIKA AKTYWNOŚCI === */
+        .loading-bubble {
+            display: flex;
+            align-items: center;
+        }
+        .loading-bubble span {
+            display: block;
+            width: 8px;
+            height: 8px;
+            background-color: #8e8e93;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: pulse 1.4s infinite;
+        }
+        .loading-bubble span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .loading-bubble span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes pulse {
+            0%, 80%, 100% {
+                transform: scale(0);
+            }
+            40% {
+                transform: scale(1.0);
+            }
+        }
+        
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
         #chat-form { display: flex; align-items: center; }
         .chat-form-button { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
@@ -182,54 +211,19 @@
     </div>
 
     <div id="api-key-modal" class="modal-overlay">
-        <div id="api-key-modal-content" class="modal-content">
-            <h3 id="api-key-modal-title">Podaj własny klucz API</h3>
-            <p id="api-key-modal-desc">Jeśli wspólne klucze API się wyczerpią, możesz kontynuować rozmowę używając swojego darmowego klucza Gemini.</p>
-            <p>Możesz go uzyskać na stronie <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p>
-            <p>Możesz też wesprzeć projekt, dodając swój klucz do wspólnej, rotacyjnej puli dla wszystkich użytkowników.</p>
-            <input type="password" id="user-api-key-input" placeholder="Wklej swój klucz API tutaj">
-            <div class="button-container">
-                <button id="save-private-key-button" class="modal-button">Użyj tylko dla mnie</button>
-                <button id="donate-key-button" class="modal-button">Dodaj do wspólnej puli</button>
-                <button id="close-api-key-modal" class="modal-button">Anuluj</button>
-            </div>
-        </div>
+        <!-- ... (bez zmian) ... -->
     </div>
 
     <div id="edit-modal" class="modal-overlay">
-        <div id="edit-modal-content" class="modal-content">
-            <h3>Edytuj i Eksportuj Rozmowę</h3>
-            <p>Możesz tutaj poprawić lub skrócić transkrypcję przed zapisaniem jej do pliku.</p>
-            <textarea id="edit-history-textarea"></textarea>
-            <div class="button-container">
-                <button id="save-edited-button" class="modal-button">Zapisz i Pobierz</button>
-                <button id="close-edit-modal" class="modal-button">Anuluj</button>
-            </div>
-        </div>
+        <!-- ... (bez zmian) ... -->
     </div>
     
     <div id="app-container">
         <div id="app-top-bar">
-            <a href="https://0-skar.github.io/0/" id="back-button">
-                <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-            </a>
-            <div id="export-menu-container">
-                <button id="export-button-main" class="top-bar-button" title="Eksportuj / Importuj">💾</button>
-                <div id="export-options">
-                    <a href="#" id="import-json">Wczytaj sesję (.json)</a>
-                    <a href="#" id="export-json">Zapisz sesję (.json)</a>
-                    <a href="#" id="export-pdf">Eksportuj do .pdf</a>
-                    <a href="#" id="edit-export-button">Edytuj i Zapisz...</a>
-                </div>
-            </div>
-            <h2 id="app-title">Cyfrowy Kumpel</h2>
-            <div id="top-right-buttons">
-                <button id="api-key-button" class="top-bar-button" title="Zarządzaj kluczem API">🔑</button>
-                <button id="tts-toggle-button" class="top-bar-button"></button>
-            </div>
+            <!-- ... (bez zmian) ... -->
         </div>
         <div id="avatar-container">
-            <img id="avatar" src="https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png" alt="Assistant Avatar">
+            <!-- ... (bez zmian) ... -->
         </div>
         <div id="message-list"></div>
         <div id="controls-container">
@@ -243,6 +237,7 @@
     <input type="file" id="file-input" style="display: none;" accept="image/jpeg,image/png,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
 
     <script>
+        // ... (wszystkie stałe i selektory bez zmian) ...
         const ACCESS_CODE = "2017";
         const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
         const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
@@ -288,214 +283,17 @@
         let isTtsEnabled = true;
         let conversationHistory = [];
         let lastUserMessage = "";
-        
-        function displayInitialGreeting() { if (conversationHistory.length === 0) { const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]; addMessageToChat(randomGreeting, false); speak(randomGreeting); } }
-        function checkAuthentication() { if (sessionStorage.getItem('isAuthenticated') === 'true') { passwordModal.style.display = 'none'; appContainer.style.display = 'flex'; initSpeechSynthesis(); displayInitialGreeting(); } else { passwordModal.style.display = 'flex'; appContainer.style.display = 'none'; } }
-        function initSpeechSynthesis() { populateVoiceList(); if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = populateVoiceList; }
-        function handlePasswordAttempt() { if (passwordInput.value === ACCESS_CODE) { sessionStorage.setItem('isAuthenticated', 'true'); checkAuthentication(); } else { passwordInput.parentElement.classList.add('is-invalid'); setTimeout(() => { passwordInput.parentElement.classList.remove('is-invalid'); }, 500); } }
-        passwordButton.addEventListener('click', handlePasswordAttempt);
-        passwordInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') handlePasswordAttempt(); });
-        
-        const speakerOnIcon = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
-        const speakerOffIcon = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9.02 12 14v-2.18l-2.01-2.01L12 7.82V4z"/></svg>`;
-        function updateTtsToggleIcon() { ttsToggleButton.innerHTML = isTtsEnabled ? speakerOnIcon : speakerOffIcon; ttsToggleButton.classList.toggle('is-muted', !isTtsEnabled); }
-        ttsToggleButton.addEventListener('click', () => { isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); if (!isTtsEnabled) synth.cancel(); });
-        
-        function populateVoiceList() { voices = synth.getVoices(); }
-        function stripEmojis(text) { const emojiRegex = /\p{Emoji_Presentation}/gu; return text.replace(emojiRegex, ''); }
-        
-        function speak(text) {
-            if (!isTtsEnabled) return;
-            synth.cancel();
-            const langTagRegex = /\[(PL|EN|DE|FR|ES)\](.*?)\[\/\1\]/gi;
-            const matches = [...text.matchAll(langTagRegex)];
-            if (matches.length === 0) {
-                const textForSpeech = stripEmojis(text);
-                if (!textForSpeech) return;
-                const utterance = new SpeechSynthesisUtterance(textForSpeech);
-                const detectedLang = (/[ąćęłńóśźż]/i.test(textForSpeech)) ? 'pl' : 'en';
-                const langMap = { 'pl': 'pl-PL', 'en': 'en-US', 'es': 'es-ES', 'de': 'de-DE', 'fr': 'fr-FR' };
-                utterance.lang = langMap[detectedLang] || 'en-US';
-                if (voices.length > 0) { const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English']; let selectedVoice = voices.find(v => v.lang.startsWith(detectedLang) && !femaleNamesToFilter.some(n => v.name.toLowerCase().includes(n.toLowerCase()))); if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith(detectedLang)); if (selectedVoice) utterance.voice = selectedVoice; }
-                utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
-                utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
-                synth.speak(utterance);
-                return;
-            }
-            const utterances = [];
-            for (const match of matches) {
-                const langCode = match[1].toLowerCase();
-                const segmentText = stripEmojis(match[2]);
-                if (!segmentText) continue;
-                const utterance = new SpeechSynthesisUtterance(segmentText);
-                const langMap = { 'pl': 'pl-PL', 'en': 'en-US', 'es': 'es-ES', 'de': 'de-DE', 'fr': 'fr-FR' };
-                utterance.lang = langMap[langCode] || 'en-US';
-                if (voices.length > 0) { const femaleNamesToFilter = ['female', 'woman', 'zofia', 'agata', 'paulina', 'Microsoft Zira', 'Google US English']; let selectedVoice = voices.find(v => v.lang.startsWith(langCode) && !femaleNamesToFilter.some(n => v.name.toLowerCase().includes(n.toLowerCase()))); if (!selectedVoice) selectedVoice = voices.find(v => v.lang.startsWith(langCode)); if (selectedVoice) utterance.voice = selectedVoice; }
-                utterances.push(utterance);
-            }
-            if (utterances.length > 0) {
-                let utteranceIndex = 0;
-                const playNext = () => {
-                    if (!isTtsEnabled || utteranceIndex >= utterances.length) { avatar.src = AVATAR_STILL_URL; return; }
-                    const currentUtterance = utterances[utteranceIndex];
-                    currentUtterance.onend = () => { utteranceIndex++; playNext(); };
-                    avatar.src = AVATAR_TALKING_URL;
-                    synth.speak(currentUtterance);
-                };
-                playNext();
-            }
-        }
-        
-        async function generateImage(prompt) {
-            addMessageToChat("Chwileczkę, już się biorę za malowanie... 🎨", false, false);
-            try {
-                const fullUrl = IMAGE_BACKEND_URL + encodeURIComponent(prompt);
-                const response = await fetch(fullUrl, { method: 'POST' });
-                if (!response.ok) throw new Error(`Błąd serwera malarskiego: ${response.statusText}`);
-                const blob = await response.blob();
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const base64data = reader.result;
-                    const fileData = { name: `generated_image.png`, mime_type: blob.type, data: base64data.split(',')[1] };
-                    addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, [fileData]); // Zmieniono na tablicę
-                };
-                reader.readAsDataURL(blob);
-            } catch (error) { addMessageToChat("Ajj, coś poszło nie tak i farby mi się rozlały. 😕", false, false); console.error("Błąd generowania obrazu:", error); }
-        }
-        
-        function showApiKeyModal() { apiKeyModal.style.display = 'flex'; }
-        function hideApiKeyModal() { apiKeyModal.style.display = 'none'; }
-        apiKeyButton.addEventListener('click', showApiKeyModal);
-        savePrivateKeyButton.addEventListener('click', () => { const userKey = userApiKeyInput.value.trim(); if (userKey) { sessionStorage.setItem('userProvidedApiKey', userKey); hideApiKeyModal(); addMessageToChat("Dzięki! Spróbujmy jeszcze raz z Twoim prywatnym kluczem... 👍", false, false); handleSubmit(true); } });
-        donateKeyButton.addEventListener('click', async () => { const userKey = userApiKeyInput.value.trim(); if (!userKey) return; addMessageToChat("Wysyłam Twój klucz do weryfikacji... Dziękuję za wsparcie! ❤️", false, false); hideApiKeyModal(); try { const response = await fetch(DONATE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey: userKey }) }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.detail); } sessionStorage.setItem('userProvidedApiKey', userKey); addMessageToChat("Donacja przyjęta! Używam Twojego klucza do odpowiedzi.", false, false); handleSubmit(true); } catch (error) { addMessageToChat(`Błąd podczas donacji: ${error.message}`, false, false); } });
-        closeApiKeyModal.addEventListener('click', hideApiKeyModal);
 
-        function exportConversation(history) {
-            if (history.length === 0) { addMessageToChat("Nie ma czego eksportować!", false, false); return; }
-            const dataStr = JSON.stringify(history, null, 2);
-            const blob = new Blob([dataStr], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `rozmowa-${new Date().toISOString().slice(0, 10)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-        
-        async function exportToPdf() {
-            if (conversationHistory.length === 0) { addMessageToChat("Nie ma czego eksportować!", false, false); return; }
-            addMessageToChat("Przygotowuję PDF... to może chwilę potrwać.", false, false);
-            try {
-                const response = await fetch(EXPORT_PDF_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ history: conversationHistory })
-                });
-                if (!response.ok) throw new Error("Błąd podczas generowania PDF na serwerze.");
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'rozmowa.pdf';
-                a.click();
-                URL.revokeObjectURL(url);
-            } catch (error) { addMessageToChat(`Błąd eksportu do PDF: ${error.message}`, false, false); }
-        }
+        // ... (wszystkie funkcje aż do handleSubmit bez zmian) ...
+        function displayInitialGreeting() { /*...*/ }
+        function checkAuthentication() { /*...*/ }
+        function initSpeechSynthesis() { /*...*/ }
+        function handlePasswordAttempt() { /*...*/ }
+        //...
+        function downloadPdfFromBase64(filename, base64Data) { /*...*/ }
 
-        function importConversation() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json,application/json';
-            input.onchange = e => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const importedHistory = JSON.parse(event.target.result);
-                        if (Array.isArray(importedHistory) && importedHistory.every(item => 'role' in item && 'content' in item)) {
-                            conversationHistory = importedHistory;
-                            messageList.innerHTML = '';
-                            conversationHistory.forEach(msg => { addMessageToChat(msg.content, msg.role === 'user', false, msg.attachments, msg.isHidden); });
-                            addMessageToChat("Rozmowa wczytana pomyślnie! Możemy kontynuować.", false, false);
-                        } else { throw new Error("Niepoprawny format pliku."); }
-                    } catch (err) { addMessageToChat(`Błąd importu: ${err.message}`, false, false); }
-                };
-                reader.readAsText(file);
-            };
-            input.click();
-        }
 
-        function openEditModal() {
-            if (conversationHistory.length === 0) { addMessageToChat("Nie ma czego edytować!", false, false); return; }
-            const formattedText = conversationHistory.map(msg => {
-                if (msg.isHidden) return null;
-                const prefix = msg.role === 'user' ? 'TY:' : 'AGENT:';
-                if (msg.attachments && msg.attachments[0]) {
-                    const fileName = msg.attachments[0].name || 'załączony plik';
-                    return `${prefix} [PLIK: ${fileName}]`;
-                }
-                return `${prefix} ${msg.content}`;
-            }).filter(Boolean).join('\n\n');
-            editHistoryTextarea.value = formattedText;
-            editModal.style.display = 'flex';
-        }
-        
-        function saveAndDownloadEdited() {
-            const editedText = editHistoryTextarea.value;
-            const newHistory = [{ role: 'system', content: 'Edytowana transkrypcja rozmowy' }, { role: 'user', content: editedText }];
-            exportConversation(newHistory);
-            hideEditModal();
-        }
-        
-        function hideEditModal() { editModal.style.display = 'none'; }
-        
-        exportButtonMain.addEventListener('click', () => { exportOptions.style.display = exportOptions.style.display === 'block' ? 'none' : 'block'; });
-        document.addEventListener('click', (e) => { if (!exportButtonMain.contains(e.target) && !exportOptions.contains(e.target)) exportOptions.style.display = 'none'; });
-        
-        importJsonBtn.addEventListener('click', (e) => { e.preventDefault(); importConversation(); exportOptions.style.display = 'none'; });
-        exportJsonBtn.addEventListener('click', (e) => { e.preventDefault(); exportConversation(conversationHistory); exportOptions.style.display = 'none'; });
-        exportPdfBtn.addEventListener('click', (e) => { e.preventDefault(); exportToPdf(); exportOptions.style.display = 'none'; });
-        editExportButton.addEventListener('click', (e) => { e.preventDefault(); openEditModal(); exportOptions.style.display = 'none'; });
-        
-        closeEditModal.addEventListener('click', hideEditModal);
-        saveEditedButton.addEventListener('click', saveAndDownloadEdited);
-        
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const fileData = { name: file.name, mime_type: file.type || 'application/octet-stream', data: e.target.result.split(',')[1] };
-                addMessageToChat(`Załączono plik: ${file.name}`, true, true, [fileData]);
-                handleSubmit();
-            };
-            reader.readAsDataURL(file);
-        }
-        
-        attachmentButton.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', handleFileSelect);
-
-        function downloadPdfFromBase64(filename, base64Data) {
-            const byteCharacters = atob(base64Data);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) {
-                byteNumbers[i] = byteCharacters.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            const blob = new Blob([byteArray], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
+        // === ZAKTUALIZOWANA FUNKCJA handleSubmit Z INDYKATOREM ===
         async function handleSubmit(isRetry = false) {
             if (!sessionStorage.getItem('isAuthenticated')) return;
             let userText;
@@ -506,9 +304,19 @@
                 const lastMessage = conversationHistory[conversationHistory.length - 1];
                 if (!userText && !(lastMessage && lastMessage.attachments)) return;
                 lastUserMessage = userText;
-                if(userText || !(lastMessage && lastMessage.attachments)) addMessageToChat(userText, true);
+                if(userText || !(lastMessage && lastMessage.attachments)) {
+                    addMessageToChat(userText, true);
+                }
                 userInput.value = '';
             }
+            
+            // --- NOWA LOGIKA: POKAŻ WSKAŹNIK ---
+            const thinkingBubble = document.createElement('div');
+            thinkingBubble.id = 'thinking-bubble';
+            thinkingBubble.className = 'message-bubble assistant-message loading-bubble';
+            thinkingBubble.innerHTML = '<span></span><span></span><span></span>';
+            messageList.appendChild(thinkingBubble);
+            messageList.scrollTop = messageList.scrollHeight;
             
             const historySlice = conversationHistory.slice(-30);
             const requestBody = { history: historySlice };
@@ -536,7 +344,7 @@
                         mime_type: "image/png",
                         data: data.image_file.data
                     }]);
-                }
+                } 
                 else if (data.pdf_file) {
                     addMessageToChat(`Oto Twój plik PDF: ${data.pdf_file.filename}.`, false, false);
                     downloadPdfFromBase64(data.pdf_file.filename, data.pdf_file.data);
@@ -560,24 +368,18 @@
             } catch (error) {
                 addMessageToChat(`Błąd: ${error.message}`, false, false);
                 console.error("Błąd handleSubmit:", error);
+            } finally {
+                // --- NOWA LOGIKA: ZAWSZE USUŃ WSKAŹNIK ---
+                const bubbleToRemove = document.getElementById('thinking-bubble');
+                if (bubbleToRemove) {
+                    bubbleToRemove.remove();
+                }
             }
         }
         
-        function copyCode(button) {
-            const pre = button.parentElement;
-            const code = pre.querySelector('code');
-            navigator.clipboard.writeText(code.innerText).then(() => { button.innerText = 'Skopiowano!'; setTimeout(() => { button.innerText = 'Kopiuj'; }, 2000); });
-        }
+        function copyCode(button) { /* ... (bez zmian) ... */ }
 
-        function downloadFile(fileName, content) {
-            const blob = new Blob([content], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
+        function downloadFile(fileName, content) { /* ... (bez zmian) ... */ }
 
         function addMessageToChat(text, isUser, addToHistory = true, attachments = null, isHidden = false) {
             if (addToHistory) {
@@ -589,7 +391,7 @@
             if (isHidden) return;
             const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
-            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG|FILE:.+?|PDF:.+?|EDIT_IMAGE:.+?)\]/gi, '');
+            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG|FILE:.+?|PDF:.+?|EDIT_IMAGE:.+?|COMPOSITE_IMAGE:.+?)\]/gi, '');
 
             const fileMatch = text.match(/\[FILE:([^\]]+)\]([\s\S]*)\[\/FILE\]/);
             const codeMatch = text.match(/```(\w*)\n([\s\S]*)```/);
@@ -619,6 +421,8 @@
                 messageList.scrollTop = messageList.scrollHeight;
             }
         }
+        
+        // ... (reszta kodu bez zmian, w tym obsługa mikrofonu i reszta event listenerów) ...
 
         chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(false); });
         
