@@ -201,8 +201,9 @@
                 <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
             </a>
             <div id="export-menu-container">
-                <button id="export-button-main" class="top-bar-button" title="Eksportuj">💾</button>
+                <button id="export-button-main" class="top-bar-button" title="Eksportuj / Importuj">💾</button>
                 <div id="export-options">
+                    <a href="#" id="import-json">Wczytaj sesję (.json)</a>
                     <a href="#" id="export-json">Zapisz sesję (.json)</a>
                     <a href="#" id="export-pdf">Eksportuj do .pdf</a>
                     <a href="#" id="edit-export-button">Edytuj i Zapisz...</a>
@@ -210,7 +211,6 @@
             </div>
             <h2 id="app-title">Cyfrowy Kumpel</h2>
             <div id="top-right-buttons">
-                <button id="import-button" class="top-bar-button" title="Importuj rozmowę">📂</button>
                 <button id="api-key-button" class="top-bar-button" title="Zarządzaj kluczem API">🔑</button>
                 <button id="tts-toggle-button" class="top-bar-button"></button>
             </div>
@@ -257,7 +257,6 @@
         const donateKeyButton = document.getElementById('donate-key-button');
         const closeApiKeyModal = document.getElementById('close-api-key-modal');
         const apiKeyButton = document.getElementById('api-key-button');
-        const importButton = document.getElementById('import-button');
         const attachmentButton = document.getElementById('attachment-button');
         const fileInput = document.getElementById('file-input');
         const editModal = document.getElementById('edit-modal');
@@ -266,6 +265,7 @@
         const closeEditModal = document.getElementById('close-edit-modal');
         const exportButtonMain = document.getElementById('export-button-main');
         const exportOptions = document.getElementById('export-options');
+        const importJsonBtn = document.getElementById('import-json');
         const exportJsonBtn = document.getElementById('export-json');
         const exportPdfBtn = document.getElementById('export-pdf');
         const editExportButton = document.getElementById('edit-export-button');
@@ -441,11 +441,12 @@
         
         exportButtonMain.addEventListener('click', () => { exportOptions.style.display = exportOptions.style.display === 'block' ? 'none' : 'block'; });
         document.addEventListener('click', (e) => { if (!exportButtonMain.contains(e.target) && !exportOptions.contains(e.target)) exportOptions.style.display = 'none'; });
+        
+        importJsonBtn.addEventListener('click', (e) => { e.preventDefault(); importConversation(); exportOptions.style.display = 'none'; });
         exportJsonBtn.addEventListener('click', (e) => { e.preventDefault(); exportConversation(conversationHistory); exportOptions.style.display = 'none'; });
         exportPdfBtn.addEventListener('click', (e) => { e.preventDefault(); exportToPdf(); exportOptions.style.display = 'none'; });
         editExportButton.addEventListener('click', (e) => { e.preventDefault(); openEditModal(); exportOptions.style.display = 'none'; });
         
-        importButton.addEventListener('click', importConversation);
         closeEditModal.addEventListener('click', hideEditModal);
         saveEditedButton.addEventListener('click', saveAndDownloadEdited);
         
@@ -482,7 +483,6 @@
             URL.revokeObjectURL(url);
         }
 
-        // --- OSTATECZNIE POPRAWIONA FUNKCJA handleSubmit ---
         async function handleSubmit(isRetry = false) {
             if (!sessionStorage.getItem('isAuthenticated')) return;
             let userText;
@@ -500,26 +500,14 @@
             const historySlice = conversationHistory.slice(-30);
             const requestBody = { history: [] };
             
-            // Poprawiona pętla budująca historię
             historySlice.forEach(msg => {
-                const historyItem = {
-                    role: msg.role,
-                    content: msg.content
-                };
-                // Dołączamy `fileData` do wiadomości, jeśli istnieje
-                if (msg.fileData) {
-                    historyItem.fileData = msg.fileData;
-                }
+                const historyItem = { role: msg.role, content: msg.content };
+                if (msg.fileData) { historyItem.fileData = msg.fileData; }
                 requestBody.history.push(historyItem);
             });
             
-            // Usunięta zbędna logika `attachmentsToSend`
-
             const userKey = sessionStorage.getItem('userProvidedApiKey');
-            if (userKey) {
-                // Ta część była niepoprawna, `apiKey` jest na poziomie głównym, nie w `history`
-                requestBody.apiKey = userKey;
-            }
+            if (userKey) { requestBody.apiKey = userKey; }
 
             try {
                 const response = await fetch(CHAT_URL, { 
@@ -634,4 +622,4 @@
         checkAuthentication();
     </script>
 </body>
-</html>```
+</html>
