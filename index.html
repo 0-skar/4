@@ -152,6 +152,7 @@
         #chat-form { display: flex; align-items: center; }
         .chat-form-button { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
         
+        /* === ZMIANA STYLU PRZYCISKU ZAŁĄCZNIKA === */
         #attachment-button {
             background: transparent;
             color: #65676b;
@@ -161,8 +162,6 @@
             height: auto;
             margin: 0 8px 0 4px;
             padding: 0;
-            cursor: pointer;
-            border: none;
         }
 
         #micButton.is-listening { background-color: #fa383e; }
@@ -235,6 +234,7 @@
         <div id="controls-container">
             <form id="chat-form">
                 <button type="button" id="attachment-button" class="chat-form-button" title="Załącz plik">📎</button>
+                <!-- === DODANO autocomplete="off" DO POLA TEKSTOWEGO === -->
                 <input type="text" id="userInput" placeholder="Opisz załączony plik lub zadaj pytanie..." autocomplete="off">
                 <button type="button" id="micButton" class="chat-form-button">🎤</button>
             </form>
@@ -278,7 +278,7 @@
         const closeEditModal = document.getElementById('close-edit-modal');
         const exportButtonMain = document.getElementById('export-button-main');
         const exportOptions = document.getElementById('export-options');
-        const importJsonBtn = document.getElementById('import-json'); // Poprawiony selektor
+        const importJsonBtn = document.getElementById('import-json');
         const exportJsonBtn = document.getElementById('export-json');
         const exportPdfBtn = document.getElementById('export-pdf');
         const editExportButton = document.getElementById('edit-export-button');
@@ -496,7 +496,6 @@
             URL.revokeObjectURL(url);
         }
 
-        // === ZAKTUALIZOWANA FUNKCJA handleSubmit Z PEŁNĄ LOGIKĄ ===
         async function handleSubmit(isRetry = false) {
             if (!sessionStorage.getItem('isAuthenticated')) return;
             let userText;
@@ -537,18 +536,10 @@
                 }
                 const data = await response.json();
 
-                // Logika obsługująca różne typy odpowiedzi od backendu
                 if (data.pdf_file) {
-                    addMessageToChat(`Oto Twój plik PDF: ${data.pdf_file.filename}.`, false, false);
+                    addMessageToChat(`Oto Twój wypełniony plik: ${data.pdf_file.filename}. Pobieranie rozpocznie się automatycznie.`, false, false);
                     downloadPdfFromBase64(data.pdf_file.filename, data.pdf_file.data);
                 } 
-                else if (data.image_file) {
-                    addMessageToChat(`Oto Twoje zedytowane zdjęcie:`, false, true, {
-                        name: data.image_file.filename,
-                        mime_type: "image/png",
-                        data: data.image_file.data
-                    });
-                }
                 else if (data.generated_text) {
                     const assistantText = data.generated_text;
                     const fileMatch = assistantText.match(/\[FILE:([^\]]+)\]([\s\S]*)\[\/FILE\]/);
@@ -587,7 +578,6 @@
             URL.revokeObjectURL(url);
         }
 
-        // === ZAKTUALIZOWANA FUNKCJA addMessageToChat Z PEŁNYM REGEXEM ===
         function addMessageToChat(text, isUser, addToHistory = true, fileData = null, isHidden = false) {
             if (addToHistory) {
                 const historyEntry = { role: isUser ? 'user' : 'assistant', content: text };
@@ -598,8 +588,7 @@
             if (isHidden) return;
             const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
-            // Pełny regex usuwający wszystkie znane tagi, aby nie pokazywać ich użytkownikowi
-            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG|FILE:.+?|PDF:.+?|EDIT_IMAGE:.+?|COMPOSITE_IMAGE:.+?)\]/gi, '');
+            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG|FILE:.+?|PDF:.+?)\]/gi, '');
 
             const fileMatch = text.match(/\[FILE:([^\]]+)\]([\s\S]*)\[\/FILE\]/);
             const codeMatch = text.match(/```(\w*)\n([\s\S]*)```/);
@@ -614,13 +603,8 @@
             } else if (fileData && fileData.mime_type && fileData.mime_type.startsWith('image/')) {
                 const image = document.createElement('img');
                 image.src = `data:${fileData.mime_type};base64,${fileData.data}`;
-                image.alt = cleanText || 'Załączony obraz';
+                image.alt = cleanText;
                 messageBubble.appendChild(image);
-                if (cleanText) {
-                    const textNode = document.createElement('p');
-                    textNode.innerText = cleanText;
-                    messageBubble.appendChild(textNode);
-                }
             } else {
                 if (cleanText) messageBubble.innerText = cleanText;
             }
