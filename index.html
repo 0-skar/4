@@ -152,7 +152,6 @@
         #chat-form { display: flex; align-items: center; }
         .chat-form-button { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
         
-        /* === ZMIANA STYLU PRZYCISKU ZAŁĄCZNIKA === */
         #attachment-button {
             background: transparent;
             color: #65676b;
@@ -162,6 +161,8 @@
             height: auto;
             margin: 0 8px 0 4px;
             padding: 0;
+            cursor: pointer;
+            border: none;
         }
 
         #micButton.is-listening { background-color: #fa383e; }
@@ -234,7 +235,6 @@
         <div id="controls-container">
             <form id="chat-form">
                 <button type="button" id="attachment-button" class="chat-form-button" title="Załącz plik">📎</button>
-                <!-- === DODANO autocomplete="off" DO POLA TEKSTOWEGO === -->
                 <input type="text" id="userInput" placeholder="Opisz załączony plik lub zadaj pytanie..." autocomplete="off">
                 <button type="button" id="micButton" class="chat-form-button">🎤</button>
             </form>
@@ -357,7 +357,7 @@
                 reader.onloadend = () => {
                     const base64data = reader.result;
                     const fileData = { name: `generated_image.png`, mime_type: blob.type, data: base64data.split(',')[1] };
-                    addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, fileData);
+                    addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, [fileData]); // Zmieniono na tablicę
                 };
                 reader.readAsDataURL(blob);
             } catch (error) { addMessageToChat("Ajj, coś poszło nie tak i farby mi się rozlały. 😕", false, false); console.error("Błąd generowania obrazu:", error); }
@@ -418,7 +418,7 @@
                         if (Array.isArray(importedHistory) && importedHistory.every(item => 'role' in item && 'content' in item)) {
                             conversationHistory = importedHistory;
                             messageList.innerHTML = '';
-                            conversationHistory.forEach(msg => { addMessageToChat(msg.content, msg.role === 'user', false, msg.fileData, msg.isHidden); });
+                            conversationHistory.forEach(msg => { addMessageToChat(msg.content, msg.role === 'user', false, msg.attachments, msg.isHidden); });
                             addMessageToChat("Rozmowa wczytana pomyślnie! Możemy kontynuować.", false, false);
                         } else { throw new Error("Niepoprawny format pliku."); }
                     } catch (err) { addMessageToChat(`Błąd importu: ${err.message}`, false, false); }
@@ -433,8 +433,8 @@
             const formattedText = conversationHistory.map(msg => {
                 if (msg.isHidden) return null;
                 const prefix = msg.role === 'user' ? 'TY:' : 'AGENT:';
-                if (msg.fileData) {
-                    const fileName = msg.fileData.name || 'załączony plik';
+                if (msg.attachments && msg.attachments[0]) {
+                    const fileName = msg.attachments[0].name || 'załączony plik';
                     return `${prefix} [PLIK: ${fileName}]`;
                 }
                 return `${prefix} ${msg.content}`;
@@ -469,7 +469,7 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 const fileData = { name: file.name, mime_type: file.type || 'application/octet-stream', data: e.target.result.split(',')[1] };
-                addMessageToChat(`Załączono plik: ${file.name}`, true, true, fileData);
+                addMessageToChat(`Załączono plik: ${file.name}`, true, true, [fileData]);
                 handleSubmit();
             };
             reader.readAsDataURL(file);
@@ -504,20 +504,14 @@
             } else {
                 userText = userInput.value.trim();
                 const lastMessage = conversationHistory[conversationHistory.length - 1];
-                if (!userText && !(lastMessage && lastMessage.role === 'user' && lastMessage.fileData)) return;
+                if (!userText && !(lastMessage && lastMessage.attachments)) return;
                 lastUserMessage = userText;
-                if(userText || !(lastMessage && lastMessage.fileData)) addMessageToChat(userText, true);
+                if(userText || !(lastMessage && lastMessage.attachments)) addMessageToChat(userText, true);
                 userInput.value = '';
             }
             
             const historySlice = conversationHistory.slice(-30);
-            const requestBody = { history: [] };
-            
-            historySlice.forEach(msg => {
-                const historyItem = { role: msg.role, content: msg.content };
-                if (msg.fileData) { historyItem.fileData = msg.fileData; }
-                requestBody.history.push(historyItem);
-            });
+            const requestBody = { history: historySlice };
             
             const userKey = sessionStorage.getItem('userProvidedApiKey');
             if (userKey) { requestBody.apiKey = userKey; }
@@ -536,8 +530,15 @@
                 }
                 const data = await response.json();
 
-                if (data.pdf_file) {
-                    addMessageToChat(`Oto Twój wypełniony plik: ${data.pdf_file.filename}. Pobieranie rozpocznie się automatycznie.`, false, false);
+                if (data.image_file) {
+                    addMessageToChat(`Oto Twoje zedytowane zdjęcie:`, false, true, [{
+                        name: data.image_file.filename,
+                        mime_type: "image/png",
+                        data: data.image_file.data
+                    }]);
+                }
+                else if (data.pdf_file) {
+                    addMessageToChat(`Oto Twój plik PDF: ${data.pdf_file.filename}.`, false, false);
                     downloadPdfFromBase64(data.pdf_file.filename, data.pdf_file.data);
                 } 
                 else if (data.generated_text) {
@@ -578,17 +579,17 @@
             URL.revokeObjectURL(url);
         }
 
-        function addMessageToChat(text, isUser, addToHistory = true, fileData = null, isHidden = false) {
+        function addMessageToChat(text, isUser, addToHistory = true, attachments = null, isHidden = false) {
             if (addToHistory) {
                 const historyEntry = { role: isUser ? 'user' : 'assistant', content: text };
-                if (fileData) historyEntry.fileData = fileData;
+                if (attachments) { historyEntry.attachments = attachments; }
                 if (isHidden) historyEntry.isHidden = true;
                 conversationHistory.push(historyEntry);
             }
             if (isHidden) return;
             const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
-            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG|FILE:.+?|PDF:.+?)\]/gi, '');
+            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG|FILE:.+?|PDF:.+?|EDIT_IMAGE:.+?)\]/gi, '');
 
             const fileMatch = text.match(/\[FILE:([^\]]+)\]([\s\S]*)\[\/FILE\]/);
             const codeMatch = text.match(/```(\w*)\n([\s\S]*)```/);
@@ -600,11 +601,16 @@
                 const code = codeMatch[2];
                 messageBubble.innerHTML = `<pre class="language-${lang}"><button class="copy-code-button" onclick="copyCode(this)">Kopiuj</button><code>${code.replace(/</g, "<").replace(/>/g, ">")}</code></pre>`;
                 if (window.Prism) Prism.highlightAllUnder(messageBubble);
-            } else if (fileData && fileData.mime_type && fileData.mime_type.startsWith('image/')) {
+            } else if (attachments && attachments[0] && attachments[0].mime_type.startsWith('image/')) {
                 const image = document.createElement('img');
-                image.src = `data:${fileData.mime_type};base64,${fileData.data}`;
-                image.alt = cleanText;
+                image.src = `data:${attachments[0].mime_type};base64,${attachments[0].data}`;
+                image.alt = cleanText || 'Załączony obraz';
                 messageBubble.appendChild(image);
+                if (cleanText) {
+                    const textNode = document.createElement('p');
+                    textNode.innerText = cleanText;
+                    messageBubble.appendChild(textNode);
+                }
             } else {
                 if (cleanText) messageBubble.innerText = cleanText;
             }
