@@ -9,8 +9,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-    <script src="https://unpkg.com/docx@8.5.0/build/index.js" defer></script>
     <style>
         :root {
             --body-bg: #f0f2f5;
@@ -148,52 +146,17 @@
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
         .assistant-message img { max-width: 100%; border-radius: 10px; margin-top: 8px; display: block; }
         
-        /* === NOWE STYLE DLA WSKAŹNIKA AKTYWNOŚCI === */
-        .loading-bubble {
-            display: flex;
-            align-items: center;
-        }
-        .loading-bubble span {
-            display: block;
-            width: 8px;
-            height: 8px;
-            background-color: #8e8e93;
-            border-radius: 50%;
-            margin: 0 2px;
-            animation: pulse 1.4s infinite;
-        }
-        .loading-bubble span:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-        .loading-bubble span:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-        @keyframes pulse {
-            0%, 80%, 100% {
-                transform: scale(0);
-            }
-            40% {
-                transform: scale(1.0);
-            }
-        }
+        .loading-bubble { display: flex; align-items: center; }
+        .loading-bubble span { display: block; width: 8px; height: 8px; background-color: #8e8e93; border-radius: 50%; margin: 0 2px; animation: pulse 1.4s infinite; }
+        .loading-bubble span:nth-child(2) { animation-delay: 0.2s; }
+        .loading-bubble span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes pulse { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
         
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
         #chat-form { display: flex; align-items: center; }
         .chat-form-button { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
         
-        #attachment-button {
-            background: transparent;
-            color: #65676b;
-            font-size: 1.5rem;
-            border-radius: 0;
-            width: auto;
-            height: auto;
-            margin: 0 8px 0 4px;
-            padding: 0;
-            cursor: pointer;
-            border: none;
-        }
-
+        #attachment-button { background: transparent; color: #65676b; font-size: 1.5rem; border-radius: 0; width: auto; height: auto; margin: 0 8px 0 4px; padding: 0; cursor: pointer; border: none; }
         #micButton.is-listening { background-color: #fa383e; }
         #userInput { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 18px; font-size: 1rem; background: #f0f2f5; }
     </style>
@@ -211,19 +174,54 @@
     </div>
 
     <div id="api-key-modal" class="modal-overlay">
-        <!-- ... (bez zmian) ... -->
+        <div id="api-key-modal-content" class="modal-content">
+            <h3 id="api-key-modal-title">Podaj własny klucz API</h3>
+            <p id="api-key-modal-desc">Jeśli wspólne klucze API się wyczerpią, możesz kontynuować rozmowę używając swojego darmowego klucza Gemini.</p>
+            <p>Możesz go uzyskać na stronie <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p>
+            <p>Możesz też wesprzeć projekt, dodając swój klucz do wspólnej, rotacyjnej puli dla wszystkich użytkowników.</p>
+            <input type="password" id="user-api-key-input" placeholder="Wklej swój klucz API tutaj">
+            <div class="button-container">
+                <button id="save-private-key-button" class="modal-button">Użyj tylko dla mnie</button>
+                <button id="donate-key-button" class="modal-button">Dodaj do wspólnej puli</button>
+                <button id="close-api-key-modal" class="modal-button">Anuluj</button>
+            </div>
+        </div>
     </div>
 
     <div id="edit-modal" class="modal-overlay">
-        <!-- ... (bez zmian) ... -->
+        <div id="edit-modal-content" class="modal-content">
+            <h3>Edytuj i Eksportuj Rozmowę</h3>
+            <p>Możesz tutaj poprawić lub skrócić transkrypcję przed zapisaniem jej do pliku.</p>
+            <textarea id="edit-history-textarea"></textarea>
+            <div class="button-container">
+                <button id="save-edited-button" class="modal-button">Zapisz i Pobierz</button>
+                <button id="close-edit-modal" class="modal-button">Anuluj</button>
+            </div>
+        </div>
     </div>
     
     <div id="app-container">
         <div id="app-top-bar">
-            <!-- ... (bez zmian) ... -->
+            <a href="https://0-skar.github.io/0/" id="back-button">
+                <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </a>
+            <div id="export-menu-container">
+                <button id="export-button-main" class="top-bar-button" title="Eksportuj / Importuj">💾</button>
+                <div id="export-options">
+                    <a href="#" id="import-json">Wczytaj sesję (.json)</a>
+                    <a href="#" id="export-json">Zapisz sesję (.json)</a>
+                    <a href="#" id="export-pdf">Eksportuj do .pdf</a>
+                    <a href="#" id="edit-export-button">Edytuj i Zapisz...</a>
+                </div>
+            </div>
+            <h2 id="app-title">Cyfrowy Kumpel</h2>
+            <div id="top-right-buttons">
+                <button id="api-key-button" class="top-bar-button" title="Zarządzaj kluczem API">🔑</button>
+                <button id="tts-toggle-button" class="top-bar-button"></button>
+            </div>
         </div>
         <div id="avatar-container">
-            <!-- ... (bez zmian) ... -->
+            <img id="avatar" src="https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png" alt="Assistant Avatar">
         </div>
         <div id="message-list"></div>
         <div id="controls-container">
@@ -237,7 +235,6 @@
     <input type="file" id="file-input" style="display: none;" accept="image/jpeg,image/png,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
 
     <script>
-        // ... (wszystkie stałe i selektory bez zmian) ...
         const ACCESS_CODE = "2017";
         const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
         const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
@@ -282,165 +279,146 @@
         let voices = [];
         let isTtsEnabled = true;
         let conversationHistory = [];
-        let lastUserMessage = "";
+        let isWaitingForResponse = false;
+        
+        function displayInitialGreeting() { if (conversationHistory.length === 0) { addMessageToChat({role: 'assistant', content: GREETINGS[Math.floor(Math.random() * GREETINGS.length)]}); } }
+        function checkAuthentication() { if (sessionStorage.getItem('isAuthenticated') === 'true') { passwordModal.style.display = 'none'; appContainer.style.display = 'flex'; initSpeechSynthesis(); displayInitialGreeting(); } else { passwordModal.style.display = 'flex'; appContainer.style.display = 'none'; } }
+        function initSpeechSynthesis() { populateVoiceList(); if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = populateVoiceList; }
+        function handlePasswordAttempt() { if (passwordInput.value === ACCESS_CODE) { sessionStorage.setItem('isAuthenticated', 'true'); checkAuthentication(); } else { passwordInput.parentElement.classList.add('is-invalid'); setTimeout(() => { passwordInput.parentElement.classList.remove('is-invalid'); }, 500); } }
+        passwordButton.addEventListener('click', handlePasswordAttempt);
+        passwordInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') handlePasswordAttempt(); });
+        
+        const speakerOnIcon = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
+        const speakerOffIcon = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9.02 12 14v-2.18l-2.01-2.01L12 7.82V4z"/></svg>`;
+        function updateTtsToggleIcon() { ttsToggleButton.innerHTML = isTtsEnabled ? speakerOnIcon : speakerOffIcon; ttsToggleButton.classList.toggle('is-muted', !isTtsEnabled); }
+        ttsToggleButton.addEventListener('click', () => { isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); if (!isTtsEnabled) synth.cancel(); });
+        
+        function populateVoiceList() { voices = synth.getVoices(); }
+        
+        async function handleSubmit(event) {
+            if(event) event.preventDefault();
+            if (isWaitingForResponse) return;
 
-        // ... (wszystkie funkcje aż do handleSubmit bez zmian) ...
-        function displayInitialGreeting() { /*...*/ }
-        function checkAuthentication() { /*...*/ }
-        function initSpeechSynthesis() { /*...*/ }
-        function handlePasswordAttempt() { /*...*/ }
-        //...
-        function downloadPdfFromBase64(filename, base64Data) { /*...*/ }
-
-
-        // === ZAKTUALIZOWANA FUNKCJA handleSubmit Z INDYKATOREM ===
-        async function handleSubmit(isRetry = false) {
-            if (!sessionStorage.getItem('isAuthenticated')) return;
-            let userText;
-            if (isRetry) {
-                userText = lastUserMessage;
-            } else {
-                userText = userInput.value.trim();
-                const lastMessage = conversationHistory[conversationHistory.length - 1];
-                if (!userText && !(lastMessage && lastMessage.attachments)) return;
-                lastUserMessage = userText;
-                if(userText || !(lastMessage && lastMessage.attachments)) {
-                    addMessageToChat(userText, true);
-                }
-                userInput.value = '';
+            const userText = userInput.value.trim();
+            const lastMessage = conversationHistory.length > 0 ? conversationHistory[conversationHistory.length - 1] : null;
+            
+            if (!userText && !(lastMessage && lastMessage.attachments && lastMessage.role === 'user')) {
+                return;
             }
             
-            // --- NOWA LOGIKA: POKAŻ WSKAŹNIK ---
-            const thinkingBubble = document.createElement('div');
-            thinkingBubble.id = 'thinking-bubble';
-            thinkingBubble.className = 'message-bubble assistant-message loading-bubble';
-            thinkingBubble.innerHTML = '<span></span><span></span><span></span>';
-            messageList.appendChild(thinkingBubble);
-            messageList.scrollTop = messageList.scrollHeight;
-            
-            const historySlice = conversationHistory.slice(-30);
+            isWaitingForResponse = true;
+            userInput.disabled = true;
+            micButton.disabled = true;
+
+            if (userText) {
+                addMessageToChat({role: 'user', content: userText});
+            }
+            userInput.value = '';
+
+            const assistantBubble = addMessageToChat({role: 'assistant', content: ""});
+
+            const historySlice = conversationHistory.slice(-20);
             const requestBody = { history: historySlice };
-            
             const userKey = sessionStorage.getItem('userProvidedApiKey');
             if (userKey) { requestBody.apiKey = userKey; }
 
             try {
-                const response = await fetch(CHAT_URL, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(requestBody) 
+                const response = await fetch(CHAT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
                 });
+
                 if (!response.ok) {
                     const errorData = await response.json();
-                    if (errorData.all_keys_exhausted) { showApiKeyModal(); } 
-                    else { throw new Error(errorData.detail || 'Nieznany błąd serwera'); }
-                    return;
+                    throw new Error(errorData.detail || `Błąd serwera: ${response.statusText}`);
                 }
-                const data = await response.json();
 
-                if (data.image_file) {
-                    addMessageToChat(`Oto Twoje zedytowane zdjęcie:`, false, true, [{
-                        name: data.image_file.filename,
-                        mime_type: "image/png",
-                        data: data.image_file.data
-                    }]);
-                } 
-                else if (data.pdf_file) {
-                    addMessageToChat(`Oto Twój plik PDF: ${data.pdf_file.filename}.`, false, false);
-                    downloadPdfFromBase64(data.pdf_file.filename, data.pdf_file.data);
-                } 
-                else if (data.generated_text) {
-                    const assistantText = data.generated_text;
-                    const fileMatch = assistantText.match(/\[FILE:([^\]]+)\]([\s\S]*)\[\/FILE\]/);
-                    const imgMatch = assistantText.match(/\[IMG\](.*?)\[\/IMG\]/);
+                assistantBubble.innerHTML = '';
+                assistantBubble.classList.remove('loading-bubble');
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullResponse = "";
 
-                    if (fileMatch) {
-                        addMessageToChat(assistantText, false, true, null, true);
-                        downloadFile(fileMatch[1], fileMatch[2]);
-                    } else if (imgMatch && imgMatch[1]) {
-                        addMessageToChat(assistantText, false, true, null, true);
-                        generateImage(imgMatch[1]);
-                    } else {
-                        addMessageToChat(assistantText, false);
-                        speak(assistantText);
-                    }
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    fullResponse += decoder.decode(value, { stream: true });
+                    assistantBubble.textContent = fullResponse;
+                    messageList.scrollTop = messageList.scrollHeight;
                 }
+                
+                processFinalResponse(fullResponse);
+
             } catch (error) {
-                addMessageToChat(`Błąd: ${error.message}`, false, false);
-                console.error("Błąd handleSubmit:", error);
+                assistantBubble.innerText = `Przepraszam, wystąpił błąd: ${error.message}`;
             } finally {
-                // --- NOWA LOGIKA: ZAWSZE USUŃ WSKAŹNIK ---
-                const bubbleToRemove = document.getElementById('thinking-bubble');
-                if (bubbleToRemove) {
-                    bubbleToRemove.remove();
-                }
+                isWaitingForResponse = false;
+                userInput.disabled = false;
+                micButton.disabled = false;
+                userInput.focus();
             }
         }
         
-        function copyCode(button) { /* ... (bez zmian) ... */ }
-
-        function downloadFile(fileName, content) { /* ... (bez zmian) ... */ }
-
-        function addMessageToChat(text, isUser, addToHistory = true, attachments = null, isHidden = false) {
-            if (addToHistory) {
-                const historyEntry = { role: isUser ? 'user' : 'assistant', content: text };
-                if (attachments) { historyEntry.attachments = attachments; }
-                if (isHidden) historyEntry.isHidden = true;
-                conversationHistory.push(historyEntry);
+        function processFinalResponse(text) {
+            // Zapisz pełną odpowiedź do historii po zakończeniu streamingu
+            conversationHistory.push({ role: 'assistant', content: text });
+            // Tutaj można dodać parsowanie tagów i wywoływanie narzędzi, jeśli backend nie obsługuje ich w streamie
+        }
+        
+        function addMessageToChat(message) {
+            if (message.content || (message.attachments && message.attachments.length > 0)) {
+                conversationHistory.push(message);
             }
-            if (isHidden) return;
+            
             const messageBubble = document.createElement('div');
-            messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
-            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG|FILE:.+?|PDF:.+?|EDIT_IMAGE:.+?|COMPOSITE_IMAGE:.+?)\]/gi, '');
-
-            const fileMatch = text.match(/\[FILE:([^\]]+)\]([\s\S]*)\[\/FILE\]/);
-            const codeMatch = text.match(/```(\w*)\n([\s\S]*)```/);
-
-            if (fileMatch) {
-                messageBubble.innerHTML = `<p>Przygotowałem dla Ciebie plik:</p><a href="#" class="download-file-button" onclick="event.preventDefault(); downloadFile('${fileMatch[1]}', \`${fileMatch[2].replace(/`/g, '\\`')}\`)">${fileMatch[1]}</a>`;
-            } else if (codeMatch) {
-                const lang = codeMatch[1] || 'plaintext';
-                const code = codeMatch[2];
-                messageBubble.innerHTML = `<pre class="language-${lang}"><button class="copy-code-button" onclick="copyCode(this)">Kopiuj</button><code>${code.replace(/</g, "<").replace(/>/g, ">")}</code></pre>`;
-                if (window.Prism) Prism.highlightAllUnder(messageBubble);
-            } else if (attachments && attachments[0] && attachments[0].mime_type.startsWith('image/')) {
-                const image = document.createElement('img');
-                image.src = `data:${attachments[0].mime_type};base64,${attachments[0].data}`;
-                image.alt = cleanText || 'Załączony obraz';
-                messageBubble.appendChild(image);
-                if (cleanText) {
-                    const textNode = document.createElement('p');
-                    textNode.innerText = cleanText;
-                    messageBubble.appendChild(textNode);
+            messageBubble.className = `message-bubble ${message.role === 'user' ? 'user' : 'assistant'}-message`;
+            
+            if(message.role === 'assistant' && message.content === "") {
+                messageBubble.classList.add('loading-bubble');
+                messageBubble.innerHTML = '<span></span><span></span><span></span>';
+            } else if (message.attachments && message.attachments[0]) {
+                const attachment = message.attachments[0];
+                if (attachment.mime_type.startsWith('image/')) {
+                    const image = document.createElement('img');
+                    image.src = `data:${attachment.mime_type};base64,${attachment.data}`;
+                    image.alt = message.content || 'Załączony obraz';
+                    messageBubble.appendChild(image);
                 }
+                const textNode = document.createElement('p');
+                textNode.textContent = message.content;
+                messageBubble.appendChild(textNode);
             } else {
-                if (cleanText) messageBubble.innerText = cleanText;
+                messageBubble.textContent = message.content;
             }
-            if (messageBubble.innerHTML || messageBubble.innerText) {
-                messageList.appendChild(messageBubble);
-                messageList.scrollTop = messageList.scrollHeight;
-            }
+            
+            messageList.appendChild(messageBubble);
+            messageList.scrollTop = messageList.scrollHeight;
+            return messageBubble;
         }
-        
-        // ... (reszta kodu bez zmian, w tym obsługa mikrofonu i reszta event listenerów) ...
 
-        chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(false); });
-        
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SpeechRecognition) {
-            const recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            let isListening = false;
-            micButton.addEventListener('click', () => { if (!sessionStorage.getItem('isAuthenticated')) return; if (isListening) { recognition.stop(); } else { userInput.value = ''; recognition.lang = 'pl-PL'; recognition.start(); } });
-            recognition.onstart = () => { isListening = true; micButton.classList.add('is-listening'); };
-            recognition.onend = () => { isListening = false; micButton.classList.remove('is-listening'); if (userInput.value.trim()){ handleSubmit(false); } };
-            recognition.onresult = (event) => { let interim_transcript = ''; let final_transcript = ''; for (let i = event.resultIndex; i < event.results.length; ++i) { const transcript = event.results[i][0].transcript; if (event.results[i].isFinal) { final_transcript += transcript; } else { interim_transcript += transcript; } } userInput.value = final_transcript + interim_transcript; };
-            recognition.onerror = (event) => { console.error("Błąd rozpoznawania mowy:", event.error); isListening = false; micButton.classList.remove('is-listening'); };
-        } else {
-            micButton.style.display = 'none';
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const fileData = { name: file.name, mime_type: file.type || 'application/octet-stream', data: e.target.result.split(',')[1] };
+                addMessageToChat({
+                    role: 'user', 
+                    content: `Załączono plik: ${file.name}`, 
+                    attachments: [fileData] 
+                });
+                handleSubmit(null);
+            };
+            reader.readAsDataURL(file);
         }
-        
+
+        chatForm.addEventListener('submit', handleSubmit);
+        attachmentButton.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelect);
+
+        // Inicjalizacja reszty...
         updateTtsToggleIcon();
         checkAuthentication();
     </script>
