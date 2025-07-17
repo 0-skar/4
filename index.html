@@ -357,7 +357,7 @@
                 reader.onloadend = () => {
                     const base64data = reader.result;
                     const fileData = { name: `generated_image.png`, mime_type: blob.type, data: base64data.split(',')[1] };
-                    addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, [fileData]); // Zmieniono na tablicę
+                    addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, [fileData]);
                 };
                 reader.readAsDataURL(blob);
             } catch (error) { addMessageToChat("Ajj, coś poszło nie tak i farby mi się rozlały. 😕", false, false); console.error("Błąd generowania obrazu:", error); }
@@ -537,10 +537,12 @@
                         data: data.image_file.data
                     }]);
                 }
+                // --- POCZĄTEK AKTUALIZACJI ---
                 else if (data.pdf_file) {
-                    addMessageToChat(`Oto Twój plik PDF: ${data.pdf_file.filename}.`, false, false);
+                    addMessageToChat(`Świetnie! Twoja ilustrowana opowieść jest gotowa. Pobieram plik: ${data.pdf_file.filename}`, false, false);
                     downloadPdfFromBase64(data.pdf_file.filename, data.pdf_file.data);
                 } 
+                // --- KONIEC AKTUALIZACJI ---
                 else if (data.generated_text) {
                     const assistantText = data.generated_text;
                     const fileMatch = assistantText.match(/\[FILE:([^\]]+)\]([\s\S]*)\[\/FILE\]/);
@@ -589,7 +591,7 @@
             if (isHidden) return;
             const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
-            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG|FILE:.+?|PDF:.+?|EDIT_IMAGE:.+?)\]/gi, '');
+            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG|FILE:.+?|PDF:.+?|EDIT_IMAGE:.+?|STORY_PDF)\]/gi, '');
 
             const fileMatch = text.match(/\[FILE:([^\]]+)\]([\s\S]*)\[\/FILE\]/);
             const codeMatch = text.match(/```(\w*)\n([\s\S]*)```/);
