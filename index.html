@@ -13,19 +13,14 @@
     <script src="https://unpkg.com/docx@8.5.0/build/index.js" defer></script>
     <style>
         :root {
-            --body-bg: #f0f2f5;
-            --chat-area-bg: #e9ecef;
-            --user-bubble-bg: #007bff;
-            --assistant-bubble-bg: #ffffff;
-            --controls-bg: #ffffff;
-            --border-color: #ced0d4;
+            --body-bg: #f0f2f5; --chat-area-bg: #e9ecef; --user-bubble-bg: #007bff;
+            --assistant-bubble-bg: #ffffff; --controls-bg: #ffffff; --border-color: #ced0d4;
         }
         html, body {
             height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--body-bg);
         }
         
-        /* --- STYLE DLA WSKAŹNIKA ŁADOWANIA --- */
         .loading-dots span {
             display: inline-block; width: 8px; height: 8px; border-radius: 50%;
             background-color: #8e8e8e; margin: 0 3px;
@@ -40,7 +35,6 @@
         .assistant-message.loading {
             display: flex; align-items: center; width: fit-content; padding: 12px 16px;
         }
-        /* --- KONIEC STYLÓW --- */
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; padding: 2rem; border-radius: 12px; text-align: center; color: #333; box-shadow: 0 5px 25px rgba(0,0,0,0.3); max-width: 500px; width: 90%; display: flex; flex-direction: column; }
@@ -51,9 +45,8 @@
         #api-key-modal-content a { color: #007bff; text-decoration: none; font-weight: bold; }
         #api-key-modal-content a:hover { text-decoration: underline; }
         .button-container { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; margin-top: 1.5rem; }
-        #password-modal-content .button-container { width: 75%; margin-left: auto; margin-right: auto; }
-        #password-button { background-color: #007bff; padding: 8px 16px; }
-        #return-button { background-color: #6c757d; text-decoration: none; display: block; padding: 8px 16px; }
+        #password-button { background-color: #007bff; }
+        #return-button { background-color: #6c757d; text-decoration: none; display: block; }
         #save-private-key-button, #save-edited-button { background-color: #007bff; }
         #donate-key-button { background-color: #28a745; }
         #close-api-key-modal, #close-edit-modal { background-color: #6c757d; }
@@ -131,9 +124,7 @@
     </div>
     <div id="app-container">
         <div id="app-top-bar">
-            <a href="https://0-skar.github.io/0/" id="back-button">
-                <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-            </a>
+            <a href="https://0-skar.github.io/0/" id="back-button"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></a>
             <div id="export-menu-container">
                 <button id="export-button-main" class="top-bar-button" title="Eksportuj / Importuj">💾</button>
                 <div id="export-options">
@@ -208,7 +199,7 @@
         let isTtsEnabled = true;
         let conversationHistory = [];
         let lastUserMessage = "";
-        let loadingBubble = null; // Zmienna do przechowywania dymka z kropkami
+        let loadingBubble = null;
 
         function displayInitialGreeting() { if (conversationHistory.length === 0) { const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]; addMessageToChat(randomGreeting, false); speak(randomGreeting); } }
         function checkAuthentication() { if (sessionStorage.getItem('isAuthenticated') === 'true') { passwordModal.style.display = 'none'; appContainer.style.display = 'flex'; initSpeechSynthesis(); displayInitialGreeting(); } else { passwordModal.style.display = 'flex'; appContainer.style.display = 'none'; } }
@@ -263,11 +254,7 @@
         function exportConversation(history) {
             const dataStr = JSON.stringify(history.filter(m => !m.isHidden), null, 2);
             const blob = new Blob([dataStr], { type: "application/json" });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `rozmowa.json`;
-            a.click();
-            URL.revokeObjectURL(a.href);
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `rozmowa.json`; a.click(); URL.revokeObjectURL(a.href);
         }
         
         async function exportToPdf() {
@@ -276,11 +263,7 @@
                 const response = await fetch(EXPORT_PDF_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ history: conversationHistory }) });
                 if (!response.ok) throw new Error("Błąd generowania PDF.");
                 const blob = await response.blob();
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = 'rozmowa.pdf';
-                a.click();
-                URL.revokeObjectURL(a.href);
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'rozmowa.pdf'; a.click(); URL.revokeObjectURL(a.href);
             } catch (error) { addMessageToChat(`Błąd eksportu: ${error.message}`, false, false); }
         }
 
@@ -318,8 +301,7 @@
         fileInput.addEventListener('change', handleFileSelect);
 
         function downloadPdfFromBase64(filename, base64Data) {
-            const byteCharacters = atob(base64Data);
-            const byteNumbers = new Array(byteCharacters.length);
+            const byteCharacters = atob(base64Data); const byteNumbers = new Array(byteCharacters.length);
             for (let i = 0; i < byteCharacters.length; i++) { byteNumbers[i] = byteCharacters.charCodeAt(i); }
             const blob = new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' });
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
@@ -329,11 +311,11 @@
         async function handleSubmit(isRetry = false) {
             if (!sessionStorage.getItem('isAuthenticated')) return;
             let userText;
-            if (isRetry) { userText = lastUserMessage; }
+            if (isRetry) { userText = lastUserMessage; } 
             else {
                 userText = userInput.value.trim();
                 const lastMsg = conversationHistory[conversationHistory.length - 1];
-                if (!userText && !(lastMsg && lastMsg.attachments)) return;
+                if (!userText && !(lastMsg && lastMsg.attachments && lastMsg.role === 'user')) return;
                 lastUserMessage = userText;
                 if(userText || !(lastMsg && lastMsg.attachments && lastMsg.role === 'user')) addMessageToChat(userText, true);
                 userInput.value = '';
@@ -341,9 +323,11 @@
             
             if (loadingBubble) loadingBubble.remove();
             loadingBubble = addMessageToChat("", false, false);
-            loadingBubble.classList.add("loading");
-            loadingBubble.innerHTML = `<div class="loading-dots"><span></span><span></span><span></span></div>`;
-            messageList.scrollTop = messageList.scrollHeight;
+            if (loadingBubble) {
+                loadingBubble.classList.add("loading");
+                loadingBubble.innerHTML = `<div class="loading-dots"><span></span><span></span><span></span></div>`;
+                messageList.scrollTop = messageList.scrollHeight;
+            }
 
             try {
                 const response = await fetch(CHAT_URL, { 
@@ -356,7 +340,7 @@
 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    if (errorData.all_keys_exhausted) { showApiKeyModal(); } 
+                    if (errorData.all_keys_exhausted) { showApiKeyModal(); addMessageToChat("Wszystkie publiczne klucze API zostały wyczerpane. Proszę, podaj własny.", false, false); } 
                     else { throw new Error(errorData.detail || 'Nieznany błąd serwera'); }
                     return;
                 }
@@ -414,7 +398,7 @@
                 } else { messageBubble.innerText = cleanText; }
             }
             
-            if (messageBubble.innerHTML || messageBubble.innerText || attachments) {
+            if (messageBubble.innerHTML || messageBubble.innerText || (attachments && attachments.length > 0)) {
                 messageList.appendChild(messageBubble);
                 messageList.scrollTop = messageList.scrollHeight;
             }
