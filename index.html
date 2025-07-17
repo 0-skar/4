@@ -176,7 +176,7 @@
     <div id="api-key-modal" class="modal-overlay">
         <div id="api-key-modal-content" class="modal-content">
             <h3 id="api-key-modal-title">Podaj własny klucz API</h3>
-            <p id="api-key-modal-desc">Jeśli wspólne klucze API się wyczerpią, możesz kontynuować rozmowę używając swojego darmowego klucza Gemini.</p>
+            <p>Jeśli wspólne klucze API się wyczerpią, możesz kontynuować rozmowę używając swojego darmowego klucza Gemini.</p>
             <p>Możesz go uzyskać na stronie <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p>
             <p>Możesz też wesprzeć projekt, dodając swój klucz do wspólnej, rotacyjnej puli dla wszystkich użytkowników.</p>
             <input type="password" id="user-api-key-input" placeholder="Wklej swój klucz API tutaj">
@@ -280,19 +280,15 @@
         let conversationHistory = [];
         let isWaitingForResponse = false;
         
-        function displayInitialGreeting() { if (conversationHistory.length === 0) { const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]; addMessageToChat({role: 'assistant', content: randomGreeting}); } }
+        function displayInitialGreeting() { if (conversationHistory.length === 0) { addMessageToChat({role: 'assistant', content: GREETINGS[Math.floor(Math.random() * GREETINGS.length)]}); } }
         function checkAuthentication() { if (sessionStorage.getItem('isAuthenticated') === 'true') { passwordModal.style.display = 'none'; appContainer.style.display = 'flex'; initSpeechSynthesis(); displayInitialGreeting(); } else { passwordModal.style.display = 'flex'; appContainer.style.display = 'none'; } }
         function initSpeechSynthesis() { populateVoiceList(); if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = populateVoiceList; }
         function handlePasswordAttempt() { if (passwordInput.value === ACCESS_CODE) { sessionStorage.setItem('isAuthenticated', 'true'); checkAuthentication(); } else { passwordInput.parentElement.classList.add('is-invalid'); setTimeout(() => { passwordInput.parentElement.classList.remove('is-invalid'); }, 500); } }
-        passwordButton.addEventListener('click', handlePasswordAttempt);
-        passwordInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') handlePasswordAttempt(); });
         
         const speakerOnIcon = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
         const speakerOffIcon = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9.02 12 14v-2.18l-2.01-2.01L12 7.82V4z"/></svg>`;
         
         function updateTtsToggleIcon() { ttsToggleButton.innerHTML = isTtsEnabled ? speakerOnIcon : speakerOffIcon; ttsToggleButton.classList.toggle('is-muted', !isTtsEnabled); }
-        ttsToggleButton.addEventListener('click', () => { isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); if (!isTtsEnabled) synth.cancel(); });
-        
         function populateVoiceList() { voices = synth.getVoices(); }
 
         async function handleSubmit(event) {
@@ -302,17 +298,13 @@
             const userText = userInput.value.trim();
             const lastMessage = conversationHistory.length > 0 ? conversationHistory[conversationHistory.length - 1] : null;
             
-            if (!userText && !(lastMessage && lastMessage.attachments && lastMessage.role === 'user')) {
-                return;
-            }
+            if (!userText && !(lastMessage && lastMessage.attachments && lastMessage.role === 'user')) return;
             
             isWaitingForResponse = true;
             userInput.disabled = true;
             micButton.disabled = true;
 
-            if (userText) {
-                addMessageToChat({role: 'user', content: userText});
-            }
+            if (userText) addMessageToChat({role: 'user', content: userText});
             userInput.value = '';
 
             const assistantBubble = addMessageToChat({role: 'assistant', content: ""});
@@ -320,7 +312,7 @@
             const historySlice = conversationHistory.slice(-20);
             const requestBody = { history: historySlice };
             const userKey = sessionStorage.getItem('userProvidedApiKey');
-            if (userKey) { requestBody.apiKey = userKey; }
+            if (userKey) requestBody.apiKey = userKey;
 
             try {
                 const response = await fetch(CHAT_URL, {
@@ -329,30 +321,31 @@
                     body: JSON.stringify(requestBody)
                 });
 
+                assistantBubble.remove();
+
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.detail || `Błąd serwera: ${response.statusText}`);
-                }
-
-                assistantBubble.innerHTML = '';
-                assistantBubble.classList.remove('loading-bubble');
-                
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let fullResponse = "";
-
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-                    fullResponse += decoder.decode(value, { stream: true });
-                    assistantBubble.textContent = fullResponse;
-                    messageList.scrollTop = messageList.scrollHeight;
+                    throw new Error(errorData.error || `Błąd serwera: ${response.statusText}`);
                 }
                 
-                processFinalResponse(fullResponse);
+                const data = await response.json();
+
+                if (data.image_file) {
+                    addMessageToChat({
+                        role: 'assistant',
+                        content: `Oto Twoje zedytowane zdjęcie:`,
+                        attachments: [{
+                            name: data.image_file.filename,
+                            mime_type: "image/png",
+                            data: data.image_file.data
+                        }]
+                    });
+                } else if (data.generated_text) {
+                    addMessageToChat({ role: 'assistant', content: data.generated_text });
+                }
 
             } catch (error) {
-                assistantBubble.innerText = `Przepraszam, wystąpił błąd: ${error.message}`;
+                addMessageToChat({role: 'assistant', content: `Przepraszam, wystąpił krytyczny błąd: ${error.message}`});
             } finally {
                 isWaitingForResponse = false;
                 userInput.disabled = false;
@@ -361,17 +354,8 @@
             }
         }
         
-        function processFinalResponse(text) {
-            const lastMessageIndex = conversationHistory.findIndex(msg => msg.role === 'assistant' && msg.content === "");
-            if(lastMessageIndex > -1) {
-                conversationHistory[lastMessageIndex].content = text;
-            }
-        }
-        
         function addMessageToChat(message) {
-            if (message.content || (message.attachments && message.attachments.length > 0)) {
-                conversationHistory.push(message);
-            }
+            conversationHistory.push(message);
             
             const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${message.role === 'user' ? 'user' : 'assistant'}-message`;
@@ -387,9 +371,11 @@
                     image.alt = message.content || 'Załączony obraz';
                     messageBubble.appendChild(image);
                 }
-                const textNode = document.createElement('p');
-                textNode.textContent = message.content;
-                messageBubble.appendChild(textNode);
+                if (message.content) {
+                    const textNode = document.createElement('p');
+                    textNode.textContent = message.content;
+                    messageBubble.appendChild(textNode);
+                }
             } else {
                 messageBubble.textContent = message.content;
             }
@@ -415,21 +401,38 @@
             reader.readAsDataURL(file);
         }
 
+        // --- Event Listeners ---
+        passwordButton.addEventListener('click', handlePasswordAttempt);
+        passwordInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') handlePasswordAttempt(); });
         chatForm.addEventListener('submit', handleSubmit);
         attachmentButton.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', handleFileSelect);
-
-        // --- PRZYWRÓCONE EVENT LISTENERY ---
         apiKeyButton.addEventListener('click', () => { apiKeyModal.style.display = 'flex'; });
         closeApiKeyModal.addEventListener('click', () => { apiKeyModal.style.display = 'none'; });
         exportButtonMain.addEventListener('click', () => { exportOptions.style.display = exportOptions.style.display === 'block' ? 'none' : 'block'; });
         document.addEventListener('click', (e) => { if (!exportButtonMain.contains(e.target) && !exportOptions.contains(e.target)) exportOptions.style.display = 'none'; });
-        importJsonBtn.addEventListener('click', (e) => { e.preventDefault(); /* importConversation() */ alert("Import wkrótce!"); exportOptions.style.display = 'none'; });
-        exportJsonBtn.addEventListener('click', (e) => { e.preventDefault(); /* exportConversation() */ alert("Eksport wkrótce!"); exportOptions.style.display = 'none'; });
-        exportPdfBtn.addEventListener('click', (e) => { e.preventDefault(); /* exportToPdf() */ alert("Eksport wkrótce!"); exportOptions.style.display = 'none'; });
+        importJsonBtn.addEventListener('click', (e) => { e.preventDefault(); alert("Funkcja wkrótce!"); exportOptions.style.display = 'none'; });
+        exportJsonBtn.addEventListener('click', (e) => { e.preventDefault(); alert("Funkcja wkrótce!"); exportOptions.style.display = 'none'; });
+        exportPdfBtn.addEventListener('click', (e) => { e.preventDefault(); alert("Funkcja wkrótce!"); exportOptions.style.display = 'none'; });
+        editExportButton.addEventListener('click', (e) => { e.preventDefault(); alert("Funkcja wkrótce!"); exportOptions.style.display = 'none'; });
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            let isListening = false;
+            micButton.addEventListener('click', () => { if (!sessionStorage.getItem('isAuthenticated')) return; if (isListening) { recognition.stop(); } else { userInput.value = ''; recognition.lang = 'pl-PL'; recognition.start(); } });
+            recognition.onstart = () => { isListening = true; micButton.classList.add('is-listening'); };
+            recognition.onend = () => { isListening = false; micButton.classList.remove('is-listening'); if (userInput.value.trim()){ handleSubmit(null); } };
+            recognition.onresult = (event) => { let interim_transcript = ''; let final_transcript = ''; for (let i = event.resultIndex; i < event.results.length; ++i) { const transcript = event.results[i][0].transcript; if (event.results[i].isFinal) { final_transcript += transcript; } else { interim_transcript += transcript; } } userInput.value = final_transcript + interim_transcript; };
+            recognition.onerror = (event) => { console.error("Błąd rozpoznawania mowy:", event.error); isListening = false; micButton.classList.remove('is-listening'); };
+        } else {
+            micButton.style.display = 'none';
+        }
         
         updateTtsToggleIcon();
         checkAuthentication();
     </script>
 </body>
-</html>
+</html>```
