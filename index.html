@@ -21,6 +21,7 @@
             background-color: var(--body-bg);
         }
         
+        /* --- NOWE STYLE DLA WSKAŹNIKA ŁADOWANIA --- */
         .loading-dots span {
             display: inline-block; width: 8px; height: 8px; border-radius: 50%;
             background-color: #8e8e8e; margin: 0 3px;
@@ -199,7 +200,7 @@
         let isTtsEnabled = true;
         let conversationHistory = [];
         let lastUserMessage = "";
-        let loadingBubble = null;
+        let loadingBubble = null; // --- ZMIANA: Zmienna do przechowywania dymka ładowania ---
 
         function displayInitialGreeting() { if (conversationHistory.length === 0) { const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]; addMessageToChat(randomGreeting, false); speak(randomGreeting); } }
         function checkAuthentication() { if (sessionStorage.getItem('isAuthenticated') === 'true') { passwordModal.style.display = 'none'; appContainer.style.display = 'flex'; initSpeechSynthesis(); displayInitialGreeting(); } else { passwordModal.style.display = 'flex'; appContainer.style.display = 'none'; } }
@@ -308,6 +309,7 @@
             a.click(); URL.revokeObjectURL(a.href);
         }
 
+        // --- ZMIANA: Zaktualizowana funkcja handleSubmit z obsługą ładowania ---
         async function handleSubmit(isRetry = false) {
             if (!sessionStorage.getItem('isAuthenticated')) return;
             let userText;
@@ -321,8 +323,9 @@
                 userInput.value = '';
             }
             
+            // Pokaż wskaźnik ładowania
             if (loadingBubble) loadingBubble.remove();
-            loadingBubble = addMessageToChat("", false, false);
+            loadingBubble = addMessageToChat("", false, false); // Stwórz pusty dymek
             if (loadingBubble) {
                 loadingBubble.classList.add("loading");
                 loadingBubble.innerHTML = `<div class="loading-dots"><span></span><span></span><span></span></div>`;
@@ -336,7 +339,7 @@
                     body: JSON.stringify({ history: conversationHistory.slice(-30), apiKey: sessionStorage.getItem('userProvidedApiKey') }) 
                 });
                 
-                if (loadingBubble) loadingBubble.remove();
+                if (loadingBubble) loadingBubble.remove(); // Usuń wskaźnik po otrzymaniu odpowiedzi
 
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -356,33 +359,24 @@
                 
                 if (data.generated_text) {
                     const assistantText = data.generated_text;
-                    const fileMatch = assistantText.match(/\[FILE:([^\]]+)\]([\s\S]*)\[\/FILE\]/);
-                    const imgMatch = assistantText.match(/\[IMG\](.*?)\[\/IMG\]/);
-
-                    if (fileMatch) {
-                        addMessageToChat(assistantText, false, true, null, true); downloadFile(fileMatch[1], fileMatch[2]);
-                    } else if (imgMatch && imgMatch[1]) {
-                        addMessageToChat(assistantText, false, true, null, true); generateImage(imgMatch[1]);
-                    } else {
-                        addMessageToChat(assistantText, false); speak(assistantText);
-                    }
+                    addMessageToChat(assistantText, false);
+                    speak(assistantText);
                 }
             } catch (error) {
-                if (loadingBubble) loadingBubble.remove();
+                if (loadingBubble) loadingBubble.remove(); // Usuń wskaźnik również w przypadku błędu
                 addMessageToChat(`Błąd: ${error.message}`, false, false);
             }
         }
         
         function copyCode(button) { const code = button.parentElement.querySelector('code'); navigator.clipboard.writeText(code.innerText).then(() => { button.innerText = 'Skopiowano!'; setTimeout(() => { button.innerText = 'Kopiuj'; }, 2000); }); }
-        function downloadFile(fileName, content) { const blob = new Blob([content], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName; a.click(); URL.revokeObjectURL(a.href); }
-
+        
         function addMessageToChat(text, isUser, addToHistory = true, attachments = null, isHidden = false) {
             if (addToHistory) { conversationHistory.push({ role: isUser ? 'user' : 'assistant', content: text, attachments, isHidden }); }
             if (isHidden) return null;
             
             const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
-            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG|FILE:.+?|PDF:.+?|EDIT_IMAGE:.+?|STORY_PDF)\]/gi, '').trim();
+            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG|FILE:.+?|PDF:.+?|EDIT_IMAGE:.+?|STORY_PDF|CREATE_COMPOSITION:.+?)\]/gi, '').trim();
 
             if (attachments && attachments[0] && attachments[0].mime_type.startsWith('image/')) {
                 const image = document.createElement('img');
@@ -398,7 +392,8 @@
                 } else { messageBubble.innerText = cleanText; }
             }
             
-            if (messageBubble.innerHTML || messageBubble.innerText || (attachments && attachments.length > 0)) {
+            // --- ZMIANA: Dodaj dymek do czatu tylko, jeśli ma jakąś treść (tekst, obraz lub jest to pusty dymek ładowania) ---
+            if (messageBubble.innerHTML.trim() || messageBubble.innerText.trim() || (attachments && attachments.length > 0) || text === "") {
                 messageList.appendChild(messageBubble);
                 messageList.scrollTop = messageList.scrollHeight;
             }
