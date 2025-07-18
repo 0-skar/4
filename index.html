@@ -73,7 +73,14 @@
         #avatar { width: 90%; max-width: 250px; height: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         #message-list { flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background-color: var(--chat-area-bg); }
         .message-bubble { padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4; word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .user-message { background-color: var(--user-bubble-bg); color: white; align-self: flex-end; } /* User messages on the right */
+        
+        /* --- ZMIANA --- */
+        .user-message { 
+            background-color: var(--user-bubble-bg); 
+            color: white; 
+            /* Usunięto 'align-self: flex-end;' aby wszystkie dymki były po lewej stronie */
+        }
+        
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
         #chat-form { display: flex; align-items: center; }
@@ -82,7 +89,6 @@
         #micButton.is-listening { background-color: #fa383e; }
         #userInput { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 18px; font-size: 1rem; background: #f0f2f5; }
 
-        /* --- NOWOŚĆ: Style dla miniaturki obrazu i modala --- */
         .chat-image-thumbnail {
             max-width: 250px;
             max-height: 250px;
@@ -97,7 +103,7 @@
             filter: brightness(0.9);
         }
         #image-modal {
-            background: rgba(0,0,0,0.85); /* Slightly darker for better focus */
+            background: rgba(0,0,0,0.85);
         }
         #full-size-image {
             max-width: 90vw;
@@ -159,7 +165,6 @@
         </div>
     </div>
 
-    <!-- --- NOWOŚĆ: Modal do wyświetlania powiększonych obrazów --- -->
     <div id="image-modal" class="modal-overlay">
         <span id="close-image-modal">×</span>
         <img id="full-size-image" src="" alt="Powiększony obraz">
@@ -237,7 +242,6 @@
         const exportPdfBtn = document.getElementById('export-pdf');
         const editExportButton = document.getElementById('edit-export-button');
         
-        // --- NOWOŚĆ: Pobranie elementów modala obrazu ---
         const imageModal = document.getElementById('image-modal');
         const fullSizeImage = document.getElementById('full-size-image');
         const closeImageModal = document.getElementById('close-image-modal');
@@ -317,13 +321,12 @@
         closeEditModal.addEventListener('click', hideEditModal);
         saveEditedButton.addEventListener('click', saveAndDownloadEdited);
         
-        // --- NOWOŚĆ: Event listenery do zamykania modala z obrazem ---
         closeImageModal.addEventListener('click', () => {
             imageModal.style.display = 'none';
         });
 
         imageModal.addEventListener('click', (e) => {
-            if (e.target === imageModal) { // Zamknij tylko jeśli kliknięto tło, a nie obraz
+            if (e.target === imageModal) {
                 imageModal.style.display = 'none';
             }
         });
@@ -423,7 +426,6 @@
                 image.src = `data:${attachments[0].mime_type};base64,${attachments[0].data}`;
                 image.alt = cleanText || 'Załączony obraz';
                 
-                // --- ZMIANA: Dodanie klasy i event listenera do obrazu ---
                 image.className = 'chat-image-thumbnail';
                 image.addEventListener('dblclick', () => {
                     fullSizeImage.src = image.src;
@@ -433,11 +435,10 @@
                 messageBubble.appendChild(image);
                 if (cleanText) { 
                     const p = document.createElement('p'); 
-                    // Jeśli użytkownik załączył plik, tekst "Załączono: nazwa_pliku" pojawi się pod obrazkiem.
                     if (isUser && text.startsWith('Załączono:')) {
                         p.innerText = text;
                         p.style.fontSize = '0.8rem';
-                        p.style.color = isUser ? '#e0e0e0' : '#65676b';
+                        p.style.color = '#65676b';
                     } else {
                         p.innerText = cleanText;
                     }
