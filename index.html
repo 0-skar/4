@@ -20,8 +20,6 @@
             height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--body-bg);
         }
-        
-        /* --- NOWE STYLE DLA WSKAŹNIKA ŁADOWANIA --- */
         .loading-dots span {
             display: inline-block; width: 8px; height: 8px; border-radius: 50%;
             background-color: #8e8e8e; margin: 0 3px;
@@ -36,7 +34,6 @@
         .assistant-message.loading {
             display: flex; align-items: center; width: fit-content; padding: 12px 16px;
         }
-
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background: white; padding: 2rem; border-radius: 12px; text-align: center; color: #333; box-shadow: 0 5px 25px rgba(0,0,0,0.3); max-width: 500px; width: 90%; display: flex; flex-direction: column; }
         .modal-content input[type="password"], #edit-history-textarea { display: block; width: 90%; margin: 1.5rem auto; padding: 12px; font-size: 1.2rem; text-align: center; border: 2px solid var(--border-color); border-radius: 8px; }
@@ -76,15 +73,53 @@
         #avatar { width: 90%; max-width: 250px; height: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         #message-list { flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background-color: var(--chat-area-bg); }
         .message-bubble { padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4; word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .user-message { background-color: var(--user-bubble-bg); color: white; }
+        .user-message { background-color: var(--user-bubble-bg); color: white; align-self: flex-end; } /* User messages on the right */
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
-        .assistant-message img { max-width: 100%; border-radius: 10px; margin-top: 8px; display: block; }
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
         #chat-form { display: flex; align-items: center; }
         .chat-form-button { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
         #attachment-button { background: transparent; color: #65676b; font-size: 1.5rem; border-radius: 0; width: auto; height: auto; margin: 0 8px 0 4px; padding: 0; cursor: pointer; border: none; }
         #micButton.is-listening { background-color: #fa383e; }
         #userInput { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 18px; font-size: 1rem; background: #f0f2f5; }
+
+        /* --- NOWOŚĆ: Style dla miniaturki obrazu i modala --- */
+        .chat-image-thumbnail {
+            max-width: 250px;
+            max-height: 250px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin-top: 8px;
+            display: block;
+        }
+        .chat-image-thumbnail:hover {
+            transform: scale(1.05);
+            filter: brightness(0.9);
+        }
+        #image-modal {
+            background: rgba(0,0,0,0.85); /* Slightly darker for better focus */
+        }
+        #full-size-image {
+            max-width: 90vw;
+            max-height: 90vh;
+            border-radius: 5px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+        #close-image-modal {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+            z-index: 1001;
+        }
+        #close-image-modal:hover {
+            color: #bbb;
+        }
+
     </style>
 </head>
 <body>
@@ -123,6 +158,13 @@
             </div>
         </div>
     </div>
+
+    <!-- --- NOWOŚĆ: Modal do wyświetlania powiększonych obrazów --- -->
+    <div id="image-modal" class="modal-overlay">
+        <span id="close-image-modal">×</span>
+        <img id="full-size-image" src="" alt="Powiększony obraz">
+    </div>
+
     <div id="app-container">
         <div id="app-top-bar">
             <a href="https://0-skar.github.io/0/" id="back-button"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></a>
@@ -195,12 +237,17 @@
         const exportPdfBtn = document.getElementById('export-pdf');
         const editExportButton = document.getElementById('edit-export-button');
         
+        // --- NOWOŚĆ: Pobranie elementów modala obrazu ---
+        const imageModal = document.getElementById('image-modal');
+        const fullSizeImage = document.getElementById('full-size-image');
+        const closeImageModal = document.getElementById('close-image-modal');
+
         const synth = window.speechSynthesis;
         let voices = [];
         let isTtsEnabled = true;
         let conversationHistory = [];
         let lastUserMessage = "";
-        let loadingBubble = null; // --- ZMIANA: Zmienna do przechowywania dymka ładowania ---
+        let loadingBubble = null;
 
         function displayInitialGreeting() { if (conversationHistory.length === 0) { const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]; addMessageToChat(randomGreeting, false); speak(randomGreeting); } }
         function checkAuthentication() { if (sessionStorage.getItem('isAuthenticated') === 'true') { passwordModal.style.display = 'none'; appContainer.style.display = 'flex'; initSpeechSynthesis(); displayInitialGreeting(); } else { passwordModal.style.display = 'flex'; appContainer.style.display = 'none'; } }
@@ -226,23 +273,6 @@
             utterance.onstart = () => { avatar.src = AVATAR_TALKING_URL; };
             utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
             synth.speak(utterance);
-        }
-        
-        async function generateImage(prompt) {
-            addMessageToChat("Chwileczkę, już się biorę za malowanie... 🎨", false, false);
-            try {
-                const fullUrl = IMAGE_BACKEND_URL + encodeURIComponent(prompt);
-                const response = await fetch(fullUrl, { method: 'POST' });
-                if (!response.ok) throw new Error(`Błąd serwera: ${response.statusText}`);
-                const blob = await response.blob();
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const base64data = reader.result;
-                    const fileData = { name: `generated_image.png`, mime_type: blob.type, data: base64data.split(',')[1] };
-                    addMessageToChat(`[IMG]${prompt}[/IMG]`, false, true, [fileData]);
-                };
-                reader.readAsDataURL(blob);
-            } catch (error) { addMessageToChat(`Coś poszło nie tak: ${error.message}`, false, false); }
         }
         
         function showApiKeyModal() { apiKeyModal.style.display = 'flex'; }
@@ -287,6 +317,18 @@
         closeEditModal.addEventListener('click', hideEditModal);
         saveEditedButton.addEventListener('click', saveAndDownloadEdited);
         
+        // --- NOWOŚĆ: Event listenery do zamykania modala z obrazem ---
+        closeImageModal.addEventListener('click', () => {
+            imageModal.style.display = 'none';
+        });
+
+        imageModal.addEventListener('click', (e) => {
+            if (e.target === imageModal) { // Zamknij tylko jeśli kliknięto tło, a nie obraz
+                imageModal.style.display = 'none';
+            }
+        });
+
+
         function handleFileSelect(event) {
             const file = event.target.files[0]; if (!file) return;
             const reader = new FileReader();
@@ -309,7 +351,6 @@
             a.click(); URL.revokeObjectURL(a.href);
         }
 
-        // --- ZMIANA: Zaktualizowana funkcja handleSubmit z obsługą ładowania ---
         async function handleSubmit(isRetry = false) {
             if (!sessionStorage.getItem('isAuthenticated')) return;
             let userText;
@@ -323,9 +364,8 @@
                 userInput.value = '';
             }
             
-            // Pokaż wskaźnik ładowania
             if (loadingBubble) loadingBubble.remove();
-            loadingBubble = addMessageToChat("", false, false); // Stwórz pusty dymek
+            loadingBubble = addMessageToChat("", false, false);
             if (loadingBubble) {
                 loadingBubble.classList.add("loading");
                 loadingBubble.innerHTML = `<div class="loading-dots"><span></span><span></span><span></span></div>`;
@@ -339,7 +379,7 @@
                     body: JSON.stringify({ history: conversationHistory.slice(-30), apiKey: sessionStorage.getItem('userProvidedApiKey') }) 
                 });
                 
-                if (loadingBubble) loadingBubble.remove(); // Usuń wskaźnik po otrzymaniu odpowiedzi
+                if (loadingBubble) loadingBubble.remove();
 
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -363,7 +403,7 @@
                     speak(assistantText);
                 }
             } catch (error) {
-                if (loadingBubble) loadingBubble.remove(); // Usuń wskaźnik również w przypadku błędu
+                if (loadingBubble) loadingBubble.remove();
                 addMessageToChat(`Błąd: ${error.message}`, false, false);
             }
         }
@@ -382,8 +422,27 @@
                 const image = document.createElement('img');
                 image.src = `data:${attachments[0].mime_type};base64,${attachments[0].data}`;
                 image.alt = cleanText || 'Załączony obraz';
+                
+                // --- ZMIANA: Dodanie klasy i event listenera do obrazu ---
+                image.className = 'chat-image-thumbnail';
+                image.addEventListener('dblclick', () => {
+                    fullSizeImage.src = image.src;
+                    imageModal.style.display = 'flex';
+                });
+
                 messageBubble.appendChild(image);
-                if (cleanText) { const p = document.createElement('p'); p.innerText = cleanText; messageBubble.appendChild(p); }
+                if (cleanText) { 
+                    const p = document.createElement('p'); 
+                    // Jeśli użytkownik załączył plik, tekst "Załączono: nazwa_pliku" pojawi się pod obrazkiem.
+                    if (isUser && text.startsWith('Załączono:')) {
+                        p.innerText = text;
+                        p.style.fontSize = '0.8rem';
+                        p.style.color = isUser ? '#e0e0e0' : '#65676b';
+                    } else {
+                        p.innerText = cleanText;
+                    }
+                    messageBubble.appendChild(p);
+                }
             } else if (cleanText) {
                 const codeMatch = cleanText.match(/```(\w*)\n([\s\S]*)```/);
                 if (codeMatch) {
@@ -392,7 +451,6 @@
                 } else { messageBubble.innerText = cleanText; }
             }
             
-            // --- ZMIANA: Dodaj dymek do czatu tylko, jeśli ma jakąś treść (tekst, obraz lub jest to pusty dymek ładowania) ---
             if (messageBubble.innerHTML.trim() || messageBubble.innerText.trim() || (attachments && attachments.length > 0) || text === "") {
                 messageList.appendChild(messageBubble);
                 messageList.scrollTop = messageList.scrollHeight;
