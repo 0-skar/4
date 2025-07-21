@@ -51,7 +51,8 @@
         pre[class*="language-"] { background: #2d2d2d; border-radius: 8px; padding: 1em; margin: .5em 0; overflow: auto; position: relative; }
         .copy-code-button { position: absolute; top: 5px; right: 5px; background: #5f5f5f; border: none; color: white; padding: 5px 8px; border-radius: 5px; cursor: pointer; opacity: 0.7; }
         .copy-code-button:hover { opacity: 1; }
-        .download-file-button { display: inline-block; background: #28a745; color: white; padding: 8px 12px; border-radius: 5px; text-decoration: none; font-size: 0.9rem; margin-top: 10px; }
+        .download-file-button { display: inline-block; background: #28a745; color: white; padding: 8px 12px; border-radius: 5px; text-decoration: none; font-size: 0.9rem; margin-top: 10px; border: none; cursor: pointer;}
+        .download-file-button:hover { background: #218838; }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); } 20%, 40%, 60%, 80% { transform: translateX(10px); } }
         .is-invalid { animation: shake 0.5s; }
         #app-container { width: 100%; height: 100%; max-width: 800px; margin: 0 auto; display: none; flex-direction: column; background-color: white; }
@@ -343,39 +344,24 @@
         attachmentButton.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', handleFileSelect);
 
-        // --- POCZĄTEK POPRAWIONEJ FUNKCJI ---
         function downloadPdfFromBase64(filename, base64Data) {
-            // Krok 1: Dekodowanie Base64 do danych binarnych
             const byteCharacters = atob(base64Data);
             const byteNumbers = new Array(byteCharacters.length);
             for (let i = 0; i < byteCharacters.length; i++) {
                 byteNumbers[i] = byteCharacters.charCodeAt(i);
             }
             const byteArray = new Uint8Array(byteNumbers);
-            
-            // Krok 2: Stworzenie obiektu Blob, który reprezentuje plik PDF
             const blob = new Blob([byteArray], { type: 'application/pdf' });
-
-            // Krok 3: Stworzenie tymczasowego adresu URL dla Bloba
             const url = URL.createObjectURL(blob);
-
-            // Krok 4: Stworzenie niewidzialnego elementu linku (<a>)
             const a = document.createElement('a');
             a.style.display = 'none';
             a.href = url;
-            a.download = filename; // Ustawienie nazwy pobieranego pliku
-
-            // Krok 5: Dodanie linku do struktury strony (DOM) - to jest kluczowe dla urządzeń mobilnych
+            a.download = filename;
             document.body.appendChild(a);
-
-            // Krok 6: Programowe "kliknięcie" linku w celu zainicjowania pobierania
             a.click();
-
-            // Krok 7: Sprzątanie - usunięcie linku i zwolnienie obiektu URL
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
         }
-        // --- KONIEC POPRAWIONEJ FUNKCJI ---
 
         async function handleSubmit(isRetry = false) {
             if (!sessionStorage.getItem('isAuthenticated')) return;
@@ -419,16 +405,16 @@
                     addMessageToChat("", false, true, [{ name: data.image_file.filename, mime_type: "image/png", data: data.image_file.data }]);
                 }
                 
-                if (data.pdf_file) {
-                    addMessageToChat(`Pobieranie pliku: ${data.pdf_file.filename}`, false, false); // Dodajemy informację o pobieraniu
-                    downloadPdfFromBase64(data.pdf_file.filename, data.pdf_file.data);
-                } 
-                
-                if (data.generated_text) {
-                    const assistantText = data.generated_text;
-                    addMessageToChat(assistantText, false);
-                    speak(assistantText);
+                // --- POCZĄTEK ZMIENIONEJ LOGIKI ---
+                // Sprawdzamy, czy jest tekst lub plik PDF do wyświetlenia
+                if (data.generated_text || data.pdf_file) {
+                    const assistantText = data.generated_text || "Oto Twój plik PDF."; // Użyj tekstu od AI lub domyślnego
+                    // Wywołujemy addMessageToChat przekazując dane PDF, które zostaną użyte do stworzenia przycisku
+                    addMessageToChat(assistantText, false, true, null, false, data.pdf_file);
+                    speak(assistantText); // Odtwarzamy tylko tekst
                 }
+                // --- KONIEC ZMIENIONEJ LOGIKI ---
+                
             } catch (error) {
                 if (loadingBubble) loadingBubble.remove();
                 addMessageToChat(`Błąd: ${error.message}`, false, false);
@@ -437,51 +423,69 @@
         
         function copyCode(button) { const code = button.parentElement.querySelector('code'); navigator.clipboard.writeText(code.innerText).then(() => { button.innerText = 'Skopiowano!'; setTimeout(() => { button.innerText = 'Kopiuj'; }, 2000); }); }
         
-        function addMessageToChat(text, isUser, addToHistory = true, attachments = null, isHidden = false) {
-            if (addToHistory) { conversationHistory.push({ role: isUser ? 'user' : 'assistant', content: text, attachments, isHidden }); }
+        // --- POCZĄTEK ZMIENIONEJ FUNKCJI ---
+        function addMessageToChat(text, isUser, addToHistory = true, attachments = null, isHidden = false, pdfFile = null) {
+            if (addToHistory) {
+                // Do historii dodajemy teraz także informację o pliku PDF
+                conversationHistory.push({ role: isUser ? 'user' : 'assistant', content: text, attachments, isHidden, pdfFile });
+            }
             if (isHidden) return null;
             
             const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
             const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG|FILE:.+?|PDF:.+?|EDIT_IMAGE:.+?|STORY_PDF|CREATE_COMPOSITION:.+?)\]/gi, '').trim();
 
+            // Istniejąca logika dla obrazów
             if (attachments && attachments[0] && attachments[0].mime_type.startsWith('image/')) {
                 const image = document.createElement('img');
                 image.src = `data:${attachments[0].mime_type};base64,${attachments[0].data}`;
                 image.alt = cleanText || 'Załączony obraz';
-                
                 image.className = 'chat-image-thumbnail';
                 image.addEventListener('dblclick', () => {
                     fullSizeImage.src = image.src;
                     imageModal.style.display = 'flex';
                 });
-
                 messageBubble.appendChild(image);
                 if (cleanText) { 
                     const p = document.createElement('p'); 
-                    if (isUser && text.startsWith('Załączono:')) {
-                        p.innerText = text;
-                        p.style.fontSize = '0.8rem';
-                        p.style.color = '#e0e0e0';
-                    } else {
-                        p.innerText = cleanText;
-                    }
+                    p.innerText = cleanText;
                     messageBubble.appendChild(p);
                 }
             } else if (cleanText) {
+                // Istniejąca logika dla tekstu i kodu
                 const codeMatch = cleanText.match(/```(\w*)\n([\s\S]*)```/);
                 if (codeMatch) {
                     messageBubble.innerHTML = `<pre class="language-${codeMatch[1] || 'plaintext'}"><button class="copy-code-button" onclick="copyCode(this)">Kopiuj</button><code>${codeMatch[2].replace(/</g, "<").replace(/>/g, ">")}</code></pre>`;
                     if (window.Prism) Prism.highlightAllUnder(messageBubble);
-                } else { messageBubble.innerText = cleanText; }
+                } else { 
+                    const p = document.createElement('p');
+                    p.innerText = cleanText;
+                    messageBubble.appendChild(p);
+                }
             }
             
-            if (messageBubble.innerHTML.trim() || messageBubble.innerText.trim() || (attachments && attachments.length > 0) || text === "") {
+            // --- NOWA LOGIKA DLA PRZYCISKU POBIERANIA PDF ---
+            if (pdfFile && !isUser) {
+                const downloadButton = document.createElement('button');
+                downloadButton.innerText = `Pobierz ${pdfFile.filename}`;
+                downloadButton.className = 'download-file-button'; // Używamy istniejącej klasy CSS
+
+                // Przypisanie akcji 'onclick', która wywoła funkcję pobierania
+                downloadButton.onclick = function() {
+                    downloadPdfFromBase64(pdfFile.filename, pdfFile.data);
+                };
+                
+                messageBubble.appendChild(downloadButton);
+            }
+            // --- KONIEC NOWEJ LOGIKI ---
+            
+            if (messageBubble.hasChildNodes()) {
                 messageList.appendChild(messageBubble);
                 messageList.scrollTop = messageList.scrollHeight;
             }
             return messageBubble;
         }
+        // --- KONIEC ZMIENIONEJ FUNKCJI ---
 
         chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(false); });
         
