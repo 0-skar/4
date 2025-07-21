@@ -385,10 +385,11 @@
             }
 
             try {
+                // --- ZMIANA: Usunięto .slice(-30) aby wysyłać pełną historię ---
                 const response = await fetch(CHAT_URL, { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ history: conversationHistory.slice(-30), apiKey: sessionStorage.getItem('userProvidedApiKey') }) 
+                    body: JSON.stringify({ history: conversationHistory, apiKey: sessionStorage.getItem('userProvidedApiKey') }) 
                 });
                 
                 if (loadingBubble) loadingBubble.remove();
@@ -405,15 +406,11 @@
                     addMessageToChat("", false, true, [{ name: data.image_file.filename, mime_type: "image/png", data: data.image_file.data }]);
                 }
                 
-                // --- POCZĄTEK ZMIENIONEJ LOGIKI ---
-                // Sprawdzamy, czy jest tekst lub plik PDF do wyświetlenia
                 if (data.generated_text || data.pdf_file) {
-                    const assistantText = data.generated_text || "Oto Twój plik PDF."; // Użyj tekstu od AI lub domyślnego
-                    // Wywołujemy addMessageToChat przekazując dane PDF, które zostaną użyte do stworzenia przycisku
+                    const assistantText = data.generated_text || "Oto Twój plik PDF.";
                     addMessageToChat(assistantText, false, true, null, false, data.pdf_file);
-                    speak(assistantText); // Odtwarzamy tylko tekst
+                    speak(assistantText);
                 }
-                // --- KONIEC ZMIENIONEJ LOGIKI ---
                 
             } catch (error) {
                 if (loadingBubble) loadingBubble.remove();
@@ -423,10 +420,8 @@
         
         function copyCode(button) { const code = button.parentElement.querySelector('code'); navigator.clipboard.writeText(code.innerText).then(() => { button.innerText = 'Skopiowano!'; setTimeout(() => { button.innerText = 'Kopiuj'; }, 2000); }); }
         
-        // --- POCZĄTEK ZMIENIONEJ FUNKCJI ---
         function addMessageToChat(text, isUser, addToHistory = true, attachments = null, isHidden = false, pdfFile = null) {
             if (addToHistory) {
-                // Do historii dodajemy teraz także informację o pliku PDF
                 conversationHistory.push({ role: isUser ? 'user' : 'assistant', content: text, attachments, isHidden, pdfFile });
             }
             if (isHidden) return null;
@@ -435,7 +430,6 @@
             messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
             const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG|FILE:.+?|PDF:.+?|EDIT_IMAGE:.+?|STORY_PDF|CREATE_COMPOSITION:.+?)\]/gi, '').trim();
 
-            // Istniejąca logika dla obrazów
             if (attachments && attachments[0] && attachments[0].mime_type.startsWith('image/')) {
                 const image = document.createElement('img');
                 image.src = `data:${attachments[0].mime_type};base64,${attachments[0].data}`;
@@ -452,7 +446,6 @@
                     messageBubble.appendChild(p);
                 }
             } else if (cleanText) {
-                // Istniejąca logika dla tekstu i kodu
                 const codeMatch = cleanText.match(/```(\w*)\n([\s\S]*)```/);
                 if (codeMatch) {
                     messageBubble.innerHTML = `<pre class="language-${codeMatch[1] || 'plaintext'}"><button class="copy-code-button" onclick="copyCode(this)">Kopiuj</button><code>${codeMatch[2].replace(/</g, "<").replace(/>/g, ">")}</code></pre>`;
@@ -464,20 +457,15 @@
                 }
             }
             
-            // --- NOWA LOGIKA DLA PRZYCISKU POBIERANIA PDF ---
             if (pdfFile && !isUser) {
                 const downloadButton = document.createElement('button');
                 downloadButton.innerText = `Pobierz ${pdfFile.filename}`;
-                downloadButton.className = 'download-file-button'; // Używamy istniejącej klasy CSS
-
-                // Przypisanie akcji 'onclick', która wywoła funkcję pobierania
+                downloadButton.className = 'download-file-button';
                 downloadButton.onclick = function() {
                     downloadPdfFromBase64(pdfFile.filename, pdfFile.data);
                 };
-                
                 messageBubble.appendChild(downloadButton);
             }
-            // --- KONIEC NOWEJ LOGIKI ---
             
             if (messageBubble.hasChildNodes()) {
                 messageList.appendChild(messageBubble);
@@ -485,7 +473,6 @@
             }
             return messageBubble;
         }
-        // --- KONIEC ZMIENIONEJ FUNKCJI ---
 
         chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(false); });
         
