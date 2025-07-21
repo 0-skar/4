@@ -385,7 +385,6 @@
             }
 
             try {
-                // --- ZMIANA: Usunięto .slice(-30) aby wysyłać pełną historię ---
                 const response = await fetch(CHAT_URL, { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
@@ -467,7 +466,9 @@
                 messageBubble.appendChild(downloadButton);
             }
             
-            if (messageBubble.hasChildNodes()) {
+            // --- POPRAWIONA LINIA ---
+            // Ten warunek gwarantuje, że pusta chmurka dla animacji ładowania zostanie dodana.
+            if (messageBubble.hasChildNodes() || text === "") {
                 messageList.appendChild(messageBubble);
                 messageList.scrollTop = messageList.scrollHeight;
             }
