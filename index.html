@@ -343,13 +343,39 @@
         attachmentButton.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', handleFileSelect);
 
+        // --- POCZĄTEK POPRAWIONEJ FUNKCJI ---
         function downloadPdfFromBase64(filename, base64Data) {
-            const byteCharacters = atob(base64Data); const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) { byteNumbers[i] = byteCharacters.charCodeAt(i); }
-            const blob = new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
-            a.click(); URL.revokeObjectURL(a.href);
+            // Krok 1: Dekodowanie Base64 do danych binarnych
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            
+            // Krok 2: Stworzenie obiektu Blob, który reprezentuje plik PDF
+            const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+            // Krok 3: Stworzenie tymczasowego adresu URL dla Bloba
+            const url = URL.createObjectURL(blob);
+
+            // Krok 4: Stworzenie niewidzialnego elementu linku (<a>)
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename; // Ustawienie nazwy pobieranego pliku
+
+            // Krok 5: Dodanie linku do struktury strony (DOM) - to jest kluczowe dla urządzeń mobilnych
+            document.body.appendChild(a);
+
+            // Krok 6: Programowe "kliknięcie" linku w celu zainicjowania pobierania
+            a.click();
+
+            // Krok 7: Sprzątanie - usunięcie linku i zwolnienie obiektu URL
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
         }
+        // --- KONIEC POPRAWIONEJ FUNKCJI ---
 
         async function handleSubmit(isRetry = false) {
             if (!sessionStorage.getItem('isAuthenticated')) return;
@@ -394,6 +420,7 @@
                 }
                 
                 if (data.pdf_file) {
+                    addMessageToChat(`Pobieranie pliku: ${data.pdf_file.filename}`, false, false); // Dodajemy informację o pobieraniu
                     downloadPdfFromBase64(data.pdf_file.filename, data.pdf_file.data);
                 } 
                 
