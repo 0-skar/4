@@ -51,8 +51,7 @@
         pre[class*="language-"] { background: #2d2d2d; border-radius: 8px; padding: 1em; margin: .5em 0; overflow: auto; position: relative; }
         .copy-code-button { position: absolute; top: 5px; right: 5px; background: #5f5f5f; border: none; color: white; padding: 5px 8px; border-radius: 5px; cursor: pointer; opacity: 0.7; }
         .copy-code-button:hover { opacity: 1; }
-        .download-file-button { display: inline-block; background: #28a745; color: white; padding: 8px 12px; border-radius: 5px; text-decoration: none; font-size: 0.9rem; margin-top: 10px; border: none; cursor: pointer;}
-        .download-file-button:hover { background: #218838; }
+        .download-file-button { display: inline-block; background: #28a745; color: white; padding: 8px 12px; border-radius: 5px; text-decoration: none; font-size: 0.9rem; margin-top: 10px; }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); } 20%, 40%, 60%, 80% { transform: translateX(10px); } }
         .is-invalid { animation: shake 0.5s; }
         #app-container { width: 100%; height: 100%; max-width: 800px; margin: 0 auto; display: none; flex-direction: column; background-color: white; }
@@ -77,6 +76,7 @@
         .user-message { 
             background-color: var(--user-bubble-bg); 
             color: white; 
+            align-self: flex-end; /* User messages on the right */
         }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
@@ -98,6 +98,9 @@
             transform: scale(1.05);
             filter: brightness(0.9);
         }
+        .message-bubble p { margin: 0; padding-top: 8px; }
+        .message-bubble img + p { margin-top: 8px; } /* Add space between image and text */
+
         #image-modal {
             background: rgba(0,0,0,0.85);
         }
@@ -124,6 +127,7 @@
     </style>
 </head>
 <body>
+    <!-- MODALS (no changes here) -->
     <div id="password-modal" class="modal-overlay">
         <div id="password-modal-content" class="modal-content">
             <h3>Wpisz kod dostępu</h3>
@@ -163,6 +167,8 @@
         <span id="close-image-modal">×</span>
         <img id="full-size-image" src="" alt="Powiększony obraz">
     </div>
+
+    <!-- APP CONTAINER (no changes here) -->
     <div id="app-container">
         <div id="app-top-bar">
             <a href="https://0-skar.github.io/0/" id="back-button"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></a>
@@ -206,6 +212,7 @@
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
         const GREETINGS = [ "Siema. Co tam dziś scrollujesz?", "Elo. Zasilanie włączone. Co dziś robimy?", "Cześć. W co dzisiaj grasz? A może chcesz, żebym coś namalował? 😎" ];
 
+        // --- DOM Elements (no changes here)
         const appContainer = document.getElementById('app-container');
         const passwordModal = document.getElementById('password-modal');
         const passwordInput = document.getElementById('password-input');
@@ -234,11 +241,11 @@
         const exportJsonBtn = document.getElementById('export-json');
         const exportPdfBtn = document.getElementById('export-pdf');
         const editExportButton = document.getElementById('edit-export-button');
-        
         const imageModal = document.getElementById('image-modal');
         const fullSizeImage = document.getElementById('full-size-image');
         const closeImageModal = document.getElementById('close-image-modal');
 
+        // --- App State (no changes here)
         const synth = window.speechSynthesis;
         let voices = [];
         let isTtsEnabled = true;
@@ -246,29 +253,24 @@
         let lastUserMessage = "";
         let loadingBubble = null;
 
+        // --- Initial Setup Functions (no changes here)
         function displayInitialGreeting() { if (conversationHistory.length === 0) { const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]; addMessageToChat(randomGreeting, false); speak(randomGreeting); } }
         function checkAuthentication() { if (sessionStorage.getItem('isAuthenticated') === 'true') { passwordModal.style.display = 'none'; appContainer.style.display = 'flex'; initSpeechSynthesis(); displayInitialGreeting(); } else { passwordModal.style.display = 'flex'; appContainer.style.display = 'none'; } }
         function initSpeechSynthesis() { populateVoiceList(); if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = populateVoiceList; }
         function handlePasswordAttempt() { if (passwordInput.value === ACCESS_CODE) { sessionStorage.setItem('isAuthenticated', 'true'); checkAuthentication(); } else { passwordInput.parentElement.classList.add('is-invalid'); setTimeout(() => { passwordInput.parentElement.classList.remove('is-invalid'); }, 500); } }
         passwordButton.addEventListener('click', handlePasswordAttempt);
         passwordInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') handlePasswordAttempt(); });
-        
         const speakerOnIcon = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
         const speakerOffIcon = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9.02 12 14v-2.18l-2.01-2.01L12 7.82V4z"/></svg>`;
         function updateTtsToggleIcon() { ttsToggleButton.innerHTML = isTtsEnabled ? speakerOnIcon : speakerOffIcon; ttsToggleButton.classList.toggle('is-muted', !isTtsEnabled); }
         ttsToggleButton.addEventListener('click', () => { isTtsEnabled = !isTtsEnabled; updateTtsToggleIcon(); if (!isTtsEnabled) synth.cancel(); });
-        
         function populateVoiceList() { voices = synth.getVoices(); }
-        
         function speak(text) {
             if (!isTtsEnabled || !text) return;
-            
             let cleanText = text.replace(/\p{Emoji_Presentation}/gu, '');
             cleanText = cleanText.replace(/[.,!?;:()]/g, ' ');
             cleanText = cleanText.replace(/\s+/g, ' ').trim();
-
             if (!cleanText) return;
-
             synth.cancel();
             const utterance = new SpeechSynthesisUtterance(cleanText);
             const detectedLang = (/[ąćęłńóśźż]/i.test(text)) ? 'pl' : 'en';
@@ -277,40 +279,20 @@
             utterance.onend = () => { avatar.src = AVATAR_STILL_URL; };
             synth.speak(utterance);
         }
-        
         function showApiKeyModal() { apiKeyModal.style.display = 'flex'; }
         function hideApiKeyModal() { apiKeyModal.style.display = 'none'; }
         apiKeyButton.addEventListener('click', showApiKeyModal);
         savePrivateKeyButton.addEventListener('click', () => { const key = userApiKeyInput.value.trim(); if(key){ sessionStorage.setItem('userProvidedApiKey', key); hideApiKeyModal(); handleSubmit(true); } });
         donateKeyButton.addEventListener('click', async () => { const key = userApiKeyInput.value.trim(); if(!key) return; hideApiKeyModal(); try { const res = await fetch(DONATE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey: key }) }); if(!res.ok) throw new Error((await res.json()).detail); sessionStorage.setItem('userProvidedApiKey', key); handleSubmit(true); } catch(err){ addMessageToChat(`Błąd donacji: ${err.message}`, false, false); } });
         closeApiKeyModal.addEventListener('click', hideApiKeyModal);
-
-        function exportConversation(history) {
-            const dataStr = JSON.stringify(history.filter(m => !m.isHidden), null, 2);
-            const blob = new Blob([dataStr], { type: "application/json" });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `rozmowa.json`; a.click(); URL.revokeObjectURL(a.href);
-        }
         
-        async function exportToPdf() {
-            addMessageToChat("Przygotowuję PDF...", false, false);
-            try {
-                const response = await fetch(EXPORT_PDF_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ history: conversationHistory }) });
-                if (!response.ok) throw new Error("Błąd generowania PDF.");
-                const blob = await response.blob();
-                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'rozmowa.pdf'; a.click(); URL.revokeObjectURL(a.href);
-            } catch (error) { addMessageToChat(`Błąd eksportu: ${error.message}`, false, false); }
-        }
-
-        function importConversation() {
-            const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
-            input.onchange = e => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (event) => { try { const imported = JSON.parse(event.target.result); if (Array.isArray(imported)) { conversationHistory = imported; messageList.innerHTML = ''; conversationHistory.forEach(msg => addMessageToChat(msg.content, msg.role === 'user', false, msg.attachments, msg.isHidden)); } else { throw new Error("Niepoprawny format."); } } catch (err) { addMessageToChat(`Błąd importu: ${err.message}`, false, false); } }; reader.readAsText(file); };
-            input.click();
-        }
-
+        // --- Import/Export and Modal Functions (no changes here)
+        function exportConversation(history) { const dataStr = JSON.stringify(history.filter(m => !m.isHidden), null, 2); const blob = new Blob([dataStr], { type: "application/json" }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `rozmowa.json`; a.click(); URL.revokeObjectURL(a.href); }
+        async function exportToPdf() { addMessageToChat("Przygotowuję PDF...", false, false); try { const response = await fetch(EXPORT_PDF_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ history: conversationHistory }) }); if (!response.ok) throw new Error("Błąd generowania PDF."); const blob = await response.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'rozmowa.pdf'; a.click(); URL.revokeObjectURL(a.href); } catch (error) { addMessageToChat(`Błąd eksportu: ${error.message}`, false, false); } }
+        function importConversation() { const input = document.createElement('input'); input.type = 'file'; input.accept = '.json'; input.onchange = e => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (event) => { try { const imported = JSON.parse(event.target.result); if (Array.isArray(imported)) { conversationHistory = imported; messageList.innerHTML = ''; conversationHistory.forEach(msg => addMessageToChat(msg.content, msg.role === 'user', false, msg.attachments, msg.isHidden)); } else { throw new Error("Niepoprawny format."); } } catch (err) { addMessageToChat(`Błąd importu: ${err.message}`, false, false); } }; reader.readAsText(file); }; input.click(); }
         function openEditModal() { const text = conversationHistory.filter(m => !m.isHidden).map(m => `${m.role === 'user' ? 'TY' : 'AGENT'}: ${m.attachments ? `[PLIK: ${m.attachments[0].name}]` : m.content}`).join('\n\n'); editHistoryTextarea.value = text; editModal.style.display = 'flex'; }
         function saveAndDownloadEdited() { exportConversation([{ role: 'user', content: editHistoryTextarea.value }]); hideEditModal(); }
         function hideEditModal() { editModal.style.display = 'none'; }
-        
         exportButtonMain.addEventListener('click', () => { exportOptions.style.display = exportOptions.style.display === 'block' ? 'none' : 'block'; });
         document.addEventListener('click', (e) => { if (!exportButtonMain.contains(e.target) && !exportOptions.contains(e.target)) exportOptions.style.display = 'none'; });
         importJsonBtn.addEventListener('click', (e) => { e.preventDefault(); importConversation(); exportOptions.style.display = 'none'; });
@@ -319,60 +301,114 @@
         editExportButton.addEventListener('click', (e) => { e.preventDefault(); openEditModal(); exportOptions.style.display = 'none'; });
         closeEditModal.addEventListener('click', hideEditModal);
         saveEditedButton.addEventListener('click', saveAndDownloadEdited);
-        
-        closeImageModal.addEventListener('click', () => {
-            imageModal.style.display = 'none';
-        });
+        closeImageModal.addEventListener('click', () => { imageModal.style.display = 'none'; });
+        imageModal.addEventListener('click', (e) => { if (e.target === imageModal) { imageModal.style.display = 'none'; } });
 
-        imageModal.addEventListener('click', (e) => {
-            if (e.target === imageModal) {
-                imageModal.style.display = 'none';
-            }
-        });
-
-        function handleFileSelect(event) {
-            const file = event.target.files[0]; if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const fileData = { name: file.name, mime_type: file.type || 'application/octet-stream', data: e.target.result.split(',')[1] };
-                addMessageToChat(`Załączono: ${file.name}`, true, true, [fileData]);
-                handleSubmit();
-            };
-            reader.readAsDataURL(file);
-        }
-        
+        // --- Core Application Logic (Attachment Handling) ---
+        function handleFileSelect(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { const fileData = { name: file.name, mime_type: file.type || 'application/octet-stream', data: e.target.result.split(',')[1] }; addMessageToChat(`Załączono: ${file.name}`, true, true, [fileData]); handleSubmit(); }; reader.readAsDataURL(file); }
         attachmentButton.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', handleFileSelect);
+        function downloadPdfFromBase64(filename, base64Data) { const byteCharacters = atob(base64Data); const byteNumbers = new Array(byteCharacters.length); for (let i = 0; i < byteCharacters.length; i++) { byteNumbers[i] = byteCharacters.charCodeAt(i); } const blob = new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href); }
+        function copyCode(button) { const code = button.parentElement.querySelector('code'); navigator.clipboard.writeText(code.innerText).then(() => { button.innerText = 'Skopiowano!'; setTimeout(() => { button.innerText = 'Kopiuj'; }, 2000); }); }
 
-        function downloadPdfFromBase64(filename, base64Data) {
-            const byteCharacters = atob(base64Data);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) {
-                byteNumbers[i] = byteCharacters.charCodeAt(i);
+        // --- ⬇️⬇️⬇️ KEY CHANGES ARE IN THE TWO FUNCTIONS BELOW ⬇️⬇️⬇️ ---
+
+        /**
+         * Renders a message bubble in the chat UI and, if specified, adds it to the conversation history.
+         * This function is the single source of truth for how messages are displayed.
+         * @param {string} text - The text content of the message.
+         * @param {boolean} isUser - True if the message is from the user, false for the assistant.
+         * @param {boolean} [addToHistory=true] - Whether to add this message to the global conversationHistory array.
+         * @param {Array|null} [attachments=null] - An array of attachment objects ({ name, mime_type, data }).
+         * @param {boolean} [isHidden=false] - If true, adds to history but doesn't render in the chat.
+         * @returns {HTMLElement|null} - The created message bubble element or null if hidden.
+         */
+        function addMessageToChat(text, isUser, addToHistory = true, attachments = null, isHidden = false) {
+            if (addToHistory) {
+                conversationHistory.push({ role: isUser ? 'user' : 'assistant', content: text, attachments, isHidden });
             }
-            const byteArray = new Uint8Array(byteNumbers);
-            const blob = new Blob([byteArray], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
+            if (isHidden) return null;
+
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
+            
+            // Hide tool usage tags (e.g., [GENERATE_IMAGE:...]) from the user's view.
+            const cleanText = text.replace(/\[\/?(STORY_PDF|GENERATE_IMAGE|EDIT_IMAGE|INPAINT_IMAGE|CREATE_COMPOSITION|CHANGE_BACKGROUND|TOOL:search|TOOL:scrape)[\s\S]*?\]/gi, '').trim();
+
+            let hasContent = false;
+
+            // First, render any attachments.
+            if (attachments && attachments[0]) {
+                const attachment = attachments[0];
+                if (attachment.mime_type.startsWith('image/')) {
+                    const image = document.createElement('img');
+                    image.src = `data:${attachment.mime_type};base64,${attachment.data}`;
+                    image.alt = cleanText || 'Załączony obraz';
+                    image.className = 'chat-image-thumbnail';
+                    image.addEventListener('click', () => { // Using 'click' for better mobile experience.
+                        fullSizeImage.src = image.src;
+                        imageModal.style.display = 'flex';
+                    });
+                    messageBubble.appendChild(image);
+                    hasContent = true;
+                } else if (attachment.mime_type === 'application/pdf') {
+                    const link = document.createElement('a');
+                    link.href = "#";
+                    link.innerText = `Pobierz: ${attachment.name}`;
+                    link.className = 'download-file-button';
+                    link.onclick = (e) => {
+                        e.preventDefault();
+                        downloadPdfFromBase64(attachment.name, attachment.data);
+                    };
+                    messageBubble.appendChild(link);
+                    hasContent = true;
+                }
+            }
+
+            // Then, render the text content, which will appear below the attachment if one exists.
+            if (cleanText) {
+                const codeMatch = cleanText.match(/```(\w*)\n([\s\S]*)```/);
+                if (codeMatch) {
+                    const pre = document.createElement('pre');
+                    pre.className = `language-${codeMatch[1] || 'plaintext'}`;
+                    pre.innerHTML = `<button class="copy-code-button" onclick="copyCode(this)">Kopiuj</button><code>${codeMatch[2].replace(/</g, "<").replace(/>/g, ">")}</code>`;
+                    messageBubble.appendChild(pre);
+                    if (window.Prism) Prism.highlightAllUnder(pre);
+                } else {
+                    const p = document.createElement('p');
+                    p.innerText = cleanText;
+                    messageBubble.appendChild(p);
+                }
+                hasContent = true;
+            }
+            
+            // Only add the bubble to the DOM if it's a loading placeholder or has actual content.
+            if (hasContent || text === "") { 
+                messageList.appendChild(messageBubble);
+                messageList.scrollTop = messageList.scrollHeight;
+            }
+            return messageBubble;
         }
 
+
+        /**
+         * Handles the entire process of sending history to the backend and processing the response.
+         * @param {boolean} [isRetry=false] - If true, resends the last user message (used for API key failures).
+         */
         async function handleSubmit(isRetry = false) {
             if (!sessionStorage.getItem('isAuthenticated')) return;
+
             let userText;
-            if (isRetry) { userText = lastUserMessage; } 
-            else {
+            if (isRetry) {
+                userText = lastUserMessage;
+            } else {
                 userText = userInput.value.trim();
                 const lastMsg = conversationHistory[conversationHistory.length - 1];
-                if (!userText && !(lastMsg && lastMsg.attachments && lastMsg.role === 'user')) return;
+                if (!userText && !(lastMsg && lastMsg.attachments && lastMsg.role === 'user' && !lastMsg.content)) return;
                 lastUserMessage = userText;
-                if(userText || !(lastMsg && lastMsg.attachments && lastMsg.role === 'user')) addMessageToChat(userText, true);
+                if (userText) {
+                    addMessageToChat(userText, true);
+                }
                 userInput.value = '';
             }
             
@@ -388,93 +424,47 @@
                 const response = await fetch(CHAT_URL, { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ history: conversationHistory, apiKey: sessionStorage.getItem('userProvidedApiKey') }) 
+                    body: JSON.stringify({ history: conversationHistory.slice(-30), apiKey: sessionStorage.getItem('userProvidedApiKey') }) 
                 });
                 
                 if (loadingBubble) loadingBubble.remove();
 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    if (errorData.all_keys_exhausted) { showApiKeyModal(); addMessageToChat("Wszystkie publiczne klucze API zostały wyczerpane. Proszę, podaj własny.", false, false); } 
-                    else { throw new Error(errorData.detail || 'Nieznany błąd serwera'); }
+                    if (errorData.all_keys_exhausted) {
+                        showApiKeyModal();
+                        addMessageToChat("Wszystkie publiczne klucze API zostały wyczerpane. Proszę, podaj własny.", false, false); 
+                    } else { throw new Error(errorData.detail || 'Nieznany błąd serwera'); }
                     return;
                 }
+                
                 const data = await response.json();
 
+                // CORRECTED LOGIC: Create a single, unified message from the assistant's response.
+                const assistantText = data.generated_text || "";
+                let assistantAttachments = null;
+
                 if (data.image_file) {
-                    addMessageToChat("", false, true, [{ name: data.image_file.filename, mime_type: "image/png", data: data.image_file.data }]);
+                    assistantAttachments = [{ name: data.image_file.filename, mime_type: "image/png", data: data.image_file.data }];
+                } else if (data.pdf_file) {
+                    assistantAttachments = [{ name: data.pdf_file.filename, mime_type: "application/pdf", data: data.pdf_file.data }];
                 }
-                
-                if (data.generated_text || data.pdf_file) {
-                    const assistantText = data.generated_text || "Oto Twój plik PDF.";
-                    addMessageToChat(assistantText, false, true, null, false, data.pdf_file);
+
+                // Add the single, combined message to the chat UI and the conversation history.
+                addMessageToChat(assistantText, false, true, assistantAttachments);
+
+                // Handle side-effects like text-to-speech.
+                if (assistantText) {
                     speak(assistantText);
                 }
-                
+
             } catch (error) {
                 if (loadingBubble) loadingBubble.remove();
                 addMessageToChat(`Błąd: ${error.message}`, false, false);
             }
         }
         
-        function copyCode(button) { const code = button.parentElement.querySelector('code'); navigator.clipboard.writeText(code.innerText).then(() => { button.innerText = 'Skopiowano!'; setTimeout(() => { button.innerText = 'Kopiuj'; }, 2000); }); }
-        
-        function addMessageToChat(text, isUser, addToHistory = true, attachments = null, isHidden = false, pdfFile = null) {
-            if (addToHistory) {
-                conversationHistory.push({ role: isUser ? 'user' : 'assistant', content: text, attachments, isHidden, pdfFile });
-            }
-            if (isHidden) return null;
-            
-            const messageBubble = document.createElement('div');
-            messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
-            const cleanText = text.replace(/\[\/?(PL|EN|DE|FR|ES|IMG|FILE:.+?|PDF:.+?|EDIT_IMAGE:.+?|STORY_PDF|CREATE_COMPOSITION:.+?)\]/gi, '').trim();
-
-            if (attachments && attachments[0] && attachments[0].mime_type.startsWith('image/')) {
-                const image = document.createElement('img');
-                image.src = `data:${attachments[0].mime_type};base64,${attachments[0].data}`;
-                image.alt = cleanText || 'Załączony obraz';
-                image.className = 'chat-image-thumbnail';
-                image.addEventListener('dblclick', () => {
-                    fullSizeImage.src = image.src;
-                    imageModal.style.display = 'flex';
-                });
-                messageBubble.appendChild(image);
-                if (cleanText) { 
-                    const p = document.createElement('p'); 
-                    p.innerText = cleanText;
-                    messageBubble.appendChild(p);
-                }
-            } else if (cleanText) {
-                const codeMatch = cleanText.match(/```(\w*)\n([\s\S]*)```/);
-                if (codeMatch) {
-                    messageBubble.innerHTML = `<pre class="language-${codeMatch[1] || 'plaintext'}"><button class="copy-code-button" onclick="copyCode(this)">Kopiuj</button><code>${codeMatch[2].replace(/</g, "<").replace(/>/g, ">")}</code></pre>`;
-                    if (window.Prism) Prism.highlightAllUnder(messageBubble);
-                } else { 
-                    const p = document.createElement('p');
-                    p.innerText = cleanText;
-                    messageBubble.appendChild(p);
-                }
-            }
-            
-            if (pdfFile && !isUser) {
-                const downloadButton = document.createElement('button');
-                downloadButton.innerText = `Pobierz ${pdfFile.filename}`;
-                downloadButton.className = 'download-file-button';
-                downloadButton.onclick = function() {
-                    downloadPdfFromBase64(pdfFile.filename, pdfFile.data);
-                };
-                messageBubble.appendChild(downloadButton);
-            }
-            
-            // --- POPRAWIONA LINIA ---
-            // Ten warunek gwarantuje, że pusta chmurka dla animacji ładowania zostanie dodana.
-            if (messageBubble.hasChildNodes() || text === "") {
-                messageList.appendChild(messageBubble);
-                messageList.scrollTop = messageList.scrollHeight;
-            }
-            return messageBubble;
-        }
-
+        // --- Event Listeners and Final Setup ---
         chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(false); });
         
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
