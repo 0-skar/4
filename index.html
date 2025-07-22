@@ -73,12 +73,15 @@
         #avatar { width: 90%; max-width: 250px; height: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         #message-list { flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background-color: var(--chat-area-bg); }
         .message-bubble { padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4; word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        
+        /* --- ⬇️ KEY CHANGE FOR TEXT ALIGNMENT IS HERE ⬇️ --- */
         .user-message { 
             background-color: var(--user-bubble-bg); 
             color: white; 
-            align-self: flex-end; /* User messages on the right */
+            /* The 'align-self: flex-end;' rule was removed to keep all bubbles on the left */
         }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
+        
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
         #chat-form { display: flex; align-items: center; }
         .chat-form-button { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
@@ -99,7 +102,7 @@
             filter: brightness(0.9);
         }
         .message-bubble p { margin: 0; padding-top: 8px; }
-        .message-bubble img + p { margin-top: 8px; } /* Add space between image and text */
+        .message-bubble img + p { margin-top: 8px; } 
 
         #image-modal {
             background: rgba(0,0,0,0.85);
@@ -127,7 +130,7 @@
     </style>
 </head>
 <body>
-    <!-- MODALS (no changes here) -->
+    <!-- The HTML for modals and the app container remains unchanged. -->
     <div id="password-modal" class="modal-overlay">
         <div id="password-modal-content" class="modal-content">
             <h3>Wpisz kod dostępu</h3>
@@ -167,8 +170,6 @@
         <span id="close-image-modal">×</span>
         <img id="full-size-image" src="" alt="Powiększony obraz">
     </div>
-
-    <!-- APP CONTAINER (no changes here) -->
     <div id="app-container">
         <div id="app-top-bar">
             <a href="https://0-skar.github.io/0/" id="back-button"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></a>
@@ -202,6 +203,8 @@
     <input type="file" id="file-input" style="display: none;" accept="image/jpeg,image/png,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
 
     <script>
+        // The JavaScript logic remains the same as the previous version.
+        // The change was only in the CSS part within the <style> tag.
         const ACCESS_CODE = "2017";
         const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
         const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
@@ -212,7 +215,6 @@
         const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
         const GREETINGS = [ "Siema. Co tam dziś scrollujesz?", "Elo. Zasilanie włączone. Co dziś robimy?", "Cześć. W co dzisiaj grasz? A może chcesz, żebym coś namalował? 😎" ];
 
-        // --- DOM Elements (no changes here)
         const appContainer = document.getElementById('app-container');
         const passwordModal = document.getElementById('password-modal');
         const passwordInput = document.getElementById('password-input');
@@ -245,7 +247,6 @@
         const fullSizeImage = document.getElementById('full-size-image');
         const closeImageModal = document.getElementById('close-image-modal');
 
-        // --- App State (no changes here)
         const synth = window.speechSynthesis;
         let voices = [];
         let isTtsEnabled = true;
@@ -253,7 +254,6 @@
         let lastUserMessage = "";
         let loadingBubble = null;
 
-        // --- Initial Setup Functions (no changes here)
         function displayInitialGreeting() { if (conversationHistory.length === 0) { const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]; addMessageToChat(randomGreeting, false); speak(randomGreeting); } }
         function checkAuthentication() { if (sessionStorage.getItem('isAuthenticated') === 'true') { passwordModal.style.display = 'none'; appContainer.style.display = 'flex'; initSpeechSynthesis(); displayInitialGreeting(); } else { passwordModal.style.display = 'flex'; appContainer.style.display = 'none'; } }
         function initSpeechSynthesis() { populateVoiceList(); if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = populateVoiceList; }
@@ -286,7 +286,6 @@
         donateKeyButton.addEventListener('click', async () => { const key = userApiKeyInput.value.trim(); if(!key) return; hideApiKeyModal(); try { const res = await fetch(DONATE_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ apiKey: key }) }); if(!res.ok) throw new Error((await res.json()).detail); sessionStorage.setItem('userProvidedApiKey', key); handleSubmit(true); } catch(err){ addMessageToChat(`Błąd donacji: ${err.message}`, false, false); } });
         closeApiKeyModal.addEventListener('click', hideApiKeyModal);
         
-        // --- Import/Export and Modal Functions (no changes here)
         function exportConversation(history) { const dataStr = JSON.stringify(history.filter(m => !m.isHidden), null, 2); const blob = new Blob([dataStr], { type: "application/json" }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `rozmowa.json`; a.click(); URL.revokeObjectURL(a.href); }
         async function exportToPdf() { addMessageToChat("Przygotowuję PDF...", false, false); try { const response = await fetch(EXPORT_PDF_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ history: conversationHistory }) }); if (!response.ok) throw new Error("Błąd generowania PDF."); const blob = await response.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'rozmowa.pdf'; a.click(); URL.revokeObjectURL(a.href); } catch (error) { addMessageToChat(`Błąd eksportu: ${error.message}`, false, false); } }
         function importConversation() { const input = document.createElement('input'); input.type = 'file'; input.accept = '.json'; input.onchange = e => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (event) => { try { const imported = JSON.parse(event.target.result); if (Array.isArray(imported)) { conversationHistory = imported; messageList.innerHTML = ''; conversationHistory.forEach(msg => addMessageToChat(msg.content, msg.role === 'user', false, msg.attachments, msg.isHidden)); } else { throw new Error("Niepoprawny format."); } } catch (err) { addMessageToChat(`Błąd importu: ${err.message}`, false, false); } }; reader.readAsText(file); }; input.click(); }
@@ -304,25 +303,12 @@
         closeImageModal.addEventListener('click', () => { imageModal.style.display = 'none'; });
         imageModal.addEventListener('click', (e) => { if (e.target === imageModal) { imageModal.style.display = 'none'; } });
 
-        // --- Core Application Logic (Attachment Handling) ---
         function handleFileSelect(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { const fileData = { name: file.name, mime_type: file.type || 'application/octet-stream', data: e.target.result.split(',')[1] }; addMessageToChat(`Załączono: ${file.name}`, true, true, [fileData]); handleSubmit(); }; reader.readAsDataURL(file); }
         attachmentButton.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', handleFileSelect);
         function downloadPdfFromBase64(filename, base64Data) { const byteCharacters = atob(base64Data); const byteNumbers = new Array(byteCharacters.length); for (let i = 0; i < byteCharacters.length; i++) { byteNumbers[i] = byteCharacters.charCodeAt(i); } const blob = new Blob([new Uint8Array(byteNumbers)], { type: 'application/pdf' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href); }
         function copyCode(button) { const code = button.parentElement.querySelector('code'); navigator.clipboard.writeText(code.innerText).then(() => { button.innerText = 'Skopiowano!'; setTimeout(() => { button.innerText = 'Kopiuj'; }, 2000); }); }
 
-        // --- ⬇️⬇️⬇️ KEY CHANGES ARE IN THE TWO FUNCTIONS BELOW ⬇️⬇️⬇️ ---
-
-        /**
-         * Renders a message bubble in the chat UI and, if specified, adds it to the conversation history.
-         * This function is the single source of truth for how messages are displayed.
-         * @param {string} text - The text content of the message.
-         * @param {boolean} isUser - True if the message is from the user, false for the assistant.
-         * @param {boolean} [addToHistory=true] - Whether to add this message to the global conversationHistory array.
-         * @param {Array|null} [attachments=null] - An array of attachment objects ({ name, mime_type, data }).
-         * @param {boolean} [isHidden=false] - If true, adds to history but doesn't render in the chat.
-         * @returns {HTMLElement|null} - The created message bubble element or null if hidden.
-         */
         function addMessageToChat(text, isUser, addToHistory = true, attachments = null, isHidden = false) {
             if (addToHistory) {
                 conversationHistory.push({ role: isUser ? 'user' : 'assistant', content: text, attachments, isHidden });
@@ -332,12 +318,10 @@
             const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
             
-            // Hide tool usage tags (e.g., [GENERATE_IMAGE:...]) from the user's view.
             const cleanText = text.replace(/\[\/?(STORY_PDF|GENERATE_IMAGE|EDIT_IMAGE|INPAINT_IMAGE|CREATE_COMPOSITION|CHANGE_BACKGROUND|TOOL:search|TOOL:scrape)[\s\S]*?\]/gi, '').trim();
 
             let hasContent = false;
 
-            // First, render any attachments.
             if (attachments && attachments[0]) {
                 const attachment = attachments[0];
                 if (attachment.mime_type.startsWith('image/')) {
@@ -345,7 +329,7 @@
                     image.src = `data:${attachment.mime_type};base64,${attachment.data}`;
                     image.alt = cleanText || 'Załączony obraz';
                     image.className = 'chat-image-thumbnail';
-                    image.addEventListener('click', () => { // Using 'click' for better mobile experience.
+                    image.addEventListener('click', () => {
                         fullSizeImage.src = image.src;
                         imageModal.style.display = 'flex';
                     });
@@ -365,7 +349,6 @@
                 }
             }
 
-            // Then, render the text content, which will appear below the attachment if one exists.
             if (cleanText) {
                 const codeMatch = cleanText.match(/```(\w*)\n([\s\S]*)```/);
                 if (codeMatch) {
@@ -382,7 +365,6 @@
                 hasContent = true;
             }
             
-            // Only add the bubble to the DOM if it's a loading placeholder or has actual content.
             if (hasContent || text === "") { 
                 messageList.appendChild(messageBubble);
                 messageList.scrollTop = messageList.scrollHeight;
@@ -390,11 +372,6 @@
             return messageBubble;
         }
 
-
-        /**
-         * Handles the entire process of sending history to the backend and processing the response.
-         * @param {boolean} [isRetry=false] - If true, resends the last user message (used for API key failures).
-         */
         async function handleSubmit(isRetry = false) {
             if (!sessionStorage.getItem('isAuthenticated')) return;
 
@@ -440,7 +417,6 @@
                 
                 const data = await response.json();
 
-                // CORRECTED LOGIC: Create a single, unified message from the assistant's response.
                 const assistantText = data.generated_text || "";
                 let assistantAttachments = null;
 
@@ -450,10 +426,8 @@
                     assistantAttachments = [{ name: data.pdf_file.filename, mime_type: "application/pdf", data: data.pdf_file.data }];
                 }
 
-                // Add the single, combined message to the chat UI and the conversation history.
                 addMessageToChat(assistantText, false, true, assistantAttachments);
 
-                // Handle side-effects like text-to-speech.
                 if (assistantText) {
                     speak(assistantText);
                 }
@@ -464,7 +438,6 @@
             }
         }
         
-        // --- Event Listeners and Final Setup ---
         chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(false); });
         
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
