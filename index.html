@@ -73,15 +73,8 @@
         #avatar { width: 90%; max-width: 250px; height: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         #message-list { flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background-color: var(--chat-area-bg); }
         .message-bubble { padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4; word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        
-        /* --- ⬇️ KEY CHANGE FOR TEXT ALIGNMENT IS HERE ⬇️ --- */
-        .user-message { 
-            background-color: var(--user-bubble-bg); 
-            color: white; 
-            /* The 'align-self: flex-end;' rule was removed to keep all bubbles on the left */
-        }
+        .user-message { background-color: var(--user-bubble-bg); color: white; }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
-        
         #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
         #chat-form { display: flex; align-items: center; }
         .chat-form-button { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
@@ -102,11 +95,8 @@
             filter: brightness(0.9);
         }
         .message-bubble p { margin: 0; padding-top: 8px; }
-        .message-bubble img + p { margin-top: 8px; } 
-
-        #image-modal {
-            background: rgba(0,0,0,0.85);
-        }
+        .message-bubble img + p { margin-top: 8px; }
+        #image-modal { background: rgba(0,0,0,0.85); }
         #full-size-image {
             max-width: 90vw;
             max-height: 90vh;
@@ -124,13 +114,10 @@
             transition: color 0.3s;
             z-index: 1001;
         }
-        #close-image-modal:hover {
-            color: #bbb;
-        }
+        #close-image-modal:hover { color: #bbb; }
     </style>
 </head>
 <body>
-    <!-- The HTML for modals and the app container remains unchanged. -->
     <div id="password-modal" class="modal-overlay">
         <div id="password-modal-content" class="modal-content">
             <h3>Wpisz kod dostępu</h3>
@@ -203,8 +190,6 @@
     <input type="file" id="file-input" style="display: none;" accept="image/jpeg,image/png,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
 
     <script>
-        // The JavaScript logic remains the same as the previous version.
-        // The change was only in the CSS part within the <style> tag.
         const ACCESS_CODE = "2017";
         const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
         const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
@@ -310,24 +295,45 @@
         function copyCode(button) { const code = button.parentElement.querySelector('code'); navigator.clipboard.writeText(code.innerText).then(() => { button.innerText = 'Skopiowano!'; setTimeout(() => { button.innerText = 'Kopiuj'; }, 2000); }); }
 
         function addMessageToChat(text, isUser, addToHistory = true, attachments = null, isHidden = false) {
+            let historyText = text;
+            if (addToHistory && attachments && attachments[0]) {
+                const fileTag = `[Plik: ${attachments[0].name}]`;
+                if (!historyText.includes(fileTag)) {
+                    historyText += ` ${fileTag}`;
+                }
+            }
+
             if (addToHistory) {
-                conversationHistory.push({ role: isUser ? 'user' : 'assistant', content: text, attachments, isHidden });
+                conversationHistory.push({ role: isUser ? 'user' : 'assistant', content: historyText, attachments, isHidden });
             }
             if (isHidden) return null;
 
             const messageBubble = document.createElement('div');
             messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
             
-            const cleanText = text.replace(/\[\/?(STORY_PDF|GENERATE_IMAGE|EDIT_IMAGE|INPAINT_IMAGE|CREATE_COMPOSITION|CHANGE_BACKGROUND|TOOL:search|TOOL:scrape)[\s\S]*?\]/gi, '').trim();
+            const cleanDisplayText = text.replace(/\[\/?(STORY_PDF|GENERATE_IMAGE|EDIT_IMAGE|INPAINT_IMAGE|CREATE_COMPOSITION|CHANGE_BACKGROUND|TOOL:search|TOOL:scrape|Plik:[\s\S]*)[\s\S]*?\]/gi, '').trim();
 
             let hasContent = false;
 
             if (attachments && attachments[0]) {
                 const attachment = attachments[0];
+                
+                const filenameElement = document.createElement('div');
+                filenameElement.innerText = attachment.name;
+                filenameElement.style.fontWeight = 'bold';
+                filenameElement.style.fontSize = '0.9em';
+                filenameElement.style.fontFamily = 'monospace';
+                filenameElement.style.color = '#333';
+                filenameElement.style.padding = '4px 8px';
+                filenameElement.style.backgroundColor = isUser ? 'rgba(255,255,255,0.1)' : '#f0f2f5';
+                filenameElement.style.borderRadius = '5px';
+                filenameElement.style.marginBottom = '8px';
+                messageBubble.appendChild(filenameElement);
+
                 if (attachment.mime_type.startsWith('image/')) {
                     const image = document.createElement('img');
                     image.src = `data:${attachment.mime_type};base64,${attachment.data}`;
-                    image.alt = cleanText || 'Załączony obraz';
+                    image.alt = attachment.name;
                     image.className = 'chat-image-thumbnail';
                     image.addEventListener('click', () => {
                         fullSizeImage.src = image.src;
@@ -338,7 +344,7 @@
                 } else if (attachment.mime_type === 'application/pdf') {
                     const link = document.createElement('a');
                     link.href = "#";
-                    link.innerText = `Pobierz: ${attachment.name}`;
+                    link.innerText = `Pobierz PDF`;
                     link.className = 'download-file-button';
                     link.onclick = (e) => {
                         e.preventDefault();
@@ -349,8 +355,8 @@
                 }
             }
 
-            if (cleanText) {
-                const codeMatch = cleanText.match(/```(\w*)\n([\s\S]*)```/);
+            if (cleanDisplayText) {
+                const codeMatch = cleanDisplayText.match(/```(\w*)\n([\s\S]*)```/);
                 if (codeMatch) {
                     const pre = document.createElement('pre');
                     pre.className = `language-${codeMatch[1] || 'plaintext'}`;
@@ -359,13 +365,13 @@
                     if (window.Prism) Prism.highlightAllUnder(pre);
                 } else {
                     const p = document.createElement('p');
-                    p.innerText = cleanText;
+                    p.innerText = cleanDisplayText;
                     messageBubble.appendChild(p);
                 }
                 hasContent = true;
             }
             
-            if (hasContent || text === "") { 
+            if (hasContent || (text === "" && !attachments)) { 
                 messageList.appendChild(messageBubble);
                 messageList.scrollTop = messageList.scrollHeight;
             }
