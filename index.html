@@ -74,11 +74,9 @@
         #message-list { flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background-color: var(--chat-area-bg); }
         .message-bubble { padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4; word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         
-        /* --- ⬇️ KEY CHANGE FOR TEXT ALIGNMENT IS HERE ⬇️ --- */
         .user-message { 
             background-color: var(--user-bubble-bg); 
             color: white; 
-            /* The 'align-self: flex-end;' rule was removed to keep all bubbles on the left */
         }
         .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
         
@@ -203,8 +201,6 @@
     <input type="file" id="file-input" style="display: none;" accept="image/jpeg,image/png,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
 
     <script>
-        // The JavaScript logic remains the same as the previous version.
-        // The change was only in the CSS part within the <style> tag.
         const ACCESS_CODE = "2017";
         const BASE_BACKEND_URL = "https://eosforus-3.hf.space"; 
         const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
@@ -347,6 +343,34 @@
                     messageBubble.appendChild(link);
                     hasContent = true;
                 }
+
+                // === POCZĄTEK ZMIANY ===
+                // Dodajemy pod każdym załącznikiem jego nazwę, aby użytkownik mógł się do niej odnieść
+                const fileNameDiv = document.createElement('div');
+                fileNameDiv.innerText = `Plik: ${attachment.name}`;
+                fileNameDiv.title = 'Kliknij, aby skopiować nazwę pliku';
+                fileNameDiv.style.fontSize = '0.75rem';
+                fileNameDiv.style.color = isUser ? '#e0e0e0' : '#555';
+                fileNameDiv.style.marginTop = '5px';
+                fileNameDiv.style.fontFamily = 'monospace';
+                fileNameDiv.style.cursor = 'pointer';
+                fileNameDiv.style.wordBreak = 'break-all';
+
+                fileNameDiv.onclick = () => {
+                    navigator.clipboard.writeText(attachment.name).then(() => {
+                        const originalText = fileNameDiv.innerText;
+                        fileNameDiv.innerText = 'Skopiowano!';
+                        fileNameDiv.style.color = '#28a745'; // Zielony kolor jako feedback
+                        setTimeout(() => {
+                            fileNameDiv.innerText = originalText;
+                            fileNameDiv.style.color = isUser ? '#e0e0e0' : '#555'; // Powrót do oryginalnego koloru
+                        }, 1500);
+                    }).catch(err => {
+                        console.error('Błąd kopiowania nazwy pliku do schowka: ', err);
+                    });
+                };
+                messageBubble.appendChild(fileNameDiv);
+                // === KONIEC ZMIANY ===
             }
 
             if (cleanText) {
