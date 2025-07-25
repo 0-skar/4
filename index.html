@@ -446,15 +446,90 @@
         
         chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(false); });
         
+        // --- START ZMODYFIKOWANEGO BLOKU SPEECH RECOGNITION ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SpeechRecognition) {
+
+        // Sprawdź, czy API jest w ogóle dostępne i czy strona jest na HTTPS
+        if (SpeechRecognition && window.isSecureContext) {
             const recognition = new SpeechRecognition();
-            recognition.continuous = true; recognition.interimResults = true; let isListening = false;
-            micButton.addEventListener('click', () => { if (!isListening) { recognition.lang = 'pl-PL'; recognition.start(); } else { recognition.stop(); } });
-            recognition.onstart = () => { isListening = true; micButton.classList.add('is-listening'); };
-            recognition.onend = () => { isListening = false; micButton.classList.remove('is-listening'); if (userInput.value.trim()){ handleSubmit(false); } };
-            recognition.onresult = (event) => { let final_transcript = ''; for (let i = event.resultIndex; i < event.results.length; ++i) { final_transcript += event.results[i][0].transcript; } userInput.value = final_transcript; };
-        } else { micButton.style.display = 'none'; }
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'pl-PL';
+
+            let isListening = false;
+
+            micButton.addEventListener('click', () => {
+                if (!isListening) {
+                    try {
+                        recognition.start();
+                    } catch(e) {
+                        console.error("Błąd przy próbie startu rozpoznawania mowy:", e);
+                        addMessageToChat("Nie udało się uruchomić mikrofonu. Spróbuj odświeżyć stronę.", false, false);
+                    }
+                } else {
+                    recognition.stop();
+                }
+            });
+
+            recognition.onstart = () => {
+                isListening = true;
+                micButton.classList.add('is-listening');
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                micButton.classList.remove('is-listening');
+                // Jeśli jest coś w polu tekstowym, wyślij to
+                if (userInput.value.trim()) {
+                    handleSubmit(false);
+                }
+            };
+
+            recognition.onresult = (event) => {
+                let interim_transcript = '';
+                let final_transcript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        final_transcript += event.results[i][0].transcript;
+                    } else {
+                        interim_transcript += event.results[i][0].transcript;
+                    }
+                }
+                // Aktualizuj pole tekstowe ostatecznym tekstem, a następnie dodaj tymczasowy
+                userInput.value = final_transcript + interim_transcript;
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Błąd rozpoznawania mowy:', event.error);
+                let errorMessage = "Wystąpił nieznany błąd mikrofonu.";
+                if (event.error === 'not-allowed') {
+                    errorMessage = "Nie udzielono pozwolenia na użycie mikrofonu. Sprawdź ustawienia swojej przeglądarki (ikona kłódki przy pasku adresu) i odśwież stronę.";
+                } else if (event.error === 'no-speech') {
+                    errorMessage = "Nie wykryto mowy. Spróbuj mówić wyraźniej.";
+                } else if (event.error === 'network') {
+                    errorMessage = "Błąd sieciowy podczas rozpoznawania mowy.";
+                } else if (event.error === 'audio-capture') {
+                    errorMessage = "Problem z przechwytywaniem dźwięku. Upewnij się, że mikrofon jest poprawnie podłączony i działa.";
+                }
+                addMessageToChat(errorMessage, false, false);
+                isListening = false;
+                micButton.classList.remove('is-listening');
+            };
+        } else {
+            // Jeśli API nie jest dostępne, wyłącz przycisk i poinformuj użytkownika
+            micButton.disabled = true;
+            micButton.style.cursor = 'not-allowed';
+            let reason = !SpeechRecognition 
+                ? "Twoja przeglądarka nie wspiera tej funkcji."
+                : "Funkcja wymaga bezpiecznego połączenia (HTTPS).";
+            micButton.title = `Nagrywanie głosu jest niedostępne. Powód: ${reason}`;
+            console.warn("Speech Recognition nie jest dostępne.", {
+                hasApi: !!SpeechRecognition,
+                isSecure: window.isSecureContext
+            });
+        }
+        // --- KONIEC ZMODYFIKOWANEGO BLOKU SPEECH RECOGNITION ---
         
         updateTtsToggleIcon();
         checkAuthentication();
