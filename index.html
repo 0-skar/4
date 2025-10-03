@@ -39,6 +39,28 @@
         .modal-content input[type="password"], #edit-history-textarea { display: block; width: 90%; margin: 1.5rem auto; padding: 12px; font-size: 1.2rem; text-align: center; border: 2px solid var(--border-color); border-radius: 8px; }
         #edit-history-textarea { text-align: left; font-size: 0.9rem; height: 40vh; resize: vertical; font-family: "Courier New", Courier, monospace; }
         .modal-button { padding: 10px 20px; font-size: 0.9rem; color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%; box-sizing: border-box; }
+        
+        /* --- POCZĄTEK DODANEGO BLOKU CSS --- */
+        #api-key-links {
+            list-style: none;
+            padding: 0;
+            margin: 0.5rem auto 1.5rem auto;
+            text-align: left;
+            width: 90%;
+        }
+        #api-key-links li {
+            margin-bottom: 0.5rem;
+        }
+        #api-key-links a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: normal;
+        }
+        #api-key-links a:hover {
+            text-decoration: underline;
+        }
+        /* --- KONIEC DODANEGO BLOKU CSS --- */
+        
         #api-key-modal-content p, #edit-modal-content p { font-size: 0.9rem; line-height: 1.5; color: #65676b; text-align: left; }
         #api-key-modal-content a { color: #007bff; text-decoration: none; font-weight: bold; }
         #api-key-modal-content a:hover { text-decoration: underline; }
@@ -128,13 +150,21 @@
             </div>
         </div>
     </div>
+
+    <!-- POCZĄTEK ZMODYFIKOWANEGO BLOKU HTML -->
     <div id="api-key-modal" class="modal-overlay">
         <div id="api-key-modal-content" class="modal-content">
             <h3>Podaj własny klucz API</h3>
-            <p>Jeśli wspólne klucze API się wyczerpią, możesz kontynuować rozmowę używając swojego darmowego klucza Gemini.</p>
-            <p>Możesz go uzyskać na stronie <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>.</p>
+            <p>Gdy publiczne klucze na serwerze się wyczerpią, możesz użyć własnego klucza. Aplikacja automatycznie wykryje jego typ (OpenAI, Claude, Gemini, Groq).</p>
+            <p style="font-weight: bold; margin-bottom: 0.5rem;">Linki do uzyskania darmowych kluczy:</p>
+            <ul id="api-key-links">
+                <li><b>OpenAI (GPT-4o)</b>: <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a></li>
+                <li><b>Anthropic (Claude)</b>: <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a></li>
+                <li><b>Google (Gemini)</b>: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a></li>
+                <li><b>Groq (Llama3)</b>: <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a></li>
+            </ul>
             <p>Możesz też wesprzeć projekt, dodając swój klucz do wspólnej puli.</p>
-            <input type="password" id="user-api-key-input" placeholder="Wklej swój klucz API tutaj">
+            <input type="password" id="user-api-key-input" placeholder="Wklej klucz (np. sk-..., gsk_..., AIza...)">
             <div class="button-container">
                 <button id="save-private-key-button" class="modal-button">Użyj tylko dla mnie</button>
                 <button id="donate-key-button" class="modal-button">Dodaj do wspólnej puli</button>
@@ -142,6 +172,8 @@
             </div>
         </div>
     </div>
+    <!-- KONIEC ZMODYFIKOWANEGO BLOKU HTML -->
+
     <div id="edit-modal" class="modal-overlay">
         <div id="edit-modal-content" class="modal-content">
             <h3>Edytuj i Eksportuj Rozmowę</h3>
