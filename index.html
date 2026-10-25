@@ -1,0 +1,1949 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>My Bro</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script src="https://unpkg.com/docx@8.5.0/build/index.js" defer></script>
+    <style>
+        :root {
+            --body-bg: #f0f2f5; --chat-area-bg: #e9ecef; --user-bubble-bg: #007bff;
+            --assistant-bubble-bg: #ffffff; --controls-bg: #ffffff; --border-color: #ced0d4;
+        }
+        html, body {
+            height: 100%; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--body-bg);
+        }
+        .loading-dots span {
+            display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+            background-color: #8e8e8e; margin: 0 3px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+        .assistant-message.loading {
+            display: flex; align-items: center; width: fit-content; padding: 12px 16px;
+        }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        
+        .modal-content { 
+            position: relative; 
+            background: white; 
+            padding: 1.5rem; /* Zmniejszono z 2rem */
+            border-radius: 12px; 
+            text-align: center; 
+            color: #333; 
+            box-shadow: 0 5px 25px rgba(0,0,0,0.3); 
+            max-width: 480px; 
+            width: 90%; 
+            display: flex; 
+            flex-direction: column;
+            max-height: 95vh; /* Zabezpieczenie przed wyjściem poza ekran */
+            overflow-y: auto; /* Scroll w razie potrzeby */
+        }
+        
+        /* Zmodyfikowany styl dla inputów w modalu API, aby były mniejsze */
+        #api-key-modal-content input[type="password"] {
+            display: block; 
+            width: 90%; 
+            margin: 0.8rem auto; /* Zmniejszono marginesy */
+            padding: 8px; /* Zmniejszono padding */
+            font-size: 1rem; /* Zmniejszono czcionkę */
+            text-align: center; 
+            border: 2px solid var(--border-color); 
+            border-radius: 8px; 
+        }
+
+        /* Inputy w innych modalach (np. hasło) pozostają większe */
+        #password-modal-content input[type="password"] {
+             display: block; width: 90%; margin: 1.5rem auto; padding: 12px; font-size: 1.2rem; text-align: center; border: 2px solid var(--border-color); border-radius: 8px; 
+        }
+
+        #edit-history-textarea { display: block; width: 90%; margin: 1.5rem auto; padding: 12px; text-align: center; border: 2px solid var(--border-color); border-radius: 8px; }
+        #edit-history-textarea { text-align: left; font-size: 0.9rem; height: 40vh; resize: vertical; font-family: "Courier New", Courier, monospace; }
+        
+        .modal-button { padding: 8px 16px; font-size: 0.9rem; color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%; box-sizing: border-box; }
+        
+        /* Kompaktowa lista linków */
+        #api-key-links {
+            list-style: none;
+            padding: 0;
+            margin: 0.2rem auto 1rem auto; /* Zmniejszone marginesy */
+            text-align: left;
+            width: 90%;
+            font-size: 0.85rem; /* Mniejsza czcionka */
+        }
+        #api-key-links li {
+            margin-bottom: 0.3rem; /* Mniejszy odstęp */
+        }
+        #api-key-links a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: normal;
+        }
+        #api-key-links a:hover {
+            text-decoration: underline;
+        }
+        
+        .close-modal-x {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+            line-height: 1;
+            transition: color 0.3s;
+            z-index: 10;
+        }
+        .close-modal-x:hover {
+            color: #333;
+        }
+
+        /* Style tekstowe dla modala API - bardziej kompaktowe */
+        #api-key-modal-content h3 { margin-top: 0; margin-bottom: 0.5rem; font-size: 1.2rem; }
+        #api-key-modal-content p { font-size: 0.85rem; line-height: 1.4; color: #65676b; text-align: left; margin: 0.3rem 0; }
+        #api-key-modal-content a { color: #007bff; text-decoration: none; font-weight: bold; }
+        #api-key-modal-content a:hover { text-decoration: underline; }
+
+        .button-container { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-top: 0.8rem; }
+        
+        #password-button { background-color: #007bff; }
+        #return-button { background-color: #6c757d; text-decoration: none; display: block; }
+        #save-private-key-button, #save-edited-button { background-color: #007bff; }
+        #donate-key-button { background-color: #28a745; }
+        #close-api-key-modal, #close-edit-modal { background-color: #6c757d; }
+        pre[class*="language-"] { background: #2d2d2d; border-radius: 8px; padding: 1em; margin: .5em 0; overflow: auto; position: relative; }
+        .copy-code-button { position: absolute; top: 5px; right: 5px; background: #5f5f5f; border: none; color: white; padding: 5px 8px; border-radius: 5px; cursor: pointer; opacity: 0.7; font-size: 0.75rem; }
+        .copy-code-button:hover { opacity: 1; }
+        .download-code-button { position: absolute; top: 5px; right: 70px; background: #28a745; border: none; color: white; padding: 5px 8px; border-radius: 5px; cursor: pointer; opacity: 0.85; font-size: 0.75rem; }
+        .download-code-button:hover { opacity: 1; }
+        .download-file-button {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: #28a745; color: white;
+            padding: 10px 16px; border-radius: 10px;
+            text-decoration: none; font-size: 0.95rem;
+            margin-top: 8px; margin-right: 6px;
+            border: none; cursor: pointer; font-weight: 600;
+            box-shadow: 0 2px 6px rgba(40,167,69,0.35);
+        }
+        .download-file-button:hover { background: #218838; transform: translateY(-1px); }
+        .download-file-button .arrow { font-size: 1.25rem; line-height: 1; }
+        .file-chip {
+            display: flex; align-items: center; gap: 10px;
+            background: #f0f2f5; border: 1px solid #ced0d4;
+            border-radius: 12px; padding: 10px 14px; margin: 8px 0;
+            font-size: 0.9rem; flex-wrap: wrap;
+        }
+        .file-chip .file-icon { font-size: 1.4rem; }
+        .file-chip .file-name { font-family: monospace; font-weight: 600; color: #333; flex: 1; min-width: 0; word-break: break-all; }
+        /* --- karta buildu w chmurze (GitHub Actions) --- */
+        .build-card { border: 2px dashed #7c9cbf; background: #f2f7fc; border-radius: 12px; padding: 12px 14px; margin: 8px 0; }
+        .build-title { font-weight: 700; color: #24507c; margin-bottom: 4px; }
+        .build-desc { font-size: 0.9rem; color: #445; margin-bottom: 10px; }
+        .build-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .build-start-btn { background: #24507c; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-weight: 600; }
+        .build-start-btn:hover { background: #1b3d5e; }
+        .build-src-btn { background: transparent; border: 1px solid #7c9cbf; color: #24507c; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+        .build-status { display: flex; align-items: center; gap: 8px; color: #24507c; font-size: 0.95rem; }
+        .build-spinner { width: 16px; height: 16px; border: 3px solid #bcd2e8; border-top-color: #24507c; border-radius: 50%; animation: buildspin 0.9s linear infinite; flex-shrink: 0; }
+        @keyframes buildspin { to { transform: rotate(360deg); } }
+        .build-elapsed { color: #789; font-size: 0.85rem; }
+        .build-links { margin-top: 6px; font-size: 0.85rem; }
+        .build-done { font-weight: 700; color: #1e7a34; margin-bottom: 6px; }
+        .build-error { color: #b00020; font-size: 0.92rem; word-break: break-word; }
+        .build-body .file-chip { margin-top: 6px; }
+        .file-chip .chip-download {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 36px; height: 36px; border-radius: 50%;
+            background: transparent; color: #333; border: none; cursor: pointer;
+            font-size: 1.35rem; flex-shrink: 0;
+            box-shadow: none; padding: 0;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+        .file-chip .chip-download:hover { background: transparent; transform: scale(1.2); opacity: 0.75; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); } 20%, 40%, 60%, 80% { transform: translateX(10px); } }
+        .is-invalid { animation: shake 0.5s; }
+        #app-container { width: 100%; height: 100%; max-width: 800px; margin: 0 auto; display: none; flex-direction: column; background-color: white; }
+        #app-top-bar { display: flex; align-items: center; padding: 8px; background-color: var(--controls-bg); border-bottom: 1px solid var(--border-color); flex-shrink: 0; position: relative; }
+        #back-button { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; text-decoration: none; z-index: 1; }
+        #back-button:hover { background-color: rgba(0,0,0,0.05); }
+        #back-button svg { width: 24px; height: 24px; fill: #333; }
+        #app-title { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; font-size: 1.1rem; color: #333; font-weight: 600; }
+        #top-right-buttons { margin-left: auto; display: flex; align-items: center; gap: 4px; padding-right: 8px; }
+        .top-bar-button { background: transparent; border: none; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; font-size: 1.2rem; }
+        .top-bar-button:hover { background-color: rgba(0,0,0,0.05); }
+        #tts-toggle-button svg { width: 24px; height: 24px; fill: #65676b; }
+        #tts-toggle-button.is-muted svg { fill: #bec3c9; }
+        #export-menu-container { position: relative; }
+        #export-options { display: none; position: absolute; top: 100%; left: 0; background: white; border: 1px solid #ccc; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 10; min-width: 150px;}
+        #export-options a { display: block; padding: 8px 12px; text-decoration: none; color: #333; font-size: 0.9rem; }
+        #export-options a:hover { background-color: #f0f2f5; }
+        #avatar-container { width: 100%; padding: 8px 0; background-color: var(--controls-bg); text-align: center; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+        #avatar { width: 90%; max-width: 250px; height: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        #message-list { flex-grow: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background-color: var(--chat-area-bg); }
+        .message-bubble { padding: 10px 14px; border-radius: 18px; max-width: 80%; line-height: 1.4; word-wrap: break-word; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .user-message { background-color: var(--user-bubble-bg); color: white; }
+        .assistant-message { background-color: var(--assistant-bubble-bg); color: #050505; }
+        #controls-container { padding: 8px; border-top: 1px solid var(--border-color); background: var(--controls-bg); flex-shrink: 0; }
+        #chat-form { display: flex; align-items: center; }
+        .chat-form-button { background-color: #007bff; width: 44px; height: 44px; font-size: 1.5rem; border-radius: 50%; margin-left: 8px; border: none; cursor: pointer; color: white; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+        #attachment-button { background: transparent; color: #65676b; font-size: 1.5rem; border-radius: 0; width: auto; height: auto; margin: 0 8px 0 4px; padding: 0; cursor: pointer; border: none; }
+        #micButton.is-listening { background-color: #fa383e; }
+        #userInput { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 18px; font-size: 1rem; background: #f0f2f5; }
+        .chat-image-thumbnail {
+            max-width: 250px;
+            max-height: 250px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin-top: 8px;
+            display: block;
+        }
+        .chat-image-thumbnail:hover {
+            transform: scale(1.05);
+            filter: brightness(0.9);
+        }
+        .message-bubble p { margin: 0; padding-top: 8px; }
+        .message-bubble img + p { margin-top: 8px; }
+        #image-modal { background: rgba(0,0,0,0.85); }
+        #full-size-image {
+            max-width: 90vw;
+            max-height: 90vh;
+            border-radius: 5px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+        #close-image-modal {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+            z-index: 1001;
+        }
+        #close-image-modal:hover { color: #bbb; }
+    </style>
+</head>
+<body>
+    <div id="password-modal" class="modal-overlay">
+        <div id="password-modal-content" class="modal-content">
+            <h3>Wpisz kod dostępu</h3>
+            <input type="password" id="password-input">
+            <div class="button-container">
+                <button id="password-button" class="modal-button">Wejdź</button>
+                <a href="https://0-skar.github.io/0/" id="return-button" class="modal-button">Wróć</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ZMODYFIKOWANY MODAL KLUCZA API -->
+    <!-- MISTRAL_V1: Mistral dodany do listy kluczy (obsluga po stronie backendu) -->
+    <!-- POWITANIE: powitanie zmienione z "Siema" na "Cześć" -->
+    <div id="api-key-modal" class="modal-overlay">
+        <div id="api-key-modal-content" class="modal-content">
+            <span id="close-api-key-x" class="close-modal-x">&times;</span>
+            
+            <h3>Podaj własny klucz API</h3>
+            <p>Gdy publiczne klucze na serwerze się wyczerpią, możesz użyć własnego klucza. Aplikacja automatycznie wykryje jego typ (OpenAI, Claude, Gemini, Groq, Mistral).</p>
+            <p style="font-weight: bold; margin-bottom: 0.2rem; font-size: 0.85rem;">Darmowe klucze:</p>
+            <ul id="api-key-links">
+                <li><b>OpenAI (GPT-4o)</b>: <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a></li>
+                <li><b>Anthropic (Claude)</b>: <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a></li>
+                <li><b>Google (Gemini)</b>: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a></li>
+                <li><b>Groq (Llama3)</b>: <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a></li>
+                <li><b>Meta (Muse)</b>: <a href="https://dev.meta.ai/api-keys" target="_blank">dev.meta.ai</a></li>
+                <li><b>OpenRouter</b>: <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></li>
+                <li><b>Mistral</b>: <a href="https://console.mistral.ai/api-keys" target="_blank">console.mistral.ai</a></li>
+            </ul>
+            <p>Możesz też wesprzeć projekt, dodając swój klucz do wspólnej puli.</p>
+            <input type="password" id="user-api-key-input" placeholder="Wklej klucz (np. sk-..., gsk_...)">
+            <div class="button-container">
+                <button id="save-private-key-button" class="modal-button">Użyj tylko dla mnie</button>
+                <button id="donate-key-button" class="modal-button">Dodaj do wspólnej puli</button>
+                <button id="close-api-key-modal" class="modal-button">Anuluj</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal-overlay">
+        <div id="edit-modal-content" class="modal-content">
+            <h3>Edytuj i Eksportuj Rozmowę</h3>
+            <p>Możesz tutaj poprawić lub skrócić transkrypcję przed zapisaniem jej do pliku.</p>
+            <textarea id="edit-history-textarea"></textarea>
+            <div class="button-container">
+                <button id="save-edited-button" class="modal-button">Zapisz i Pobierz</button>
+                <button id="close-edit-modal" class="modal-button">Anuluj</button>
+            </div>
+        </div>
+    </div>
+    <div id="image-modal" class="modal-overlay">
+        <span id="close-image-modal">×</span>
+        <img id="full-size-image" src="" alt="Powiększony obraz">
+    </div>
+    <div id="app-container">
+        <div id="app-top-bar">
+            <a href="https://0-skar.github.io/0/" id="back-button"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></a>
+            <div id="export-menu-container" style="position:relative;">
+                <button id="export-button-main" class="top-bar-button" title="Zapisane rozmowy">💾</button>
+                <div id="chats-dropdown" style="display:none; position:absolute; top:100%; left:0; background:#fff; border:1px solid #ccc; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.15); z-index:100; min-width:280px; max-width:340px; max-height:60vh; overflow-y:auto;">
+                    <div style="padding:10px 12px; border-bottom:1px solid #eee; font-weight:600; font-size:0.95rem; display:flex; justify-content:space-between; align-items:center;">
+                        <span>Zapisane rozmowy</span>
+                        <button id="new-chat-btn" style="background:#28a745; color:#fff; border:none; border-radius:5px; padding:3px 8px; font-size:0.8rem; cursor:pointer;">+ Nowa</button>
+                    </div>
+                    <div id="chats-list">
+                        <p style="color:#999; text-align:center; padding:16px; margin:0; font-size:0.9rem;">Ładowanie...</p>
+                    </div>
+                </div>
+            </div>
+            <h2 id="app-title">My Bro</h2>
+            <div id="top-right-buttons">
+                <button id="api-key-button" class="top-bar-button" title="Zarządzaj kluczem API">🔑</button>
+                <button id="tts-toggle-button" class="top-bar-button"></button>
+            </div>
+        </div>
+        <div id="avatar-container">
+            <img id="avatar" src="https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png" alt="Assistant Avatar">
+        </div>
+        <div id="message-list"></div>
+        <div id="controls-container">
+            <form id="chat-form">
+                <button type="button" id="attachment-button" class="chat-form-button" title="Załącz plik">📎</button>
+                <input type="text" id="userInput" placeholder="Opisz załączony plik lub zadaj pytanie..." autocomplete="off">
+                <button type="button" id="micButton" class="chat-form-button">🎤</button>
+            </form>
+        </div>
+    </div>
+    <input type="file" id="file-input" style="display: none;" multiple>
+
+    <script>
+        // UWAGA: żadnych sekretów we frontendzie – kody dostępu trzyma backend (zmienne środowiskowe).
+        // Frontend dostaje tylko krótko żyjący token po poprawnym logowaniu.
+        const BASE_BACKEND_URL = "https://eosforus-3.hf.space";
+        const LOGIN_URL = `${BASE_BACKEND_URL}/login`;
+        const CHAT_URL = `${BASE_BACKEND_URL}/chat`;
+        const DONATE_URL = `${BASE_BACKEND_URL}/donate-key`;
+        const CLOUD_BUILD_START_URL = `${BASE_BACKEND_URL}/cloud-build/start`;
+        const CLOUD_BUILD_STATUS_URL = (id) => `${BASE_BACKEND_URL}/cloud-build/${id}`;
+        const EXPORT_PDF_URL = `${BASE_BACKEND_URL}/export-pdf`;
+        const BOX_FILES_URL = `${BASE_BACKEND_URL}/box/files`;
+        const BOX_UPLOAD_URL = `${BASE_BACKEND_URL}/box/upload`;
+        const BOX_DOWNLOAD_URL = `${BASE_BACKEND_URL}/box/download`;
+        const BOX_DELETE_URL = `${BASE_BACKEND_URL}/box/delete`;
+        const AVATAR_STILL_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-still.png";
+        const AVATAR_TALKING_URL = "https://raw.githubusercontent.com/0-skar/4/main/avatar-talking.gif";
+        const GREETINGS = [ "Cześć" ];
+        const TTS_URL = `${BASE_BACKEND_URL}/tts`;
+        const STT_URL = `${BASE_BACKEND_URL}/stt`;
+
+        // --- BOX – automatyczne zapisywanie rozmów (przez proxy backendu) ---
+        const BOX_CHATS_FOLDER = "chats";
+        let currentChatId = sessionStorage.getItem('currentChatId') || null;
+        let autoSaveTimer = null;
+
+        // Nagłówki autoryzacyjne do każdego zapytania do backendu
+        function authHeaders(extra) {
+            const t = sessionStorage.getItem('authToken');
+            return Object.assign({ 'Authorization': 'Bearer ' + t }, extra || {});
+        }
+
+        const appContainer = document.getElementById('app-container');
+        const passwordModal = document.getElementById('password-modal');
+        const passwordInput = document.getElementById('password-input');
+        const passwordButton = document.getElementById('password-button');
+        const userInput = document.getElementById('userInput');
+        const messageList = document.getElementById('message-list');
+        const micButton = document.getElementById('micButton');
+        const avatar = document.getElementById('avatar');
+        const ttsToggleButton = document.getElementById('tts-toggle-button');
+        const chatForm = document.getElementById('chat-form');
+        const apiKeyModal = document.getElementById('api-key-modal');
+        const userApiKeyInput = document.getElementById('user-api-key-input');
+        const savePrivateKeyButton = document.getElementById('save-private-key-button');
+        const donateKeyButton = document.getElementById('donate-key-button');
+        const closeApiKeyModal = document.getElementById('close-api-key-modal');
+        const apiKeyButton = document.getElementById('api-key-button');
+        const attachmentButton = document.getElementById('attachment-button');
+        const fileInput = document.getElementById('file-input');
+        const editModal = document.getElementById('edit-modal');
+        const editHistoryTextarea = document.getElementById('edit-history-textarea');
+        const saveEditedButton = document.getElementById('save-edited-button');
+        const closeEditModal = document.getElementById('close-edit-modal');
+        const exportButtonMain = document.getElementById('export-button-main');
+        const chatsDropdown = document.getElementById('chats-dropdown');
+        const chatsList = document.getElementById('chats-list');
+        const newChatBtn = document.getElementById('new-chat-btn');
+        const imageModal = document.getElementById('image-modal');
+        const fullSizeImage = document.getElementById('full-size-image');
+        const closeImageModal = document.getElementById('close-image-modal');
+        const closeApiKeyX = document.getElementById('close-api-key-x');
+
+        let isTtsEnabled = true;
+        let conversationHistory = [];
+        let lastUserMessage = "";
+        let loadingBubble = null;
+        let currentAudio = null;
+
+        // ========== BOX – automatyczne zapisywanie rozmów (proxy: /box/*) ==========
+        function generateChatTitle() {
+            const firstUser = conversationHistory.find(m => m.role === 'user' && m.content && !m.isHidden);
+            let title = firstUser ? firstUser.content.trim() : 'Nowa rozmowa';
+            title = title.replace(/[^\w\sąćęłńóśźżĄĆĘŁŃÓŚŹŻ\-.,!?]/gi, '').trim();
+            if (title.length > 55) title = title.slice(0, 52) + '...';
+            return title || 'Rozmowa';
+        }
+
+        function makeSafeFilename(title) {
+            const now = new Date();
+            const ts = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            const safe = title.replace(/[^\w\s\-ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/gi, '').replace(/\s+/g, '_').slice(0, 40);
+            return `${ts}_${safe || 'rozmowa'}.json`;
+        }
+
+        async function saveCurrentChatToBox() {
+            if (conversationHistory.filter(m => !m.isHidden).length < 2) return;
+            if (!sessionStorage.getItem('authToken')) return;
+
+            const title = generateChatTitle();
+            if (!currentChatId) {
+                currentChatId = makeSafeFilename(title);
+                sessionStorage.setItem('currentChatId', currentChatId);
+            }
+
+            const payload = {
+                title: title,
+                savedAt: new Date().toISOString(),
+                history: conversationHistory.filter(m => !m.isHidden)
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const form = new FormData();
+            form.append('file', blob, currentChatId);
+            form.append('path', BOX_CHATS_FOLDER);
+
+            try {
+                const res = await fetch(BOX_UPLOAD_URL, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: form
+                });
+                if (res.ok) console.log('Chat saved:', currentChatId);
+            } catch (e) {
+                console.error('Auto-save error:', e);
+            }
+        }
+
+        function scheduleAutoSave() {
+            if (autoSaveTimer) clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => saveCurrentChatToBox(), 2000);
+        }
+
+        function formatChatDate(isoStr) {
+            try {
+                const d = new Date(isoStr);
+                return d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+                       ' ' + d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+            } catch {
+                return '';
+            }
+        }
+
+        async function loadChatsList() {
+            chatsList.innerHTML = '<p style="color:#999;text-align:center;padding:16px;margin:0;font-size:0.9rem;">Ładowanie...</p>';
+            if (!sessionStorage.getItem('authToken')) {
+                chatsList.innerHTML = '<p style="color:#c00;text-align:center;padding:16px;margin:0;">Brak połączenia z Boxem</p>';
+                return;
+            }
+            try {
+                const res = await fetch(BOX_FILES_URL, {
+                    headers: authHeaders()
+                });
+                if (!res.ok) throw new Error('Błąd listy');
+                const data = await res.json();
+                const chatFiles = (data.files || [])
+                    .filter(f => f.startsWith(BOX_CHATS_FOLDER + '/') && f.endsWith('.json'))
+                    .sort()
+                    .reverse();
+
+                if (chatFiles.length === 0) {
+                    chatsList.innerHTML = '<p style="color:#999;text-align:center;padding:16px;margin:0;font-size:0.9rem;">Brak zapisanych rozmów</p>';
+                    return;
+                }
+
+                // Pobieramy tytuły z plików (równolegle, max kilka)
+                chatsList.innerHTML = '';
+                for (const fullPath of chatFiles.slice(0, 40)) {
+                    const filename = fullPath.split('/').pop();
+                    let title = filename.replace(/^\d{4}-\d{2}-\d{2}T[\d\-]+_/, '').replace(/\.json$/, '').replace(/_/g, ' ');
+                    let dateStr = '';
+                    // data z nazwy pliku
+                    const dateMatch = filename.match(/^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})/);
+                    if (dateMatch) {
+                        dateStr = `${dateMatch[1].split('-').reverse().join('.')} ${dateMatch[2]}:${dateMatch[3]}`;
+                    }
+
+                    const item = document.createElement('div');
+                    item.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background .15s;';
+                    item.onmouseenter = () => item.style.background = '#f5f7fa';
+                    item.onmouseleave = () => item.style.background = '';
+                    item.innerHTML = `
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:0.9rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</div>
+                            <div style="font-size:0.75rem;color:#888;margin-top:2px;">${dateStr}</div>
+                        </div>
+                        <button class="chat-del-btn" data-path="${fullPath}" title="Usuń" style="background:none;border:none;color:#bbb;font-size:1.15rem;cursor:pointer;padding:2px 6px;line-height:1;flex-shrink:0;">×</button>
+                    `;
+                    item.querySelector('div').onclick = () => loadChatFromBox(fullPath);
+                    item.querySelector('.chat-del-btn').onclick = async (e) => {
+                        e.stopPropagation();
+                        if (!confirm('Usunąć tę rozmowę?')) return;
+                        try {
+                            await fetch(BOX_DELETE_URL, {
+                                method: 'POST',
+                                headers: authHeaders({ 'Content-Type': 'application/json' }),
+                                body: JSON.stringify({ path: fullPath })
+                            });
+                            if (currentChatId && fullPath.endsWith(currentChatId)) {
+                                currentChatId = null;
+                                sessionStorage.removeItem('currentChatId');
+                            }
+                            loadChatsList();
+                        } catch {
+                            alert('Nie udało się usunąć');
+                        }
+                    };
+                    chatsList.appendChild(item);
+                }
+            } catch (e) {
+                chatsList.innerHTML = `<p style="color:#c00;text-align:center;padding:16px;margin:0;">Błąd: ${e.message}</p>`;
+            }
+        }
+
+        async function loadChatFromBox(fullPath) {
+            if (!sessionStorage.getItem('authToken')) return;
+            try {
+                const res = await fetch(`${BOX_DOWNLOAD_URL}?path=${encodeURIComponent(fullPath)}`, {
+                    headers: authHeaders()
+                });
+                if (!res.ok) throw new Error('Błąd pobierania');
+                const data = await res.json();
+                conversationHistory = data.history || [];
+                currentChatId = fullPath.split('/').pop();
+                sessionStorage.setItem('currentChatId', currentChatId);
+                messageList.innerHTML = '';
+                conversationHistory.forEach(msg => {
+                    addMessageToChat(msg.content, msg.role === 'user', false, msg.attachments, msg.isHidden);
+                });
+                chatsDropdown.style.display = 'none';
+            } catch (e) {
+                alert('Nie udało się wczytać rozmowy');
+            }
+        }
+
+        function startNewChat() {
+            conversationHistory = [];
+            currentChatId = null;
+            sessionStorage.removeItem('currentChatId');
+            messageList.innerHTML = '';
+            displayInitialGreeting();
+            chatsDropdown.style.display = 'none';
+        }
+
+        // Otwieranie / zamykanie listy
+        exportButtonMain.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = chatsDropdown.style.display === 'block';
+            chatsDropdown.style.display = isOpen ? 'none' : 'block';
+            if (!isOpen) loadChatsList();
+        });
+        document.addEventListener('click', (e) => {
+            if (!exportButtonMain.contains(e.target) && !chatsDropdown.contains(e.target)) {
+                chatsDropdown.style.display = 'none';
+            }
+        });
+        newChatBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            startNewChat();
+        });
+
+        function displayInitialGreeting() { 
+            if (conversationHistory.length === 0) { 
+                const greeting = GREETINGS[0]; 
+                addMessageToChat(greeting, false); 
+                speak(greeting); 
+            } 
+        }
+        function checkAuthentication() {
+            if (sessionStorage.getItem('authToken')) {
+                passwordModal.style.display = 'none';
+                appContainer.style.display = 'flex';
+                displayInitialGreeting();
+            } else {
+                passwordModal.style.display = 'flex';
+                appContainer.style.display = 'none';
+            }
+        }
+        function shakePassword() {
+            passwordInput.parentElement.classList.add('is-invalid');
+            setTimeout(() => { passwordInput.parentElement.classList.remove('is-invalid'); }, 500);
+        }
+        async function handlePasswordAttempt() {
+            // Kod weryfikuje BACKEND – frontend go nie zna i nie przechowuje
+            const code = passwordInput.value;
+            if (!code) { shakePassword(); return; }
+            passwordButton.disabled = true;
+            try {
+                const res = await fetch(LOGIN_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: code })
+                });
+                if (!res.ok) throw new Error('bad code');
+                const data = await res.json();
+                if (!data.access_token) throw new Error('no token');
+                sessionStorage.setItem('authToken', data.access_token);
+                passwordInput.value = '';
+                checkAuthentication();
+            } catch (e) {
+                shakePassword();
+            } finally {
+                passwordButton.disabled = false;
+            }
+        }
+        passwordButton.addEventListener('click', handlePasswordAttempt);
+        passwordInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') handlePasswordAttempt(); });
+        
+        const speakerOnIcon = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
+        const speakerOffIcon = `<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L7 9.02 12 14v-2.18l-2.01-2.01L12 7.82V4z"/></svg>`;
+        
+        function updateTtsToggleIcon() { 
+            ttsToggleButton.innerHTML = isTtsEnabled ? speakerOnIcon : speakerOffIcon; 
+            ttsToggleButton.classList.toggle('is-muted', !isTtsEnabled); 
+        }
+        
+        ttsToggleButton.addEventListener('click', () => { 
+            isTtsEnabled = !isTtsEnabled; 
+            updateTtsToggleIcon(); 
+            if (!isTtsEnabled && currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+                avatar.src = AVATAR_STILL_URL;
+            }
+        });
+
+        // Lepsze wykrywanie języka
+        function detectLanguage(text) {
+            if (!text) return 'pl';
+            const polishChars = (text.match(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/g) || []).length;
+            const words = text.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+            
+            // Typowe angielskie słowa
+            const enWords = ['the', 'and', 'is', 'are', 'you', 'what', 'how', 'can', 'please', 'thanks', 'hello', 'hi', 'yes', 'no', 'with', 'for', 'this', 'that', 'have', 'has'];
+            const enCount = words.filter(w => enWords.includes(w)).length;
+            
+            // Typowe polskie słowa
+            const plWords = ['jest', 'nie', 'tak', 'co', 'jak', 'czy', 'mam', 'możesz', 'proszę', 'dzięki', 'siema', 'cześć', 'hej', 'dobra', 'okej', 'chcę', 'potrzebuję'];
+            const plCount = words.filter(w => plWords.includes(w)).length;
+
+            if (polishChars >= 1 || plCount >= 1) return 'pl';
+            if (enCount >= 1) return 'en';
+            // domyślnie polski
+            return 'pl';
+        }
+
+        async function speak(text) {
+            if (!isTtsEnabled || !text) return;
+
+            // Czyścimy tekst z emoji
+            let cleanText = text.replace(/\p{Emoji_Presentation}/gu, '');
+            cleanText = cleanText.replace(/\s+/g, ' ').trim();
+            if (!cleanText) return;
+
+            // Twarde przypisanie głosu do języka
+            const lang = detectLanguage(text);
+            const voice = lang === 'pl' ? "pl-PL-MarekNeural" : "en-US-GuyNeural";
+
+            try {
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio = null;
+                }
+
+                avatar.src = AVATAR_TALKING_URL;
+
+                const response = await fetch(TTS_URL, {
+                    method: 'POST',
+                    headers: authHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({ text: cleanText, voice: voice })
+                });
+
+                if (!response.ok) throw new Error("TTS failed");
+
+                const blob = await response.blob();
+                const audioUrl = URL.createObjectURL(blob);
+                currentAudio = new Audio(audioUrl);
+                
+                currentAudio.onended = () => {
+                    avatar.src = AVATAR_STILL_URL;
+                    URL.revokeObjectURL(audioUrl);
+                    currentAudio = null;
+                };
+                
+                currentAudio.onerror = () => {
+                    avatar.src = AVATAR_STILL_URL;
+                    currentAudio = null;
+                };
+
+                await currentAudio.play();
+            } catch (err) {
+                console.error("TTS error:", err);
+                avatar.src = AVATAR_STILL_URL;
+            }
+        }
+        function showApiKeyModal() { apiKeyModal.style.display = 'flex'; }
+        function hideApiKeyModal() { apiKeyModal.style.display = 'none'; }
+        apiKeyButton.addEventListener('click', showApiKeyModal);
+        savePrivateKeyButton.addEventListener('click', () => { const key = userApiKeyInput.value.trim(); if(key){ sessionStorage.setItem('userProvidedApiKey', key); hideApiKeyModal(); handleSubmit(true); } });
+        donateKeyButton.addEventListener('click', async () => { const key = userApiKeyInput.value.trim(); if(!key) return; hideApiKeyModal(); try { const res = await fetch(DONATE_URL, { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ apiKey: key }) }); if(!res.ok) throw new Error((await res.json()).detail); sessionStorage.setItem('userProvidedApiKey', key); handleSubmit(true); } catch(err){ addMessageToChat(`Błąd donacji: ${err.message}`, false, false); } });
+        closeApiKeyModal.addEventListener('click', hideApiKeyModal);
+        closeApiKeyX.addEventListener('click', hideApiKeyModal);
+        
+        function exportConversation(history) { const dataStr = JSON.stringify(history.filter(m => !m.isHidden), null, 2); const blob = new Blob([dataStr], { type: "application/json" }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `rozmowa.json`; a.click(); URL.revokeObjectURL(a.href); }
+        async function exportToPdf() { addMessageToChat("Przygotowuję PDF...", false, false); try { const response = await fetch(EXPORT_PDF_URL, { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ history: conversationHistory }) }); if (!response.ok) throw new Error("Błąd generowania PDF."); const blob = await response.blob(); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'rozmowa.pdf'; a.click(); URL.revokeObjectURL(a.href); } catch (error) { addMessageToChat(`Błąd eksportu: ${error.message}`, false, false); } }
+        function importConversation() { const input = document.createElement('input'); input.type = 'file'; input.accept = '.json'; input.onchange = e => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (event) => { try { const imported = JSON.parse(event.target.result); if (Array.isArray(imported)) { conversationHistory = imported; messageList.innerHTML = ''; conversationHistory.forEach(msg => addMessageToChat(msg.content, msg.role === 'user', false, msg.attachments, msg.isHidden)); } else { throw new Error("Niepoprawny format."); } } catch (err) { addMessageToChat(`Błąd importu: ${err.message}`, false, false); } }; reader.readAsText(file); }; input.click(); }
+        function openEditModal() { const text = conversationHistory.filter(m => !m.isHidden).map(m => `${m.role === 'user' ? 'TY' : 'AGENT'}: ${m.attachments ? `[PLIK: ${m.attachments[0].name}]` : m.content}`).join('\n\n'); editHistoryTextarea.value = text; editModal.style.display = 'flex'; }
+        function saveAndDownloadEdited() { exportConversation([{ role: 'user', content: editHistoryTextarea.value }]); hideEditModal(); }
+        function hideEditModal() { editModal.style.display = 'none'; }
+        closeEditModal.addEventListener('click', hideEditModal);
+        saveEditedButton.addEventListener('click', saveAndDownloadEdited);
+        closeImageModal.addEventListener('click', () => { imageModal.style.display = 'none'; });
+        imageModal.addEventListener('click', (e) => { if (e.target === imageModal) { imageModal.style.display = 'none'; } });
+
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files || []);
+            // reset inputu żeby dało się wybrać ten sam plik ponownie
+            event.target.value = '';
+            if (!files.length) return;
+
+            const MAX_SIZE = 25 * 1024 * 1024; // 25 MB na plik
+            const okFiles = [];
+            files.forEach(file => {
+                if (file.size > MAX_SIZE) {
+                    addMessageToChat(`Plik ${file.name} jest za duży (max 25 MB, ma ${(file.size/1024/1024).toFixed(1)} MB) – wybierz mniejszy.`, false, false);
+                } else if (file.size === 0) {
+                    addMessageToChat(`Plik ${file.name} jest pusty.`, false, false);
+                } else {
+                    okFiles.push(file);
+                }
+            });
+            if (!okFiles.length) return;
+
+            // wczytaj wszystkie pliki równolegle, potem wyślij jako jedną wiadomość
+            const readers = okFiles.map(file => new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const base64 = e.target.result.split(',')[1];
+                        resolve({ name: file.name, mime_type: file.type || 'application/octet-stream', data: base64 });
+                    } catch (err) { reject(err); }
+                };
+                reader.onerror = () => reject(new Error('Błąd odczytu ' + file.name));
+                reader.readAsDataURL(file);
+            }));
+
+            Promise.all(readers).then(fileDataArray => {
+                const names = fileDataArray.map(f => f.name).join(', ');
+                const label = fileDataArray.length === 1
+                    ? `Załączono: ${names}`
+                    : `Załączono ${fileDataArray.length} pliki: ${names}`;
+                addMessageToChat(label, true, true, fileDataArray);
+                handleSubmit();
+            }).catch(err => {
+                addMessageToChat(`Błąd załączania plików: ${err.message}`, false, false);
+            });
+        }
+        attachmentButton.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelect);
+        function downloadBase64File(filename, base64Data, mimeType) {
+            try {
+                const byteCharacters = atob(base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
+                const blob = new Blob([new Uint8Array(byteNumbers)], { type: mimeType || 'application/octet-stream' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(a.href);
+            } catch (e) { console.error('Download error', e); }
+        }
+        function downloadPdfFromBase64(filename, base64Data) { downloadBase64File(filename, base64Data, 'application/pdf'); }
+
+        // --- Karta buildu w chmurze (GitHub Actions) ---
+        function buildTargetLabel(target) {
+            return { nsis: 'Instalator Windows (NSIS)', cpp: 'Program C++ (.exe)', dotnet: 'Program C# (.exe)', android: 'Pakiet Android (APK)' }[target] || ('Build: ' + target);
+        }
+
+        function makeDownloadChip(filename, data, mime) {
+            const chip = document.createElement('div');
+            chip.className = 'file-chip';
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'file-icon';
+            iconSpan.textContent = iconForMime(mime || 'application/octet-stream', filename);
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'file-name';
+            nameSpan.textContent = filename;
+            const dlBtn = document.createElement('button');
+            dlBtn.className = 'chip-download';
+            dlBtn.title = 'Pobierz ' + filename;
+            dlBtn.innerHTML = '⬇️';
+            dlBtn.onclick = (ev) => { ev.stopPropagation(); downloadBase64File(filename, data, mime || 'application/octet-stream'); };
+            chip.appendChild(iconSpan); chip.appendChild(nameSpan); chip.appendChild(dlBtn);
+            return chip;
+        }
+
+        function renderBuildCard(attachment) {
+            let job = null;
+            try {
+                const bytes = Uint8Array.from(atob(attachment.data), c => c.charCodeAt(0));
+                job = JSON.parse(new TextDecoder().decode(bytes));
+            } catch (e) { /* uszkodzony payload */ }
+            const card = document.createElement('div');
+            card.className = 'build-card';
+            if (!job || !job.target) {
+                card.innerHTML = '<div class="build-title">☁️ Build w chmurze</div><div class="build-desc">Nie udało się odczytać danych buildu.</div>';
+                return card;
+            }
+            const sources = job.sources || [];
+            const title = document.createElement('div');
+            title.className = 'build-title';
+            title.textContent = '☁️ Build w chmurze: ' + buildTargetLabel(job.target);
+            const desc = document.createElement('div');
+            desc.className = 'build-desc';
+            desc.textContent = `Projekt gotowy (${sources.length} plików). Zbudowanie potrwa zwykle 2–4 minuty – status zobaczysz tutaj na żywo, a gotowy plik pojawi się w tej karcie.`;
+            const actions = document.createElement('div');
+            actions.className = 'build-actions';
+            const startBtn = document.createElement('button');
+            startBtn.className = 'build-start-btn';
+            startBtn.textContent = '▶ Rozpocznij build';
+            const srcBtn = document.createElement('button');
+            srcBtn.className = 'build-src-btn';
+            srcBtn.textContent = 'Pobierz sam projekt';
+            const body = document.createElement('div');
+            body.className = 'build-body';
+            actions.appendChild(startBtn); actions.appendChild(srcBtn);
+            card.appendChild(title); card.appendChild(desc); card.appendChild(actions); card.appendChild(body);
+            srcBtn.onclick = () => {
+                body.innerHTML = '';
+                if (!sources.length) { body.textContent = 'Brak plików projektu.'; return; }
+                sources.forEach(s => body.appendChild(makeDownloadChip(s.filename, s.data, s.mime_type)));
+            };
+            startBtn.onclick = () => startCloudBuild(card, job);
+            return card;
+        }
+
+        async function startCloudBuild(card, job) {
+            const body = card.querySelector('.build-body');
+            const actions = card.querySelector('.build-actions');
+            const desc = card.querySelector('.build-desc');
+            actions.style.display = 'none';
+            if (desc) desc.style.display = 'none';
+            body.innerHTML = '';
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'build-status';
+            const spinner = document.createElement('span'); spinner.className = 'build-spinner';
+            const stageEl = document.createElement('span'); stageEl.textContent = 'Startuję build…';
+            const elapsedEl = document.createElement('span'); elapsedEl.className = 'build-elapsed';
+            statusDiv.appendChild(spinner); statusDiv.appendChild(stageEl); statusDiv.appendChild(elapsedEl);
+            const linksDiv = document.createElement('div'); linksDiv.className = 'build-links';
+            body.appendChild(statusDiv); body.appendChild(linksDiv);
+            const t0 = Date.now();
+            const timer = setInterval(() => {
+                const s = Math.floor((Date.now() - t0) / 1000);
+                elapsedEl.textContent = `(${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')})`;
+            }, 1000);
+            const fail = (msg) => {
+                clearInterval(timer);
+                body.innerHTML = '';
+                const err = document.createElement('div');
+                err.className = 'build-error';
+                err.textContent = '❌ Build nieudany: ' + msg;
+                body.appendChild(err);
+                if (linksDiv.innerHTML) body.appendChild(linksDiv);
+            };
+            try {
+                const res = await fetch(CLOUD_BUILD_START_URL, {
+                    method: 'POST',
+                    headers: authHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({ target: job.target, sources: job.sources })
+                });
+                if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || ('HTTP ' + res.status));
+                const { build_id } = await res.json();
+                while (true) {
+                    await new Promise(r => setTimeout(r, 8000));
+                    const sr = await fetch(CLOUD_BUILD_STATUS_URL(build_id), { headers: authHeaders() });
+                    if (!sr.ok) throw new Error((await sr.json().catch(() => ({}))).detail || ('HTTP ' + sr.status));
+                    const st = await sr.json();
+                    if (st.run_url && !linksDiv.innerHTML) {
+                        const a = document.createElement('a');
+                        a.href = st.run_url; a.target = '_blank'; a.rel = 'noopener';
+                        a.textContent = 'Podgląd buildu na GitHubie';
+                        linksDiv.appendChild(a);
+                    }
+                    if (st.status === 'done') {
+                        clearInterval(timer);
+                        body.innerHTML = '';
+                        const done = document.createElement('div');
+                        done.className = 'build-done';
+                        done.textContent = '✅ Build gotowy:';
+                        body.appendChild(done);
+                        (st.files || []).forEach(f => body.appendChild(makeDownloadChip(f.filename, f.data, f.mime_type)));
+                        body.appendChild(linksDiv);
+                        return;
+                    }
+                    if (st.status === 'failed') throw new Error(st.error || 'Build nieudany');
+                    if (st.stage) stageEl.textContent = st.stage;
+                }
+            } catch (err) {
+                fail(err.message);
+            }
+        }
+        function copyCode(button) {
+            const code = button.parentElement.querySelector('code');
+            navigator.clipboard.writeText(code.innerText).then(() => {
+                button.innerText = 'Skopiowano!';
+                setTimeout(() => { button.innerText = 'Kopiuj'; }, 2000);
+            });
+        }
+        function downloadCodeFromPre(button, filename) {
+            const code = button.parentElement.querySelector('code');
+            const blob = new Blob([code.innerText], { type: 'text/plain;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename || 'code.txt';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+        function extFromLang(lang) {
+            const map = { python: 'py', py: 'py', javascript: 'js', js: 'js', typescript: 'ts', ts: 'ts', html: 'html', css: 'css', json: 'json', markdown: 'md', md: 'md', sql: 'sql', bash: 'sh', shell: 'sh', sh: 'sh', java: 'java', c: 'c', cpp: 'cpp', rust: 'rs', go: 'go', php: 'php', ruby: 'rb', yaml: 'yaml', yml: 'yml', xml: 'xml', plaintext: 'txt', text: 'txt' };
+            return map[(lang || '').toLowerCase()] || 'txt';
+        }
+        function iconForMime(mime, name) {
+            if (mime && mime.startsWith('image/')) return '🖼️';
+            if (mime === 'application/pdf' || (name || '').toLowerCase().endsWith('.pdf')) return '📄';
+            if ((mime && mime.includes('wordprocessingml')) || (name || '').toLowerCase().endsWith('.docx')) return '📝';
+            if ((mime && mime.includes('spreadsheet')) || /\.(xlsx?|csv)$/i.test(name || '')) return '📊';
+            if (/\.(zip|rar|7z|tar|gz)$/i.test(name || '')) return '🗜️';
+            if (/\.(mp3|wav|ogg|m4a|flac)$/i.test(name || '')) return '🎵';
+            if (/\.(mp4|webm|mov|avi|mkv)$/i.test(name || '')) return '🎬';
+            const ext = (name || '').split('.').pop().toLowerCase();
+            if (['py','js','ts','tsx','jsx','html','htm','css','json','md','markdown','sql','sh','java','c','cpp','h','hpp','rs','go','php','rb','swift','kt','yaml','yml','xml','toml','ini','env'].includes(ext)) return '💻';
+            return '📎';
+        }
+
+        function addMessageToChat(text, isUser, addToHistory = true, attachments = null, isHidden = false) {
+            let historyText = text;
+            if (addToHistory && attachments && attachments.length) {
+                const names = attachments.map(a => a.name).join(', ');
+                const fileTag = `[Plik: ${names}]`;
+                if (!historyText.includes(fileTag)) historyText += ` ${fileTag}`;
+            }
+
+            if (addToHistory) {
+                conversationHistory.push({ role: isUser ? 'user' : 'assistant', content: historyText, attachments, isHidden });
+            }
+            if (isHidden) return null;
+
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `message-bubble ${isUser ? 'user' : 'assistant'}-message`;
+
+            // wyczyść tagi narzędzi i FILE z widoku
+            const cleanDisplayText = (text || '')
+                .replace(/\[FILE:[^\]]*\][\s\S]*?\[\/FILE\]/gi, '')
+                .replace(/\[GENERATE_DOCX:[^\]]*\][\s\S]*?\[\/GENERATE_DOCX\]/gi, '')
+                .replace(/\[GENERATE_PDF:[^\]]*\][\s\S]*?\[\/GENERATE_PDF\]/gi, '')
+                .replace(/\[\/?(STORY_PDF|GENERATE_IMAGE|EDIT_IMAGE|INPAINT_IMAGE|CREATE_COMPOSITION|CHANGE_BACKGROUND|TOOL:search|TOOL:scrape|OPEN_URL|Plik:[\s\S]*?)[\s\S]*?\]/gi, '')
+                .trim();
+
+            let hasContent = false;
+
+            // --- załączniki (obrazy, PDF, DOCX, kod itd.) ---
+            if (attachments && attachments.length) {
+                attachments.forEach(attachment => {
+                    // karta buildu w chmurze zamiast zwykłego chipa pliku
+                    if ((attachment.mime_type || '') === 'application/x-build-job') {
+                        messageBubble.appendChild(renderBuildCard(attachment));
+                        hasContent = true;
+                        return;
+                    }
+                    const mime = attachment.mime_type || 'application/octet-stream';
+                    const chip = document.createElement('div');
+                    chip.className = 'file-chip';
+
+                    const iconSpan = document.createElement('span');
+                    iconSpan.className = 'file-icon';
+                    iconSpan.textContent = iconForMime(mime, attachment.name);
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'file-name';
+                    nameSpan.textContent = attachment.name;
+
+                    chip.appendChild(iconSpan);
+                    chip.appendChild(nameSpan);
+
+                    if (mime.startsWith('image/')) {
+                        messageBubble.appendChild(chip);
+                        const image = document.createElement('img');
+                        image.src = `data:${mime};base64,${attachment.data}`;
+                        image.alt = attachment.name;
+                        image.className = 'chat-image-thumbnail';
+                        image.addEventListener('click', () => {
+                            fullSizeImage.src = image.src;
+                            imageModal.style.display = 'flex';
+                        });
+                        messageBubble.appendChild(image);
+                    } else {
+                        // jeden przycisk pobierania w chipie
+                        const dlBtn = document.createElement('button');
+                        dlBtn.className = 'chip-download';
+                        dlBtn.title = 'Pobierz ' + attachment.name;
+                        dlBtn.innerHTML = '⬇️';
+                        dlBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            downloadBase64File(attachment.name, attachment.data, mime);
+                        };
+                        chip.appendChild(dlBtn);
+                        messageBubble.appendChild(chip);
+                    }
+                    hasContent = true;
+                });
+            }
+
+            // --- tekst + bloki kodu (wiele bloków) ---
+            if (cleanDisplayText) {
+                const codeRegex = /```(\w*)\n?([\s\S]*?)```/g;
+                let lastIndex = 0;
+                let match;
+                let foundCode = false;
+
+                while ((match = codeRegex.exec(cleanDisplayText)) !== null) {
+                    foundCode = true;
+                    // tekst przed blokiem
+                    const before = cleanDisplayText.slice(lastIndex, match.index).trim();
+                    if (before) {
+                        const p = document.createElement('p');
+                        p.innerText = before;
+                        messageBubble.appendChild(p);
+                    }
+                    const lang = match[1] || 'plaintext';
+                    const codeBody = match[2];
+                    const pre = document.createElement('pre');
+                    pre.className = `language-${lang}`;
+                    pre.style.position = 'relative';
+                    const fname = `code.${extFromLang(lang)}`;
+                    pre.innerHTML =
+                        `<button class="download-code-button" onclick="downloadCodeFromPre(this,'${fname}')">Pobierz</button>` +
+                        `<button class="copy-code-button" onclick="copyCode(this)">Kopiuj</button>` +
+                        `<code class="language-${lang}">${codeBody.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>`;
+                    messageBubble.appendChild(pre);
+                    if (window.Prism) Prism.highlightAllUnder(pre);
+                    lastIndex = match.index + match[0].length;
+                }
+
+                if (foundCode) {
+                    const after = cleanDisplayText.slice(lastIndex).trim();
+                    if (after) {
+                        const p = document.createElement('p');
+                        p.innerText = after;
+                        messageBubble.appendChild(p);
+                    }
+                } else {
+                    const p = document.createElement('p');
+                    p.innerText = cleanDisplayText;
+                    messageBubble.appendChild(p);
+                }
+                hasContent = true;
+            }
+
+            if (hasContent || (text === "" && !attachments)) {
+                messageList.appendChild(messageBubble);
+                messageList.scrollTop = messageList.scrollHeight;
+            }
+            return messageBubble;
+        }
+
+        async function handleSubmit(isRetry = false) {
+            if (!sessionStorage.getItem('authToken')) return;
+
+            let userText;
+            if (isRetry) {
+                userText = lastUserMessage;
+            } else {
+                userText = userInput.value.trim();
+                const lastMsg = conversationHistory[conversationHistory.length - 1];
+                if (!userText && !(lastMsg && lastMsg.attachments && lastMsg.role === 'user' && !lastMsg.content)) return;
+                lastUserMessage = userText;
+                if (userText) {
+                    addMessageToChat(userText, true);
+                }
+                userInput.value = '';
+            }
+            
+            if (loadingBubble) loadingBubble.remove();
+            loadingBubble = addMessageToChat("", false, false);
+            if (loadingBubble) {
+                loadingBubble.classList.add("loading");
+                loadingBubble.innerHTML = `<div class="loading-dots"><span></span><span></span><span></span></div>`;
+                messageList.scrollTop = messageList.scrollHeight;
+            }
+
+            try {
+                const response = await fetch(CHAT_URL, { 
+                    method: 'POST', 
+                    headers: authHeaders({ 'Content-Type': 'application/json' }), 
+                    body: JSON.stringify({ history: conversationHistory.slice(-30), apiKey: sessionStorage.getItem('userProvidedApiKey') }) 
+                });
+                
+                if (loadingBubble) loadingBubble.remove();
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    if (errorData.all_keys_exhausted) {
+                        showApiKeyModal();
+                        addMessageToChat("Wszystkie publiczne klucze API zostały wyczerpane. Proszę, podaj własny.", false, false); 
+                    } else { throw new Error(errorData.detail || 'Nieznany błąd serwera'); }
+                    return;
+                }
+                
+                const data = await response.json();
+
+                const assistantText = data.generated_text || "";
+                let assistantAttachments = [];
+
+                // Nowa lista plików z backendu (HTML, Python, DOCX, PDF, ...)
+                if (Array.isArray(data.files) && data.files.length) {
+                    data.files.forEach(f => {
+                        assistantAttachments.push({
+                            name: f.filename,
+                            mime_type: f.mime_type || 'application/octet-stream',
+                            data: f.data
+                        });
+                    });
+                }
+                // Kompatybilność wsteczna
+                if (data.image_file) {
+                    assistantAttachments.push({
+                        name: data.image_file.filename,
+                        mime_type: "image/png",
+                        data: data.image_file.data
+                    });
+                }
+                if (data.pdf_file) {
+                    assistantAttachments.push({
+                        name: data.pdf_file.filename,
+                        mime_type: "application/pdf",
+                        data: data.pdf_file.data
+                    });
+                }
+
+                // deduplikacja po nazwie
+                const seen = new Set();
+                assistantAttachments = assistantAttachments.filter(a => {
+                    if (seen.has(a.name)) return false;
+                    seen.add(a.name);
+                    return true;
+                });
+
+                addMessageToChat(assistantText, false, true, assistantAttachments.length ? assistantAttachments : null);
+
+                if (assistantText) {
+                    speak(assistantText);
+                }
+
+                // Automatyczny zapis rozmowy do Boxa
+                scheduleAutoSave();
+
+            } catch (error) {
+                if (loadingBubble) loadingBubble.remove();
+                addMessageToChat(`Błąd: ${error.message}`, false, false);
+            }
+        }
+        
+        chatForm.addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(false); });
+
+        // ========== ELASTYCZNY SYSTEM MIKROFONU – auto-wybór najlepszej strategii ==========
+        const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const ua = navigator.userAgent || '';
+        const isAndroid = /Android/i.test(ua);
+        const isHuawei = /Huawei|Honor|HUAWEI|HM\d|HMA-|LYA-|VOG-|ELE-|ANA-|TAS-|LIO-|NOH-|WLZ-|JEF-|MAR-|CDY-|JNY-|ELZ-|ANY-|BRT-|ALT-|AGM-|AGS-|AGK-|AGS2|NTH-|MGA-|RMO-|HarmonyOS|HMSCore/i.test(ua);
+        const isSamsung = /Samsung|SM-[A-Z0-9]+|Galaxy/i.test(ua);
+        const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)
+            || (navigator.maxTouchPoints > 1 && /MacIntel/.test(navigator.platform || ''));
+        const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isSafari = /^((?!chrome|android).)*safari/i.test(ua) || (isIOS && /Safari/.test(ua));
+        const isFirefox = /Firefox/i.test(ua);
+        const isChrome = /Chrome|CriOS|Chromium/i.test(ua) && !/Edge|Edg|OPR|Opera/i.test(ua);
+        const isEdge = /Edg|Edge/i.test(ua);
+        const isSamsungBrowser = /SamsungBrowser/i.test(ua);
+        // Capability detection – niezależnie od HTTPS (HTTPS sprawdzamy osobno przy starcie)
+        const hasSpeechSupport = !!SpeechRecognitionCtor;
+        const hasMediaRecorder = !!(navigator.mediaDevices && window.MediaRecorder);
+
+        const MIC_PREF_KEY = 'mybro_mic_strategy_v2';
+        const MIC_FAIL_KEY = 'mybro_mic_failures_v2';
+
+        // Strategie – kolejność domyślna zależna od urządzenia
+        // type: 'record' = MediaRecorder→backend, 'webspeech' = Web Speech API
+        const ALL_STRATEGIES = [
+            {
+                id: 'record_huawei',
+                type: 'record',
+                label: 'Nagrywanie (Huawei)',
+                // mp4/aac często stabilniejsze na WebView/Huawei niż webm/opus
+                mimePriority: ['audio/mp4', 'audio/webm', 'audio/webm;codecs=opus', 'audio/ogg', 'audio/wav', ''],
+                constraints: {
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        channelCount: 1,
+                        sampleRate: 16000
+                    }
+                },
+                timeslice: 500,
+                minDurationMs: 1200,
+                minBytes: 2500
+            },
+            {
+                id: 'record_enhanced',
+                type: 'record',
+                label: 'Nagrywanie (jakość)',
+                mimePriority: ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/ogg', 'audio/wav'],
+                constraints: { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } },
+                timeslice: 200,
+                minDurationMs: 800,
+                minBytes: 1500
+            },
+            {
+                id: 'record_simple',
+                type: 'record',
+                label: 'Nagrywanie (proste)',
+                mimePriority: ['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/wav', ''],
+                constraints: { audio: true },
+                timeslice: 250,
+                minDurationMs: 800,
+                minBytes: 1200
+            },
+            {
+                id: 'webspeech_single',
+                type: 'webspeech',
+                label: 'Web Speech (pojedyncze)',
+                continuous: false,
+                interimResults: true,
+                silenceMs: 2200
+            },
+            {
+                id: 'webspeech_continuous',
+                type: 'webspeech',
+                label: 'Web Speech (ciągłe)',
+                continuous: true,
+                interimResults: true,
+                silenceMs: 3500
+            },
+            {
+                id: 'webspeech_final_only',
+                type: 'webspeech',
+                label: 'Web Speech (tylko finalne)',
+                continuous: false,
+                interimResults: false,
+                silenceMs: 2500
+            }
+        ];
+
+        function defaultStrategyOrder() {
+            // Huawei / Honor → specjalna ścieżka (mp4, dłuższe nagranie)
+            if (isHuawei || /Honor|HarmonyOS|HMSCore/i.test(ua)) {
+                return ['record_huawei', 'record_simple', 'record_enhanced', 'webspeech_single', 'webspeech_final_only'];
+            }
+            // Mobile / Samsung / Android → najpierw nagrywanie
+            if (isMobileDevice || isSamsung || isAndroid || isIOS) {
+                return ['record_enhanced', 'record_huawei', 'record_simple', 'webspeech_single', 'webspeech_final_only', 'webspeech_continuous'];
+            }
+            // Desktop Chrome/Edge → Web Speech najpierw
+            if (isChrome || isEdge) {
+                return ['webspeech_continuous', 'webspeech_single', 'record_enhanced', 'record_simple', 'webspeech_final_only'];
+            }
+            // Safari / Firefox / inne
+            if (isSafari || isFirefox) {
+                return ['record_enhanced', 'record_simple', 'webspeech_single', 'webspeech_final_only'];
+            }
+            return ['record_enhanced', 'webspeech_single', 'record_simple', 'webspeech_continuous', 'webspeech_final_only'];
+        }
+
+        function loadSavedStrategy() {
+            try {
+                const saved = localStorage.getItem(MIC_PREF_KEY);
+                if (saved && ALL_STRATEGIES.some(s => s.id === saved)) return saved;
+            } catch (_) {}
+            return null;
+        }
+
+        function saveStrategy(id) {
+            try { localStorage.setItem(MIC_PREF_KEY, id); } catch (_) {}
+        }
+
+        function clearSavedStrategy() {
+            try {
+                localStorage.removeItem(MIC_PREF_KEY);
+                localStorage.removeItem(MIC_FAIL_KEY);
+            } catch (_) {}
+        }
+
+        function getFailureCount() {
+            try { return parseInt(localStorage.getItem(MIC_FAIL_KEY) || '0', 10) || 0; } catch (_) { return 0; }
+        }
+
+        function bumpFailure() {
+            try { localStorage.setItem(MIC_FAIL_KEY, String(getFailureCount() + 1)); } catch (_) {}
+        }
+
+        function resetFailures() {
+            try { localStorage.setItem(MIC_FAIL_KEY, '0'); } catch (_) {}
+        }
+
+        function buildStrategyQueue() {
+            const order = defaultStrategyOrder();
+            const saved = loadSavedStrategy();
+            // Jeśli zapisana strategia – daj ją na początek
+            if (saved) {
+                const rest = order.filter(id => id !== saved);
+                return [saved, ...rest];
+            }
+            return order;
+        }
+
+        function getStrategyById(id) {
+            return ALL_STRATEGIES.find(s => s.id === id) || ALL_STRATEGIES[0];
+        }
+
+        // Halucynacje typowe dla Whisper/STT przy ciszy, szumie lub złym kodeku (częste na Huawei)
+        const STT_HALLUCINATIONS = [
+            'dziękuję', 'dziekuje', 'dziękuje', 'dziekuje.', 'dziękuję.',
+            'thank you', 'thanks', 'thanks for watching', 'thank you for watching',
+            'subtitles by', 'subscribe', 'thanks for listening',
+            'amara.org', 'www.youtube.com', 'you', 'bye', 'goodbye',
+            'do widzenia', 'pa', 'ok', 'okej', 'hmm', 'uh', 'um',
+            'napisy', 'napisy stworzone', 'transcribed by'
+        ];
+
+        function normalizeTranscript(t) {
+            return (t || '').toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        function isLikelyHallucination(text) {
+            const n = normalizeTranscript(text);
+            if (!n) return true;
+            if (n.length <= 2) return true;
+            for (const h of STT_HALLUCINATIONS) {
+                const hn = normalizeTranscript(h);
+                if (n === hn || n === hn + ' ' + hn) return true;
+            }
+            // bardzo krótkie jedno słowo z listy "pustych"
+            if (n.split(' ').length === 1 && n.length < 12) {
+                const singles = ['dziekuje', 'dziekuje', 'thanks', 'you', 'ok', 'okej', 'bye', 'pa', 'a', 'e', 'i'];
+                if (singles.includes(n)) return true;
+            }
+            return false;
+        }
+
+        function isHuaweiLike() {
+            return isHuawei || (/HMSCore|Harmony|Honor/i.test(ua));
+        }
+
+
+        function strategyAvailable(stratOrId) {
+            const strat = typeof stratOrId === 'string' ? getStrategyById(stratOrId) : stratOrId;
+            if (!strat) return false;
+            if (strat.type === 'record') return hasMediaRecorder;
+            if (strat.type === 'webspeech') return hasSpeechSupport;
+            return false;
+        }
+
+        // --- stan runtime ---
+        let recognition = null;
+        let isListening = false;
+        let wantListening = false;
+        let stopTimer = null;
+        let accumulatedFinal = '';
+        let micPermissionGranted = false;
+        let restartAttempts = 0;
+        const MAX_RESTARTS = 4;
+
+        let mediaRecorder = null;
+        let mediaStream = null;
+        let recordedChunks = [];
+        let isRecordingBackend = false;
+        let activeStrategyId = null;
+        let strategyQueue = [];
+        let autoFallbackInProgress = false;
+        let lastMicError = null;
+        let recordStartedAt = 0;
+        let activeRecordStrat = null;
+
+        function getPreferredLang() {
+            const lastUser = [...conversationHistory].reverse().find(m => m.role === 'user');
+            if (lastUser && lastUser.content) {
+                return detectLanguage(lastUser.content) === 'en' ? 'en-US' : 'pl-PL';
+            }
+            return 'pl-PL';
+        }
+
+        function setMicStatus(text) {
+            micButton.title = text || 'Mikrofon';
+        }
+
+        function showMicHint(msg) {
+            addMessageToChat(msg, false, false);
+        }
+
+        // --- uprawnienia ---
+        async function ensureMicPermission(constraints) {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                return { ok: true, stream: null };
+            }
+            const tries = [
+                constraints || { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } },
+                { audio: true }
+            ];
+            let lastErr = null;
+            for (const c of tries) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia(c);
+                    micPermissionGranted = true;
+                    return { ok: true, stream };
+                } catch (err) {
+                    lastErr = err;
+                    console.warn('getUserMedia try failed:', c, err);
+                }
+            }
+            const err = lastErr;
+            if (err && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+                showMicHint(
+                    'Brak pozwolenia na mikrofon.\n' +
+                    '• Kliknij kłódkę przy adresie → Mikrofon → Zezwól\n' +
+                    '• Android: Ustawienia → Aplikacje → przeglądarka → Uprawnienia → Mikrofon\n' +
+                    '• Odśwież stronę po zmianie.'
+                );
+            } else if (err && err.name === 'NotFoundError') {
+                showMicHint('Nie znaleziono mikrofonu. Podłącz mikrofon i spróbuj ponownie.');
+            } else if (err && (err.name === 'NotReadableError' || err.name === 'TrackStartError' || err.name === 'AbortError')) {
+                showMicHint('Mikrofon jest zajęty przez inną aplikację. Zamknij ją i spróbuj ponownie.');
+            } else {
+                showMicHint('Nie udało się uzyskać dostępu do mikrofonu: ' + (err && err.name ? err.name : 'nieznany błąd'));
+            }
+            return { ok: false, stream: null, error: err };
+        }
+
+        // --- Web Speech ---
+        function createRecognition(strat) {
+            const rec = new SpeechRecognitionCtor();
+            rec.continuous = !!strat.continuous;
+            rec.interimResults = strat.interimResults !== false;
+            rec.maxAlternatives = 1;
+            rec.lang = getPreferredLang();
+
+            rec.onstart = () => {
+                isListening = true;
+                restartAttempts = 0;
+                micButton.classList.add('is-listening');
+                setMicStatus('Słucham… kliknij, aby zakończyć (' + strat.label + ')');
+            };
+
+            rec.onresult = (event) => {
+                clearTimeout(stopTimer);
+                let interim = '';
+                let finalChunk = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) finalChunk += transcript;
+                    else interim += transcript;
+                }
+                if (finalChunk) accumulatedFinal = (accumulatedFinal + ' ' + finalChunk).trim();
+                userInput.value = (accumulatedFinal + (interim ? ' ' + interim : '')).trim();
+
+                const silenceDelay = strat.silenceMs || 2500;
+                stopTimer = setTimeout(() => {
+                    wantListening = false;
+                    try { rec.stop(); } catch (_) {}
+                }, silenceDelay);
+            };
+
+            rec.onend = () => {
+                isListening = false;
+                clearTimeout(stopTimer);
+                if (wantListening && restartAttempts < MAX_RESTARTS) {
+                    restartAttempts++;
+                    setTimeout(() => {
+                        if (wantListening) {
+                            try {
+                                rec.lang = getPreferredLang();
+                                rec.start();
+                            } catch (e) {
+                                finishWebSpeech(false);
+                            }
+                        }
+                    }, 280);
+                    return;
+                }
+                finishWebSpeech(true);
+            };
+
+            rec.onerror = (event) => {
+                console.error('Speech error:', event.error, 'strategy:', strat.id);
+                clearTimeout(stopTimer);
+                lastMicError = event.error;
+
+                if (event.error === 'aborted') return;
+
+                if (event.error === 'no-speech') {
+                    if (wantListening && restartAttempts < MAX_RESTARTS) return;
+                    isListening = false;
+                    wantListening = false;
+                    micButton.classList.remove('is-listening');
+                    if (!userInput.value.trim()) {
+                        // traktuj jako porażkę strategii – spróbuj następnej
+                        markStrategyFailedAndRetry('Brak mowy przy strategii: ' + strat.label);
+                    } else {
+                        finishWebSpeech(true);
+                    }
+                    return;
+                }
+
+                isListening = false;
+                wantListening = false;
+                micButton.classList.remove('is-listening');
+
+                // Błędy uprawnień – nie próbuj kolejnych strategii Web Speech
+                if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                    showMicHint('Brak pozwolenia na mikrofon. Zezwól w ustawieniach przeglądarki i odśwież stronę.');
+                    setMicStatus('Mikrofon');
+                    return;
+                }
+
+                // Inne błędy – automatyczny fallback na kolejną strategię
+                markStrategyFailedAndRetry('Błąd Web Speech (' + event.error + ') – próbuję inną metodę…');
+            };
+
+            return rec;
+        }
+
+        function finishWebSpeech(success) {
+            isListening = false;
+            wantListening = false;
+            micButton.classList.remove('is-listening');
+            clearTimeout(stopTimer);
+            const text = userInput.value.trim();
+            if (text) {
+                if (success && activeStrategyId) {
+                    saveStrategy(activeStrategyId);
+                    resetFailures();
+                }
+                handleSubmit(false);
+            }
+            accumulatedFinal = '';
+            setMicStatus(getDefaultMicTitle());
+        }
+
+        async function startWebSpeech(strat) {
+            if (isListening || wantListening) return false;
+            const perm = await ensureMicPermission(strat.constraints || { audio: true });
+            if (!perm.ok) return false;
+            if (perm.stream) perm.stream.getTracks().forEach(t => t.stop());
+
+            accumulatedFinal = '';
+            userInput.value = '';
+            wantListening = true;
+            restartAttempts = 0;
+            activeStrategyId = strat.id;
+
+            if (recognition) {
+                try { recognition.abort(); } catch (_) {}
+            }
+            recognition = createRecognition(strat);
+
+            try {
+                recognition.start();
+                return true;
+            } catch (e) {
+                console.warn('recognition.start failed:', e);
+                try { recognition.abort(); } catch (_) {}
+                recognition = createRecognition(strat);
+                try {
+                    recognition.start();
+                    return true;
+                } catch (e2) {
+                    wantListening = false;
+                    lastMicError = String(e2);
+                    return false;
+                }
+            }
+        }
+
+        function stopWebSpeech() {
+            wantListening = false;
+            clearTimeout(stopTimer);
+            if (recognition) {
+                try { recognition.stop(); } catch (_) {}
+            }
+            if (!isListening) finishWebSpeech(true);
+        }
+
+        // --- MediaRecorder ---
+        function pickMimeType(priority) {
+            const list = priority || ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/ogg', 'audio/wav'];
+            for (const t of list) {
+                if (!t) return '';
+                try {
+                    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t;
+                } catch (_) {}
+            }
+            return '';
+        }
+
+        async function startRecord(strat) {
+            if (isRecordingBackend) return false;
+            const perm = await ensureMicPermission(strat.constraints);
+            if (!perm.ok) return false;
+
+            try {
+                // użyj streamu z permission jeśli jest, albo pobierz ponownie
+                if (perm.stream) {
+                    mediaStream = perm.stream;
+                } else {
+                    mediaStream = await navigator.mediaDevices.getUserMedia(strat.constraints || { audio: true });
+                }
+                recordedChunks = [];
+                const mime = pickMimeType(strat.mimePriority);
+                const options = mime ? { mimeType: mime } : {};
+                mediaRecorder = new MediaRecorder(mediaStream, options);
+                activeStrategyId = strat.id;
+
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+                };
+
+                mediaRecorder.onerror = (e) => {
+                    console.error('MediaRecorder error:', e);
+                    lastMicError = 'mediarecorder-error';
+                    stopRecord(false);
+                    markStrategyFailedAndRetry('Błąd nagrywania – próbuję inną metodę…');
+                };
+
+                mediaRecorder.onstop = async () => {
+                    micButton.classList.remove('is-listening');
+                    isRecordingBackend = false;
+                    const elapsed = Date.now() - (recordStartedAt || Date.now());
+                    const stratRef = activeRecordStrat || strat;
+                    if (mediaStream) {
+                        mediaStream.getTracks().forEach(t => t.stop());
+                        mediaStream = null;
+                    }
+                    if (!recordedChunks.length) {
+                        markStrategyFailedAndRetry('Puste nagranie – spróbuj mówić głośniej i dłużej.');
+                        return;
+                    }
+                    const blobType = (mediaRecorder && mediaRecorder.mimeType) || mime || 'audio/webm';
+                    const blob = new Blob(recordedChunks, { type: blobType });
+                    recordedChunks = [];
+
+                    const minBytes = (stratRef && stratRef.minBytes) || 1200;
+                    const minDurationMs = (stratRef && stratRef.minDurationMs) || 700;
+                    if (blob.size < minBytes || elapsed < minDurationMs) {
+                        showMicHint(
+                            'Nagranie było zbyt krótkie lub zbyt ciche (' + Math.round(elapsed/1000*10)/10 + 's, ' + blob.size + ' B).\n' +
+                            'Przytrzymaj mikrofon dłużej i mów głośniej, bliżej ust.'
+                        );
+                        setMicStatus(getDefaultMicTitle());
+                        return;
+                    }
+                    console.log('[mic] audio blob:', blobType, blob.size, 'bytes, duration~', elapsed, 'ms, strategy:', stratRef && stratRef.id);
+
+                    const prevPlaceholder = userInput.placeholder;
+                    userInput.placeholder = 'Rozpoznaję mowę…';
+                    userInput.disabled = true;
+                    micButton.disabled = true;
+                    setMicStatus('Rozpoznaję mowę…');
+
+                    try {
+                        const form = new FormData();
+                        const ext = blobType.includes('mp4') ? 'mp4'
+                            : blobType.includes('ogg') ? 'ogg'
+                            : blobType.includes('wav') ? 'wav'
+                            : 'webm';
+                        form.append('file', blob, 'recording.' + ext);
+                        const lang = getPreferredLang().startsWith('en') ? 'en' : 'pl';
+                        form.append('language', lang);
+                        const privateKey = sessionStorage.getItem('userProvidedApiKey');
+                        if (privateKey) form.append('apiKey', privateKey);
+
+                        const res = await fetch(STT_URL, { method: 'POST', headers: authHeaders(), body: form });
+                        if (!res.ok) {
+                            const err = await res.json().catch(() => ({}));
+                            throw new Error(err.detail || ('HTTP ' + res.status));
+                        }
+                        const data = await res.json();
+                        const text = (data.text || '').trim();
+                        console.log('[mic] STT result:', JSON.stringify(text));
+                        if (text && isLikelyHallucination(text)) {
+                            console.warn('[mic] rejected hallucination:', text);
+                            showMicHint(
+                                'Rozpoznano podejrzany wynik („' + text + '”), który zwykle pojawia się przy złym nagraniu.\n' +
+                                'Spróbuj ponownie: mów głośniej, bliżej mikrofonu, przez co najmniej 2 sekundy.'
+                            );
+                            // na Huawei nie zapisuj tej strategii jako udanej
+                            if (isHuaweiLike()) {
+                                const saved = loadSavedStrategy();
+                                if (saved === activeStrategyId) clearSavedStrategy();
+                            }
+                            setMicStatus(getDefaultMicTitle());
+                            return;
+                        }
+                        if (text) {
+                            userInput.value = text;
+                            saveStrategy(activeStrategyId);
+                            resetFailures();
+                            handleSubmit(false);
+                        } else {
+                            markStrategyFailedAndRetry('Nie rozpoznano mowy – mów wyraźniej i dłużej.');
+                        }
+                    } catch (err) {
+                        console.error('STT error:', err);
+                        lastMicError = String(err.message || err);
+                        markStrategyFailedAndRetry('Błąd STT: ' + (err.message || err) + ' – próbuję inną metodę…');
+                    } finally {
+                        userInput.placeholder = prevPlaceholder;
+                        userInput.disabled = false;
+                        micButton.disabled = false;
+                        setMicStatus(getDefaultMicTitle());
+                    }
+                };
+
+                activeRecordStrat = strat;
+                recordStartedAt = Date.now();
+                mediaRecorder.start(strat.timeslice || 250);
+                isRecordingBackend = true;
+                micButton.classList.add('is-listening');
+                const tip = isHuaweiLike()
+                    ? 'Nagrywam… mów wyraźnie 2–3 sekundy, potem kliknij ponownie'
+                    : 'Nagrywam… kliknij, aby zakończyć (' + strat.label + ')';
+                setMicStatus(tip);
+                return true;
+            } catch (err) {
+                console.error('startRecord error:', err);
+                isRecordingBackend = false;
+                lastMicError = err && err.name ? err.name : String(err);
+                if (mediaStream) {
+                    try { mediaStream.getTracks().forEach(t => t.stop()); } catch (_) {}
+                    mediaStream = null;
+                }
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    showMicHint('Brak pozwolenia na mikrofon. Zezwól w ustawieniach i odśwież stronę.');
+                    return false;
+                }
+                return false;
+            }
+        }
+
+        function stopRecord(success) {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                const minMs = (activeRecordStrat && activeRecordStrat.minDurationMs) || (isHuaweiLike() ? 1200 : 600);
+                const elapsed = Date.now() - (recordStartedAt || 0);
+                if (elapsed < minMs) {
+                    // daj dokończyć minimalny czas nagrania
+                    setMicStatus('Jeszcze chwilę… mów dalej');
+                    setTimeout(() => {
+                        try { if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); } catch (_) {}
+                    }, Math.max(100, minMs - elapsed));
+                    return;
+                }
+                try { mediaRecorder.stop(); } catch (_) {}
+            } else {
+                isRecordingBackend = false;
+                micButton.classList.remove('is-listening');
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(t => t.stop());
+                    mediaStream = null;
+                }
+                setMicStatus(getDefaultMicTitle());
+            }
+        }
+
+        // --- orchestrator: auto-fallback ---
+        async function tryNextStrategy(reason) {
+            if (autoFallbackInProgress) return;
+            autoFallbackInProgress = true;
+            try {
+                while (strategyQueue.length > 0) {
+                    const nextId = strategyQueue.shift();
+                    const strat = getStrategyById(nextId);
+                    if (!strategyAvailable(strat)) {
+                        console.log('[mic] skip unavailable:', nextId);
+                        continue;
+                    }
+
+                    console.log('[mic] Trying strategy:', strat.id, reason || '');
+                    setMicStatus('Próbuję: ' + strat.label + '…');
+
+                    let ok = false;
+                    if (strat.type === 'record') {
+                        ok = await startRecord(strat);
+                    } else {
+                        ok = await startWebSpeech(strat);
+                    }
+                    if (ok) {
+                        activeStrategyId = strat.id;
+                        autoFallbackInProgress = false;
+                        return true;
+                    }
+                }
+                // Wszystkie strategie zawiodły
+                bumpFailure();
+                const fails = getFailureCount();
+                let tip = 'Nie udało się uruchomić mikrofonu żadną metodą.';
+                if (!window.isSecureContext) {
+                    tip = 'Strona musi być na HTTPS, żeby mikrofon działał.';
+                } else if (fails >= 2) {
+                    tip += '\n\nWskazówki:\n• Sprawdź uprawnienia mikrofonu w przeglądarce i systemie\n• Zamknij inne apki używające mikrofonu\n• Spróbuj Chrome lub Samsung Internet\n• Na Huawei: Ustawienia → Aplikacje → przeglądarka → Uprawnienia → Mikrofon';
+                }
+                if (lastMicError) tip += '\n(Ostatni błąd: ' + lastMicError + ')';
+                showMicHint(tip);
+                setMicStatus(getDefaultMicTitle());
+                return false;
+            } finally {
+                autoFallbackInProgress = false;
+            }
+        }
+
+        function markStrategyFailedAndRetry(msg) {
+            bumpFailure();
+            // usuń zapisaną strategię jeśli właśnie zawiodła
+            const saved = loadSavedStrategy();
+            if (saved && saved === activeStrategyId) {
+                clearSavedStrategy();
+            }
+            if (msg) showMicHint(msg);
+            // kontynuuj kolejkę (bez restartu od zera – idziemy dalej)
+            if (strategyQueue.length === 0) {
+                strategyQueue = buildStrategyQueue().filter(id => id !== activeStrategyId);
+            } else {
+                strategyQueue = strategyQueue.filter(id => id !== activeStrategyId);
+            }
+            activeStrategyId = null;
+            setTimeout(() => tryNextStrategy('fallback'), 400);
+        }
+
+        function getDefaultMicTitle() {
+            const saved = loadSavedStrategy();
+            if (saved) {
+                const s = getStrategyById(saved);
+                return 'Mikrofon – ' + s.label + ' (zapisane)';
+            }
+            if (isMobileDevice || isHuawei || isSamsung) {
+                return 'Mikrofon – kliknij, aby nagrać (auto)';
+            }
+            return 'Mikrofon – kliknij, aby mówić (auto)';
+        }
+
+        async function startMicAdaptive() {
+            if (isListening || wantListening || isRecordingBackend) return;
+
+            if (!window.isSecureContext) {
+                showMicHint(
+                    'Mikrofon wymaga bezpiecznego połączenia (HTTPS lub localhost).\n' +
+                    'Jeśli otwierasz plik lokalnie (file://), wrzuć stronę na hosting z HTTPS ' +
+                    '(np. GitHub Pages) albo uruchom lokalny serwer: np. python -m http.server'
+                );
+                return;
+            }
+
+            const queue = buildStrategyQueue().filter(strategyAvailable);
+            strategyQueue = queue.slice();
+
+            console.log('[mic] capabilities:', {
+                speech: hasSpeechSupport,
+                mediaRecorder: hasMediaRecorder,
+                secure: window.isSecureContext,
+                queue: strategyQueue
+            });
+
+            if (strategyQueue.length === 0) {
+                let tip = 'Ta przeglądarka nie udostępnia API mikrofonu.';
+                if (!hasSpeechSupport && !hasMediaRecorder) {
+                    tip += '\nBrak Web Speech API i MediaRecorder.';
+                } else if (!hasMediaRecorder) {
+                    tip += '\nBrak MediaRecorder.';
+                } else if (!hasSpeechSupport) {
+                    tip += '\nBrak Web Speech API.';
+                }
+                tip += '\nSpróbuj Chrome, Edge lub Samsung Internet.';
+                showMicHint(tip);
+                return;
+            }
+            await tryNextStrategy('start');
+        }
+
+        function stopMicAdaptive() {
+            if (isListening || wantListening) {
+                stopWebSpeech();
+                return;
+            }
+            if (isRecordingBackend) {
+                stopRecord(true);
+                return;
+            }
+        }
+
+        // Główny handler
+        micButton.addEventListener('click', () => {
+            if (isListening || wantListening || isRecordingBackend) {
+                stopMicAdaptive();
+            } else {
+                startMicAdaptive();
+            }
+        });
+
+        // Długie przytrzymanie (1.2s) = reset strategii i ponowne wyszukanie
+        let pressTimer = null;
+        micButton.addEventListener('pointerdown', () => {
+            pressTimer = setTimeout(() => {
+                clearSavedStrategy();
+                showMicHint('Zresetowano ustawienia mikrofonu. Kliknij ponownie – system wybierze najlepszą metodę.');
+                setMicStatus(getDefaultMicTitle());
+                // wibracja jeśli dostępna
+                try { if (navigator.vibrate) navigator.vibrate(40); } catch (_) {}
+            }, 1200);
+        });
+        micButton.addEventListener('pointerup', () => { clearTimeout(pressTimer); });
+        micButton.addEventListener('pointerleave', () => { clearTimeout(pressTimer); });
+        micButton.addEventListener('pointercancel', () => { clearTimeout(pressTimer); });
+
+        setMicStatus(getDefaultMicTitle());
+
+        updateTtsToggleIcon();
+        checkAuthentication();
+    </script>
+</body>
+</html>
+
